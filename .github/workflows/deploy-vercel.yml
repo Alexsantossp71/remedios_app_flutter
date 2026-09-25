@@ -3,8 +3,9 @@ name: Deploy to Vercel
 on:
   push:
     branches: [main, master]
-  pull_request:
-    branches: [main, master]
+
+permissions:
+  contents: read
 
 jobs:
   build-and-deploy:
@@ -12,13 +13,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
+          cache: true
 
       - name: Get dependencies
         run: flutter pub get
@@ -26,11 +26,10 @@ jobs:
       - name: Build web
         run: flutter build web --release
 
-      - name: Deploy to Vercel
-        uses: BetaHuhn/deploy-to-vercel-action@v1
-        with:
+      - name: Deploy static site to Vercel
+        env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PRODUCTION: true
+        run: >-
+          npx vercel@latest deploy build/web --prod --yes
+          --name remedios-app-flutter
+          --token="$VERCEL_TOKEN"
