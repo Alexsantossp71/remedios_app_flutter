@@ -1,0 +1,13 @@
+{
+  "buildCommand": "flutter build web --release",
+  "outputDirectory": "build/web",
+  "env": {
+    "FLUTTER_VERSION": "3.24.0"
+  },
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
