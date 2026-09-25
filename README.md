@@ -23,7 +23,7 @@ Este projeto está configurado para deploy automático no **Vercel** a cada push
 
 ## 🛠️ Tecnologias
 
-- **Flutter 3.24+** - Framework UI
+- **Flutter (Canal Stable)** - Framework UI Multiplataforma
 - **Provider** - State management
 - **Table Calendar** - Calendário com lembretes
 - **SharedPreferences** - Persistência local
