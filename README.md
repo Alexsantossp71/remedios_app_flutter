@@ -15,7 +15,7 @@ Um aplicativo Flutter completo para gerenciar medicamentos, terapias e lembretes
 
 Este projeto está configurado para deploy automático no **Vercel** a cada push para `main` ou `master`.
 
-**Status do Deploy:** [![Deploy to Vercel](https://github.com/Alexsantossp71/remedios_app_flutter/actions/workflows/deploy-vercel.yml/badge.svg)](https://github.com/Alexsantossp71/remedios_app_flutter/actions)
+**Status do Deploy:** [![Deploy to Vercel](https://github.com/Alexsantossp71/remedios_app_flutter/actions/workflows/deploy-vercel.yml/badge.svg)](https://github.com/Alexsantossp71/remedios_app_flutter/actions/workflows/deploy-vercel.yml)
 
 ## 🌐 Acesso Online
 
