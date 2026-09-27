@@ -24,7 +24,8 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   final _thresholdController = TextEditingController();
   final List<DoseTime> _doseTimes = [];
 
-  Medicine? _selectedMedicine;
+  late final Future<List<Medicine>> _medicineCatalogFuture;
+  String _medicineQuery = '';
   TreatmentFrequency _frequency = TreatmentFrequency.daily;
   DateTime _startDate = DateTime.now();
   DateTime? _endDate;
@@ -34,6 +35,7 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   @override
   void initState() {
     super.initState();
+    _medicineCatalogFuture = MedicineData.load();
     final treatment = widget.initialTreatment;
     if (treatment == null) {
       _doseTimes.add(const DoseTime(hour: 8, minute: 0));
@@ -91,7 +93,8 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
     );
     if (picked == null) return;
     final time = DoseTime(hour: picked.hour, minute: picked.minute);
-    if (_doseTimes.any((item) => item.minutesSinceMidnight == time.minutesSinceMidnight)) {
+    if (_doseTimes.any(
+        (item) => item.minutesSinceMidnight == time.minutesSinceMidnight)) {
       return;
     }
     setState(() {
@@ -101,15 +104,103 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
     });
   }
 
-  void _selectMedicine(Medicine? medicine) {
+  void _selectMedicine(Medicine medicine) {
     setState(() {
-      _selectedMedicine = medicine;
-      if (medicine == null) return;
       _nameController.text = medicine.name;
-      _dosageController.text = medicine.dosage;
+      _dosageController.text =
+          medicine.dosage.isNotEmpty ? medicine.dosage : medicine.listedDosage;
       _presentationController.text = medicine.presentation;
+      _medicineQuery = '';
     });
   }
+
+  InputDecoration _medicineInputDecoration() {
+    return const InputDecoration(
+      labelText: 'Buscar medicamento',
+      hintText: 'Nome comercial ou princípio ativo',
+      prefixIcon: Icon(Icons.search),
+    );
+  }
+
+  Widget _buildMedicineSearch() {
+    return FutureBuilder<List<Medicine>>(
+      future: _medicineCatalogFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return TextFormField(
+            controller: _nameController,
+            decoration: _medicineInputDecoration(),
+            validator: _validateMedicineName,
+          );
+        }
+
+        final medicines = snapshot.data!;
+        final results = MedicineData.search(medicines, _medicineQuery);
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: _medicineInputDecoration(),
+              validator: _validateMedicineName,
+              onChanged: (value) => setState(() => _medicineQuery = value),
+            ),
+            if (_medicineQuery.isNotEmpty && results.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 220),
+                  child: ListView.builder(
+                    padding: EdgeInsets.zero,
+                    primary: false,
+                    shrinkWrap: true,
+                    itemCount: results.length,
+                    itemBuilder: (context, index) {
+                      final medicine = results[index];
+                      final details = [
+                        if (medicine.activeIngredient.isNotEmpty)
+                          medicine.activeIngredient,
+                        if (medicine.presentation.isNotEmpty)
+                          medicine.presentation,
+                        if (medicine.requiresManualDetails)
+                          'Confira e informe a apresentação',
+                      ].join(' · ');
+                      return ListTile(
+                        dense: true,
+                        title: Text(
+                          medicine.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          details,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        onTap: () => _selectMedicine(medicine),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  String? _validateMedicineName(String? value) =>
+      value == null || value.trim().isEmpty
+          ? 'Informe o nome do remédio'
+          : null;
 
   void _save() {
     if (!(_formKey.currentState?.validate() ?? false) || _doseTimes.isEmpty) {
@@ -154,31 +245,8 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                DropdownButtonFormField<Medicine>(
-                  initialValue: _selectedMedicine,
-                  decoration: const InputDecoration(
-                    labelText: 'Escolher da lista',
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                  hint: const Text('Opcional'),
-                  onChanged: _selectMedicine,
-                  items: MedicineData.medicines
-                      .map(
-                        (medicine) => DropdownMenuItem(
-                          value: medicine,
-                          child: Text(medicine.name),
-                        ),
-                      )
-                      .toList(),
-                ),
+                _buildMedicineSearch(),
                 const SizedBox(height: 12),
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(labelText: 'Nome do remédio'),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Informe o nome do remédio'
-                      : null,
-                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -192,7 +260,8 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
                     Expanded(
                       child: TextFormField(
                         controller: _presentationController,
-                        decoration: const InputDecoration(labelText: 'Forma'),
+                        decoration:
+                            const InputDecoration(labelText: 'Apresentação'),
                       ),
                     ),
                   ],
@@ -241,7 +310,8 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
                           label: Text(
                             '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
                           ),
-                          onDeleted: () => setState(() => _doseTimes.remove(time)),
+                          onDeleted: () =>
+                              setState(() => _doseTimes.remove(time)),
                         ),
                       ),
                       ActionChip(

@@ -1,56 +1,42 @@
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
+
 import '../models/medicine.dart';
 
 class MedicineData {
-  static const List<Medicine> medicines = [
-    Medicine(
-      name: 'Paracetamol',
-      dosage: '500mg',
-      presentation: 'Comprimido',
-    ),
-    Medicine(
-      name: 'Dipirona',
-      dosage: '500mg',
-      presentation: 'Comprimido',
-    ),
-    Medicine(
-      name: 'Amoxicilina',
-      dosage: '500mg',
-      presentation: 'Cápsula',
-    ),
-    Medicine(
-      name: 'Losartana',
-      dosage: '50mg',
-      presentation: 'Comprimido',
-    ),
-    Medicine(
-      name: 'Omeprazol',
-      dosage: '20mg',
-      presentation: 'Cápsula',
-    ),
-    Medicine(
-      name: 'Atorvastatina',
-      dosage: '20mg',
-      presentation: 'Comprimido',
-    ),
-    Medicine(
-      name: 'Salbutamol',
-      dosage: '100mcg',
-      presentation: 'Spray',
-    ),
-    Medicine(
-      name: 'Cetirizina',
-      dosage: '10mg',
-      presentation: 'Comprimido',
-    ),
-    Medicine(
-      name: 'Loratadina',
-      dosage: '10mg',
-      presentation: 'Comprimido',
-    ),
-    Medicine(
-      name: 'Vitamina C',
-      dosage: '500mg',
-      presentation: 'Comprimido efervescente',
-    ),
-  ];
+  static Future<List<Medicine>>? _catalogFuture;
+
+  static Future<List<Medicine>> load() {
+    return _catalogFuture ??= _loadCatalog();
+  }
+
+  static Future<List<Medicine>> _loadCatalog() async {
+    final json =
+        await rootBundle.loadString('assets/data/medicine_catalog.json');
+    final catalog = jsonDecode(json) as Map<String, dynamic>;
+    final items = catalog['items'] as List<dynamic>;
+    return items
+        .map((item) => Medicine.fromJson(item as Map<String, dynamic>))
+        .toList(growable: false);
+  }
+
+  static List<Medicine> search(
+    Iterable<Medicine> medicines,
+    String query, {
+    int limit = 20,
+  }) {
+    final normalizedQuery = normalizeMedicineText(query);
+    if (normalizedQuery.isEmpty || limit <= 0) return const [];
+
+    final matches = List.generate(6, (_) => <Medicine>[]);
+    for (final medicine in medicines) {
+      final rank = medicine.matchRank(normalizedQuery);
+      if (rank >= 0 && matches[rank].length < limit) {
+        matches[rank].add(medicine);
+      }
+    }
+
+    return matches.expand((group) => group).take(limit).toList(growable: false);
+  }
 }
