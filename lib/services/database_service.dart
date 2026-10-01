@@ -1,11 +1,15 @@
 import 'dart:convert';
-import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+// Import the correct database factory based on platform.
+// On web: uses sqflite's IndexedDB implementation.
+// On mobile/desktop: uses sqflite's default implementation.
+import 'database_factory_web.dart' if (dart.library.io) 'database_factory_io.dart';
 
 /// Database service for managing SQLite database instance, schemas, and migrations.
 class DatabaseService {
@@ -38,36 +42,32 @@ class DatabaseService {
   /// Initialize an in-memory database for testing.
   @visibleForTesting
   Future<Database> initInMemoryDatabase() async {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+    if (kIsWeb) {
+      throw UnsupportedError('In-memory database not supported on Web');
+    }
+    initializeDatabaseFactory();
 
-    final db = await databaseFactory.openDatabase(
+    final db = await openDatabase(
       inMemoryDatabasePath,
-      options: OpenDatabaseOptions(
-        version: _databaseVersion,
-        onCreate: _onCreate,
-        onConfigure: _onConfigure,
-      ),
+      version: _databaseVersion,
+      onCreate: _onCreate,
+      onConfigure: (db) => _onConfigure(db),
     );
     await setDatabaseForTesting(db);
     return db;
   }
 
   Future<Database> _initDatabase() async {
-    // Configure FFI database factory for desktop / test environments if not web.
-    if (!kIsWeb) {
-      if (Platform.isWindows || Platform.isLinux) {
-        sqfliteFfiInit();
-        databaseFactory = databaseFactoryFfi;
-      }
-    }
+    // Initialize the correct database factory for the current platform.
+    initializeDatabaseFactory();
 
     String path;
     if (kIsWeb) {
-      // In-memory / virtual db for web if sqflite web isn't fully configured
-      path = inMemoryDatabasePath;
+      // On web, use a logical database name (IndexedDB).
+      path = _databaseName;
     } else {
       try {
+        // On mobile/desktop, use the application documents directory.
         final documentsDirectory = await getApplicationDocumentsDirectory();
         path = p.join(documentsDirectory.path, _databaseName);
       } catch (_) {
@@ -81,7 +81,7 @@ class DatabaseService {
       path,
       version: _databaseVersion,
       onCreate: _onCreate,
-      onConfigure: _onConfigure,
+      onConfigure: (db) => _onConfigure(db),
       onUpgrade: (db, oldVersion, newVersion) => _onUpgrade(db, oldVersion, newVersion),
     );
 
@@ -91,10 +91,6 @@ class DatabaseService {
     }
 
     return db;
-  }
-
-  Future<void> _onConfigure(Database db) async {
-    await db.execute('PRAGMA foreign_keys = ON');
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -174,6 +170,7 @@ class DatabaseService {
         notes TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL DEFAULT 'scheduled',
         return_date TEXT,
+        completed_at TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
         FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
@@ -186,6 +183,11 @@ class DatabaseService {
     await db.execute(
       'CREATE INDEX idx_consultations_date ON consultations(date)',
     );
+  }
+
+  Future<void> _onConfigure(Database db) async {
+    // Enable foreign keys
+    await db.execute('PRAGMA foreign_keys = ON');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
