@@ -55,14 +55,18 @@ class Medicine {
   }
 
   int matchRank(String normalizedQuery) {
-    if (_normalizedName == normalizedQuery) return 0;
-    if (_normalizedAliases.contains(normalizedQuery)) return 1;
-    if (_normalizedName.startsWith(normalizedQuery)) return 2;
-    if (_normalizedAliases.any((alias) => alias.startsWith(normalizedQuery))) {
-      return 3;
+    // EAN primary: exact EAN match is the most specific identifier
+    for (final ean in eans) {
+      if (ean == normalizedQuery) return 0;
     }
-    if (_normalizedIngredient.startsWith(normalizedQuery)) return 4;
-    if (_normalizedSearch.contains(normalizedQuery)) return 5;
+    if (_normalizedName == normalizedQuery) return 1;
+    if (_normalizedAliases.contains(normalizedQuery)) return 2;
+    if (_normalizedName.startsWith(normalizedQuery)) return 3;
+    if (_normalizedAliases.any((alias) => alias.startsWith(normalizedQuery))) {
+      return 4;
+    }
+    if (_normalizedIngredient.startsWith(normalizedQuery)) return 5;
+    if (_normalizedSearch.contains(normalizedQuery)) return 6;
     return -1;
   }
 

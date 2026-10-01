@@ -34,7 +34,7 @@ class Treatment {
   final int? refillThreshold;
   final bool isArchived;
 
-  const Treatment({
+  Treatment({
     required this.id,
     required this.name,
     required this.dosage,
@@ -47,7 +47,22 @@ class Treatment {
     required this.stock,
     required this.refillThreshold,
     this.isArchived = false,
-  });
+  }) : assert(id.isNotEmpty, 'id must not be empty'),
+       assert(name.isNotEmpty, 'name must not be empty'),
+       assert(dosage.isNotEmpty, 'dosage must not be empty'),
+       assert(presentation.isNotEmpty, 'presentation must not be empty'),
+       assert(doseTimes.isNotEmpty, 'DoseTimes cannot be empty'),
+       assert(stock == null || stock >= 0, 'stock must be non-negative'),
+       assert(
+         refillThreshold == null || refillThreshold >= 0,
+         'refillThreshold must be non-negative',
+       ),
+       assert(
+         endDate == null ||
+             startDate.isBefore(endDate) ||
+             startDate.isAtSameMomentAs(endDate),
+         'startDate must be before or equal to endDate',
+       );
 
   factory Treatment.fromJson(Map<String, dynamic> json) {
     return Treatment(

@@ -27,6 +27,16 @@ This is a Flutter application called "Remédio na Hora" (Medicine on Time) - a m
 - To enable web support: `flutter config --enable-web` then `flutter run -d chrome`
 - To clean build: `flutter clean`
 
+## Agent skills
+
+### Issue tracker
+
+Issues and specs for this repo live as GitHub issues. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context layout (`CONTEXT.md` + `docs/adr/` at the repo root). See `docs/agents/domain.md`.
+
 ## Project Structure
 
 ```
@@ -36,12 +46,12 @@ lib/
 │   └── medicine_data.dart - Static medicine data for dropdown
 ├── models/
 │   ├── medicine.dart      - Medicine model (name, dosage, presentation)
-│   └── reminder.dart      - Reminder model (medicine details + times + taken status)
+│   └── treatment.dart      - Treatment model (medicine details + dose times + archived status)
 └── services/
-    └── reminder_service.dart - Handles persistence using shared_preferences
+    └── therapy_storage_service.dart - Handles persistence using SQLite (sqflite)
 ```
 
-### Key Components
+## Key Components
 
 1. **Main.dart**: Contains the UI with:
    - TableCalendar for date selection
@@ -51,44 +61,40 @@ lib/
 
 2. **Models**:
    - Medicine: Represents a medicine type with name, dosage, presentation
-   - Reminder: Represents a scheduled medicine intake with times and completion status
+   - Treatment: Represents a scheduled medicine intake with times and archived status
 
 3. **Services**:
-   - ReminderService: Handles loading/saving reminders to shared_preferences using JSON serialization
-
-4. **Data**:
-   - MedicineData: Hardcoded list of common medicines for the dropdown selection
-
-## State Management Approach
-
-This app uses Flutter's built-in State management:
-- StatefulWidget for HomeScreen (_HomeScreenState)
-- setState() calls to refresh UI when data changes
-- ReminderService as a singleton for data persistence
+   - TherapyStorageService: Handles persistence using SQLite (sqflite) for treatments and dose events
 
 ## Data Flow
 
-1. App starts → ReminderService.initialize() loads reminders from shared_preferences
-2. HomeScreen displays reminders for selected date
-3. User adds reminder via dialog → ReminderService.addReminder() saves to shared_preferences
-4. User toggles reminder taken → ReminderService.updateReminder() updates shared_preferences
-5. On date change → _loadReminders() refreshes the list
+1. App starts → TherapyStorageService.loadTreatments() loads treatments from SQLite
+2. HomeScreen displays reminders for selected date (derived from treatments)
+3. User adds treatment via dialog → TherapyStorageService.saveTreatment() saves to SQLite
+4. User marks dose taken → TherapyProvider.setDoseStatus() updates status and stock
+5. On date change → TherapyProvider.ensureDoseEventsFor() refreshes dose events
 
 ## Testing
 
 - Tests are located in the `test/` directory
-- Currently contains widget_test.dart (empty)
+- Includes widget_test.dart, sqlite_storage_test.dart, and other tests for models and services
 - To add tests: Create new test files in test/ following Flutter testing conventions
+- Use flutter_test package for widget and unit tests
 - Use flutter_test package for widget and unit tests
 
 ## Dependencies
 
 Key packages in pubspec.yaml:
 - flutter/material.dart - UI framework
-- shared_preferences: ^2.2.2 - Local storage for reminders
+- sqflite: ^2.4.1 - SQLite database
+- sqflite_common_ffi: ^2.3.4+4 - SQLite FFI for desktop
+- path: ^1.9.0 - Path utilities
+- path_provider: ^2.1.5 - Path provider
 - http: ^1.2.1 - For potential API calls (not currently used)
 - table_calendar: ^3.0.9 - Calendar widget
-- intl: ^0.18.0 - Internationalization (date formatting)
+- intl: ^0.20.2 - Internationalization (date formatting)
+- provider: ^6.1.5+1 - State management
+- uuid: ^4.5.1 - UUID generation
 
 ## Common Development Patterns
 
@@ -104,13 +110,13 @@ Key packages in pubspec.yaml:
    - Follow Material Design guidelines
 
 3. **Data Persistence**:
-   - Use ReminderService for all shared_preferences operations
+   - Use TherapyStorageService for all SQLite operations
    - Convert objects to/from JSON for storage
    - Handle null values and type conversions carefully
 
 ## Troubleshooting
 
 - If UI doesn't update: Check that setState() is being called
-- If data doesn't persist: Verify ReminderService methods are called correctly
+- If data doesn't persist: Verify TherapyProvider methods are called correctly
 - If build fails: Run flutter pub get to ensure dependencies are installed
 - For platform-specific issues: Check android/, ios/, web/, windows/, macos/, linux/ directories

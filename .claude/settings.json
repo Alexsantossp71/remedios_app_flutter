@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"F:/flutter/bin/flutter.bat\" devices *)"
+    ]
+  }
+}

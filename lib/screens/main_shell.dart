@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'doctors_screen.dart';
+import 'consultations_screen.dart';
 import 'profile_screen.dart';
 import 'progress_screen.dart';
 import 'today_screen.dart';
@@ -27,6 +29,16 @@ class _MainShellState extends State<MainShell> {
       label: 'Tratamentos',
     ),
     NavigationDestination(
+      icon: Icon(Icons.calendar_month_outlined),
+      selectedIcon: Icon(Icons.calendar_month),
+      label: 'Consultas',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.medical_services_outlined),
+      selectedIcon: Icon(Icons.medical_services),
+      label: 'Médicos',
+    ),
+    NavigationDestination(
       icon: Icon(Icons.insights_outlined),
       selectedIcon: Icon(Icons.insights),
       label: 'Progresso',
@@ -41,11 +53,16 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Remédio na Hora'),
+      ),
       body: IndexedStack(
         index: _selectedIndex,
         children: const [
           TodayScreen(),
           TreatmentsScreen(),
+          ConsultationsScreen(),
+          DoctorsScreen(),
           ProgressScreen(),
           ProfileScreen(),
         ],

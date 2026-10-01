@@ -51,8 +51,11 @@ class TherapyProvider extends ChangeNotifier {
   }
 
   Future<void> addTreatment(Treatment treatment) async {
+    if (treatment.doseTimes.isEmpty) {
+      throw ArgumentError('DoseTimes cannot be empty');
+    }
     _treatments = [..._treatments, treatment];
-    await _storage.saveTreatments(_treatments);
+    await _storage.saveTreatment(treatment);
     await ensureDoseEventsFor(DateTime.now(), notify: false);
     notifyListeners();
   }
@@ -61,7 +64,7 @@ class TherapyProvider extends ChangeNotifier {
     _treatments = _treatments
         .map((current) => current.id == treatment.id ? treatment : current)
         .toList();
-    await _storage.saveTreatments(_treatments);
+    await _storage.saveTreatment(treatment);
     await ensureDoseEventsFor(DateTime.now(), notify: false);
     notifyListeners();
   }
@@ -121,8 +124,6 @@ class TherapyProvider extends ChangeNotifier {
         updatedTreatment = treatment.copyWith(
           stock: treatment.stock! > 0 ? treatment.stock! - 1 : 0,
         );
-      } else if (doseEvent.status == DoseStatus.taken && status != DoseStatus.taken) {
-        updatedTreatment = treatment.copyWith(stock: treatment.stock! + 1);
       }
     }
 
@@ -138,8 +139,8 @@ class TherapyProvider extends ChangeNotifier {
         .toList();
 
     await Future.wait([
-      _storage.saveDoseEvents(_doseEvents),
-      _storage.saveTreatments(_treatments),
+      _storage.saveDoseEvent(updatedEvent),
+      _storage.saveTreatment(updatedTreatment),
     ]);
     notifyListeners();
   }
