@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../models/dose_event.dart';
 import '../models/treatment.dart';

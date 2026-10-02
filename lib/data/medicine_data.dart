@@ -29,7 +29,7 @@ class MedicineData {
     final normalizedQuery = normalizeMedicineText(query);
     if (normalizedQuery.isEmpty || limit <= 0) return const [];
 
-    final matches = List.generate(6, (_) => <Medicine>[]);
+    final matches = List.generate(7, (_) => <Medicine>[]);
     for (final medicine in medicines) {
       final rank = medicine.matchRank(normalizedQuery);
       if (rank >= 0 && matches[rank].length < limit) {

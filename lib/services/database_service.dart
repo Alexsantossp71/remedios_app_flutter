@@ -7,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Import the correct database factory based on platform.
-// On web: uses sqflite's IndexedDB implementation.
+// On web: uses sqflite_common_ffi_web (IndexedDB + WASM).
 // On mobile/desktop: uses sqflite's default implementation.
 import 'database_factory_web.dart' if (dart.library.io) 'database_factory_io.dart';
 
@@ -77,13 +77,27 @@ class DatabaseService {
       }
     }
 
-    final db = await openDatabase(
-      path,
-      version: _databaseVersion,
-      onCreate: _onCreate,
-      onConfigure: (db) => _onConfigure(db),
-      onUpgrade: (db, oldVersion, newVersion) => _onUpgrade(db, oldVersion, newVersion),
-    );
+    Database db;
+    if (kIsWeb) {
+      // On web, use databaseFactoryWeb directly.
+      db = await databaseFactoryWeb.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: _databaseVersion,
+          onCreate: _onCreate,
+          onConfigure: _onConfigure,
+          onUpgrade: _onUpgrade,
+        ),
+      );
+    } else {
+      db = await openDatabase(
+        path,
+        version: _databaseVersion,
+        onCreate: _onCreate,
+        onConfigure: (db) => _onConfigure(db),
+        onUpgrade: (db, oldVersion, newVersion) => _onUpgrade(db, oldVersion, newVersion),
+      );
+    }
 
     if (!_isInitialized) {
       _isInitialized = true;
