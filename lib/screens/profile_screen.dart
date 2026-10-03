@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/health_plan_provider.dart';
 import '../providers/therapy_provider.dart';
+import '../screens/health_plans_screen.dart';
+import '../widgets/health_plan_form_dialog.dart';
 import '../widgets/section_header.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -9,8 +12,10 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<TherapyProvider>();
-    final lowStock = provider.activeTreatments.where((treatment) => treatment.needsRefill).length;
+    final therapyProvider = context.watch<TherapyProvider>();
+    final healthPlanProvider = context.watch<HealthPlanProvider>();
+    final lowStock = therapyProvider.activeTreatments.where((treatment) => treatment.needsRefill).length;
+    final planCount = healthPlanProvider.healthPlans.length;
 
     return SafeArea(
       child: ListView(
@@ -79,7 +84,7 @@ class ProfileScreen extends StatelessWidget {
                 _SummaryTile(
                   icon: Icons.medication_outlined,
                   title: 'Tratamentos ativos',
-                  value: '${provider.activeTreatments.length}',
+                  value: '${therapyProvider.activeTreatments.length}',
                 ),
                 const Divider(height: 1, indent: 64, endIndent: 18),
                 _SummaryTile(
@@ -89,6 +94,69 @@ class ProfileScreen extends StatelessWidget {
                   valueColor: lowStock > 0 ? Colors.orange.shade800 : null,
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 28),
+          const SectionHeader(title: 'Meus Planos de Saúde'),
+          const SizedBox(height: 10),
+          Card(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => Scaffold(
+                      appBar: AppBar(title: const Text('Meus Planos de Saúde')),
+                      body: const HealthPlansScreen(),
+                      floatingActionButton: Builder(
+                        builder: (ctx) => FloatingActionButton(
+                          onPressed: () => _addPlan(ctx),
+                          child: const Icon(Icons.add),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                      child: Icon(
+                        Icons.health_and_safety,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Planos e Convênios',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            planCount == 0
+                                ? 'Nenhum plano cadastrado'
+                                : '$planCount ${planCount == 1 ? 'plano cadastrado' : 'planos cadastrados'}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.outline),
+                  ],
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 28),
@@ -120,7 +188,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 24),
           Center(
             child: Text(
-              'Remédio na Hora',
+              'Remédio na Hora v3.0',
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: Theme.of(context).colorScheme.outline,
                     fontWeight: FontWeight.w700,
@@ -130,6 +198,26 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _addPlan(BuildContext context) async {
+    final provider = context.read<HealthPlanProvider>();
+    final plan = await showDialog<dynamic>(
+      context: context,
+      builder: (context) => const HealthPlanFormDialog(),
+    );
+
+    if (plan != null) {
+      await provider.saveHealthPlan(plan);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${plan.name} adicionado com sucesso!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 
