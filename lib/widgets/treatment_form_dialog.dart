@@ -92,7 +92,10 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       initialTime: const TimeOfDay(hour: 8, minute: 0),
     );
     if (picked == null) return;
-    final time = DoseTime(hour: picked.hour, minute: picked.minute);
+    _addDoseTime(DoseTime(hour: picked.hour, minute: picked.minute));
+  }
+
+  void _addDoseTime(DoseTime time) {
     if (_doseTimes.any(
         (item) => item.minutesSinceMidnight == time.minutesSinceMidnight)) {
       return;
@@ -103,6 +106,12 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
           first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight));
     });
   }
+
+  static const _quickPickTimes = [
+    DoseTime(hour: 8, minute: 0),
+    DoseTime(hour: 12, minute: 0),
+    DoseTime(hour: 18, minute: 0),
+  ];
 
   void _selectMedicine(Medicine medicine) {
     setState(() {
@@ -296,6 +305,23 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      for (final time in _quickPickTimes)
+                        ActionChip(
+                          label: Text(
+                            '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                          ),
+                          onPressed: () => _addDoseTime(time),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 6),
