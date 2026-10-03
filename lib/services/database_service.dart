@@ -17,7 +17,7 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._();
 
   static const String _databaseName = 'remedios_app.db';
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 3;
 
   Database? _db;
   bool _isInitialized = false;
@@ -46,6 +46,8 @@ class DatabaseService {
       throw UnsupportedError('In-memory database not supported on Web');
     }
     initializeDatabaseFactory();
+
+    if (_db != null && _db!.isOpen) return _db!;
 
     final db = await openDatabase(
       inMemoryDatabasePath,
@@ -197,6 +199,24 @@ class DatabaseService {
     await db.execute(
       'CREATE INDEX idx_consultations_date ON consultations(date)',
     );
+
+    // 5. Health Plans table
+    await db.execute('''
+      CREATE TABLE health_plans (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        card_number TEXT NOT NULL DEFAULT '',
+        group_number TEXT NOT NULL DEFAULT '',
+        beneficiary_code TEXT NOT NULL DEFAULT '',
+        validity TEXT NOT NULL DEFAULT '',
+        coverage_type TEXT NOT NULL DEFAULT '',
+        specialties TEXT NOT NULL DEFAULT '[]',
+        notes TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _onConfigure(Database db) async {
@@ -210,6 +230,25 @@ class DatabaseService {
       await db.execute(
         'ALTER TABLE consultations ADD COLUMN completed_at TEXT',
       );
+    }
+    if (oldVersion < 3) {
+      // Version 3: Create health_plans table for new feature
+      await db.execute('''
+        CREATE TABLE health_plans (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          provider TEXT NOT NULL,
+          card_number TEXT NOT NULL DEFAULT '',
+          group_number TEXT NOT NULL DEFAULT '',
+          beneficiary_code TEXT NOT NULL DEFAULT '',
+          validity TEXT NOT NULL DEFAULT '',
+          coverage_type TEXT NOT NULL DEFAULT '',
+          specialties TEXT NOT NULL DEFAULT '[]',
+          notes TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
     }
   }
 
