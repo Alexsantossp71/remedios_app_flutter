@@ -325,6 +325,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                       child: DropdownButtonFormField<String>(
                         key: const ValueKey('crmStateUf'),
                         initialValue: _crmState,
+                        isExpanded: true,
                         hint: const Text('Selecione'),
                         decoration: _decoration('UF do CRM'),
                         items: [
@@ -458,10 +459,11 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                       ),
                       const SizedBox(width: 10),
                       SizedBox(
-                        width: 108,
+                        width: 120,
                         child: DropdownButtonFormField<String>(
                           key: const ValueKey('addressUf'),
                           initialValue: _addressState,
+                          isExpanded: true,
                           hint: const Text('Selecione'),
                           decoration: _decoration('UF'),
                           items: [
