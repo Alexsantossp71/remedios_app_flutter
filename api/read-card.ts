@@ -133,26 +133,29 @@ function resolveLocalLangPath(): string | undefined {
 
 function getWorker(): Promise<Worker> {
   if (!workerPromise) {
-    // O traineddata vem no repositório (2,3 MB). Se não estiver no bundle,
-    // cai no CDN oficial do projeto Tesseract.
     const localLangPath = resolveLocalLangPath();
+    // O log de runtime é a única pista que existe quando a OCR falha em produção:
+    // sem ele, um traineddata ausente e um WASM quebrado são indistinguíveis
+    // do lado de fora, porque os dois viram o mesmo 502 "unreadable".
+    console.log(
+      `[read-card] cwd=${process.cwd()} langPath=${localLangPath ?? 'AUSENTE'}`,
+    );
+    if (!localLangPath) {
+      throw new Error(
+        'por.traineddata não encontrado no bundle; ver includeFiles em vercel.json',
+      );
+    }
     // /tmp é o único diretório gravável no runtime de função da Vercel.
     const cachePath = join(tmpdir(), 'tesseract-cache');
     mkdirSync(cachePath, { recursive: true });
-    const attempt = (langPath?: string) =>
-      createWorker('por', 1, {
-        langPath,
-        cachePath,
-        // Com langPath local o arquivo é procurado como "por.traineddata.gz"
-        // quando gzip=true (o padrão), e esse .gz não existe. No CDN ele existe.
-        gzip: langPath ? false : true,
-      });
-    const pending = localLangPath
-      ? attempt(localLangPath).catch(() => attempt(undefined))
-      : attempt(undefined);
+    const pending = createWorker('por', 1, {
+      langPath: localLangPath,
+      cachePath,
+      // Com langPath local o arquivo é procurado como "por.traineddata.gz"
+      // quando gzip=true (o padrão), e esse .gz não existe.
+      gzip: false,
+    });
     workerPromise = pending;
-    // Sem este reset uma falha transitória deixaria a promise rejeitada presa
-    // em workerPromise, e a instância aquecida nunca mais tentaria de novo.
     pending.catch(() => {
       if (workerPromise === pending) workerPromise = null;
     });
@@ -160,21 +163,23 @@ function getWorker(): Promise<Worker> {
   return workerPromise;
 }
 
-async function recognizeText(imageBase64: string): Promise<string> {
-  const worker = await getWorker();
-  const buffer = Buffer.from(imageBase64, 'base64');
+function withDeadline<T>(work: Promise<T>, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    const { data } = await Promise.race([
-      worker.recognize(buffer),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error('ocr_timeout')), OCR_TIMEOUT_MS);
-      }),
-    ]);
-    return data.text ?? '';
-  } finally {
-    clearTimeout(timer);
-  }
+  const guard = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`ocr_timeout:${label}`)), OCR_TIMEOUT_MS);
+  });
+  // O prazo é uma barreira, não um cancelamento: sem este catch, a promessa
+  // perdedora continuaria rejeitada depois do timeout e o Node derrubaria o
+  // processo com unhandledRejection, derrubando requisições seguintes.
+  work.catch(() => undefined);
+  return Promise.race([work, guard]).finally(() => clearTimeout(timer)) as Promise<T>;
+}
+
+async function recognizeText(imageBase64: string): Promise<string> {
+  const worker = await withDeadline(getWorker(), 'worker');
+  const buffer = Buffer.from(imageBase64, 'base64');
+  const { data } = await withDeadline(worker.recognize(buffer), 'recognize');
+  return data.text ?? '';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
