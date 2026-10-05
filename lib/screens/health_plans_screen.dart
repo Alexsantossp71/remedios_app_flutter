@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -172,10 +174,16 @@ class HealthPlansScreen extends StatelessWidget {
     final bytes = await file.readAsBytes();
     if (!context.mounted) return null;
 
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const _ReadingCardDialog(),
+    // O diálogo é empurrado sem await: showDialog só completa quando a rota
+    // é dispensada, e a única linha que a dispensa (o pop no fim do fluxo)
+    // depende da leitura terminar. Awaitar aqui trava a tela para sempre sem
+    // nunca enviar a imagem.
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const _ReadingCardDialog(),
+      ),
     );
 
     CardReadResult? data;
