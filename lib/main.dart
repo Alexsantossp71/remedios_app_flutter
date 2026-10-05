@@ -8,6 +8,7 @@ import 'providers/consultation_provider.dart';
 import 'providers/doctor_provider.dart';
 import 'providers/health_plan_provider.dart';
 import 'providers/therapy_provider.dart';
+import 'providers/user_profile_provider.dart';
 import 'screens/main_shell.dart';
 
 Future<void> main() async {
@@ -18,10 +19,12 @@ Future<void> main() async {
   final doctorProvider = DoctorProvider();
   final consultationProvider = ConsultationProvider();
   final healthPlanProvider = HealthPlanProvider();
+  final userProfileProvider = UserProfileProvider();
   await therapyProvider.initialize();
   await doctorProvider.initialize();
   await consultationProvider.initialize();
   await healthPlanProvider.initialize();
+  await userProfileProvider.initialize();
 
   runApp(
     MultiProvider(
@@ -30,6 +33,7 @@ Future<void> main() async {
         ChangeNotifierProvider.value(value: doctorProvider),
         ChangeNotifierProvider.value(value: consultationProvider),
         ChangeNotifierProvider.value(value: healthPlanProvider),
+        ChangeNotifierProvider.value(value: userProfileProvider),
       ],
       child: const RemediosApp(),
     ),

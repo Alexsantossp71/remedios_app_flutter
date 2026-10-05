@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/medical_specialties.dart';
 import '../models/doctor.dart';
 import '../services/cep_lookup_service.dart';
+import '../services/crm_lookup_service.dart';
 import 'br_input_formatters.dart';
 
 class DoctorFormDialog extends StatefulWidget {
@@ -13,11 +13,13 @@ class DoctorFormDialog extends StatefulWidget {
     this.initialDoctor,
     this.knownSpecialties = const [],
     this.cepLookup,
+    this.crmLookup,
   });
 
   final Doctor? initialDoctor;
   final Iterable<String> knownSpecialties;
   final CepLookupService? cepLookup;
+  final CrmLookupService? crmLookup;
 
   @override
   State<DoctorFormDialog> createState() => _DoctorFormDialogState();
@@ -26,6 +28,7 @@ class DoctorFormDialog extends StatefulWidget {
 class _DoctorFormDialogState extends State<DoctorFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final CepLookupService _cepLookup;
+  late final CrmLookupService _crmLookup;
   late final TextEditingController _nameController;
   late final TextEditingController _specialtyController;
   late final TextEditingController _crmController;
@@ -43,9 +46,11 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
 
   String? _crmState;
   String? _addressState;
+  TextEditingController? _specialtyFieldController;
   bool _showAddress = false;
   bool _showExtras = false;
   bool _lookingUpCep = false;
+  bool _lookingUpCrm = false;
   String? _cepMessage;
   String? _lastLookedCep;
 
@@ -55,6 +60,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
   void initState() {
     super.initState();
     _cepLookup = widget.cepLookup ?? CepLookupService();
+    _crmLookup = widget.crmLookup ?? CrmLookupService();
     final doctor = widget.initialDoctor;
     _nameController = TextEditingController(text: doctor?.name ?? '');
     _specialtyController = TextEditingController(text: doctor?.specialty ?? '');
@@ -149,25 +155,82 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     });
   }
 
-  Future<void> _verifyOnCfm() async {
-    final searchTerms = [
-      if (_nameController.text.trim().isNotEmpty)
-        'Nome: ${_nameController.text.trim()}',
-      if (_crmController.text.trim().isNotEmpty)
-        'CRM: ${_crmController.text.trim()}',
-      if (_crmState != null) 'UF: $_crmState',
-    ].join('\n');
-    if (searchTerms.isNotEmpty) {
-      await Clipboard.setData(ClipboardData(text: searchTerms));
+  void _showCrmSnack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  Future<void> _applyCrmResult(CrmLookupResult result) async {
+    final nameEmpty = _nameController.text.trim().isEmpty;
+    final specialtyEmpty = _specialtyController.text.trim().isEmpty;
+    var replace = true;
+    if (!nameEmpty || !specialtyEmpty) {
+      replace = await showDialog<bool>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Substituir os dados atuais?'),
+              content: Text(
+                'Encontrado: ${result.name}. Substitui os campos preenchidos?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Manter'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Substituir'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
     }
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Nome, CRM e UF copiados. Cole na busca do CFM para conferir.',
-        ),
-      ),
-    );
+    setState(() {
+      if (replace && result.name.isNotEmpty) {
+        _nameController.text = result.name;
+      }
+      if (replace && result.specialty.isNotEmpty) {
+        _specialtyController.text = result.specialty;
+        _specialtyFieldController?.text = result.specialty;
+      }
+    });
+  }
+
+  Future<void> _lookupCrm() async {
+    final digits = digitsOnly(_crmController.text);
+    if (digits.length < 4) {
+      _showCrmSnack('Informe o CRM para consultar');
+      return;
+    }
+    if (_crmState == null || _crmState!.isEmpty) {
+      _showCrmSnack('Selecione a UF do CRM para consultar');
+      return;
+    }
+
+    setState(() => _lookingUpCrm = true);
+    final result = await _crmLookup.lookup(digits, _crmState!);
+    if (!mounted) return;
+    setState(() => _lookingUpCrm = false);
+
+    switch (result.kind) {
+      case CrmLookupKind.success:
+        await _applyCrmResult(result);
+        if (!mounted) return;
+        _showCrmSnack(
+          result.statusText == 'Ativo'
+              ? 'CRM ativo: ${result.name}'
+              : 'CRM ${result.statusText.toLowerCase()}: ${result.name}',
+        );
+      case CrmLookupKind.notFound:
+        _showCrmSnack('CRM não encontrado no conselho');
+      case CrmLookupKind.unsupported:
+        _showCrmSnack('Estado ainda não coberto — preencha manualmente');
+      case CrmLookupKind.error:
+        _showCrmSnack('Falha na consulta. Tente novamente.');
+    }
   }
 
   void _toggleHealthPlan(String plan) {
@@ -205,6 +268,17 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     if (crm.isEmpty) return 'Informe o CRM';
     if (!isValidCrmNumber(crm)) return 'CRM deve ter 4 a 7 dígitos';
     if (_crmState == null || _crmState!.isEmpty) return 'Selecione a UF do CRM';
+    return null;
+  }
+
+  /// Telefone opcional: se preenchido, precisa ter 10 ou 11 dígitos.
+  String? _validatePhone(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    final digits = digitsOnly(trimmed);
+    if (digits.length < 10 || digits.length > 11) {
+      return 'Telefone deve ter 10 ou 11 dígitos';
+    }
     return null;
   }
 
@@ -289,6 +363,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                   },
                   fieldViewBuilder:
                       (context, controller, focusNode, onFieldSubmitted) {
+                    _specialtyFieldController = controller;
                     return TextFormField(
                       controller: controller,
                       focusNode: focusNode,
@@ -340,9 +415,15 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                       ),
                     ),
                     IconButton(
-                      tooltip: 'Copiar dados para conferir no CFM',
-                      onPressed: _verifyOnCfm,
-                      icon: const Icon(Icons.verified_outlined),
+                      tooltip: 'Buscar dados pelo CRM no conselho',
+                      onPressed: _lookingUpCrm ? null : _lookupCrm,
+                      icon: _lookingUpCrm
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.search_outlined),
                     ),
                   ],
                 ),
@@ -352,6 +433,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                   inputFormatters: [PhoneInputFormatter()],
+                  validator: _validatePhone,
                   decoration: _decoration(
                     'Telefone',
                     hint: '(11) 99999-0000',

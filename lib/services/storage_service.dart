@@ -1,3 +1,10 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'database_service.dart';
+
 /// Abstract storage service interface that works across all Flutter platforms.
 ///
 /// On Web: Uses SharedPreferences for persistence (no SQLite support)

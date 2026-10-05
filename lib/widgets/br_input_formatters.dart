@@ -2,6 +2,30 @@ import 'package:flutter/services.dart';
 
 String digitsOnly(String value) => value.replaceAll(RegExp(r'\D'), '');
 
+/// Formata o CPF enquanto digita: 000.000.000-00 (até 11 dígitos).
+class CpfInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = digitsOnly(newValue.text);
+    final clipped = digits.length > 11 ? digits.substring(0, 11) : digits;
+    final buffer = StringBuffer();
+    for (var index = 0; index < clipped.length; index++) {
+      if (index == 3 || index == 6) buffer.write('.');
+      if (index == 9) buffer.write('-');
+      buffer.write(clipped[index]);
+    }
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+
 class CepInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(

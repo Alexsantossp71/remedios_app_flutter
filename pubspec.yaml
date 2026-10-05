@@ -23,6 +23,7 @@ dependencies:
   flutter_local_notifications: ^20.1.0
   sqflite_common_ffi: ^2.3.6
   sqflite_common_ffi_web: ^1.0.2
+  image_picker: ^1.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

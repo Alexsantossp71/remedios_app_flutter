@@ -1,0 +1,220 @@
+{
+  "health_plans": [
+    {
+      "name": "Unimed",
+      "card_number": "UMD1234567890123",
+      "expiry_date": "12/2027",
+      "type": "Nacional",
+      "coverage": ["Consultas", "Exames", "Hospitalar"],
+      "category": "Premium"
+    },
+    {
+      "name": "SulAmérica",
+      "card_number": "SA8765432109876",
+      "expiry_date": "06/2028",
+      "type": "Nacional",
+      "coverage": ["Consultas", "Exames", "Odontologia"],
+      "category": "Completo"
+    },
+    {
+      "name": "Amil",
+      "card_number": "AML5554443332221",
+      "expiry_date": "03/2027",
+      "type": "Regional",
+      "coverage": ["Consultas", "Exames básicos"],
+      "category": "Básico"
+    }
+  ],
+  "doctors": [
+    {
+      "name": "Dra. Ana Paula Oliveira",
+      "specialty": "Cardiologia",
+      "crm_number": "54321",
+      "crm_uf": "SP",
+      "phone": "(11) 98765-4321",
+      "clinic": "Hospital Albert Einstein",
+      "address_street": "Av. Albert Einstein",
+      "address_number": "627",
+      "city": "São Paulo",
+      "state": "SP",
+      "zip_code": "05652-900"
+    },
+    {
+      "name": "Dr. Carlos Mendes",
+      "specialty": "Ortopedia",
+      "crm_number": "67890",
+      "crm_uf": "RJ",
+      "phone": "(21) 99876-5432",
+      "clinic": "Clínica Ortopédica Rio",
+      "address_street": "Rua do Ouvidor",
+      "address_number": "50",
+      "city": "Rio de Janeiro",
+      "state": "RJ",
+      "zip_code": "20040-030"
+    },
+    {
+      "name": "Dra. Beatriz Santos",
+      "specialty": "Pediatria",
+      "crm_number": "11223",
+      "crm_uf": "MG",
+      "phone": "(31) 97654-3210",
+      "clinic": "Hospital das Clínicas UFMG",
+      "address_street": "Av. Prof. Alfredo Balena",
+      "address_number": "110",
+      "city": "Belo Horizonte",
+      "state": "MG",
+      "zip_code": "30130-100"
+    },
+    {
+      "name": "Dr. João Silva Neto",
+      "specialty": "Dermatologia",
+      "crm_number": "33445",
+      "crm_uf": "RS",
+      "phone": "(51) 99456-7890",
+      "clinic": "Clínica de Dermatologia Porto Alegre",
+      "address_street": "Rua dos Andradas",
+      "address_number": "1000",
+      "city": "Porto Alegre",
+      "state": "RS",
+      "zip_code": "90020-005"
+    },
+    {
+      "name": "Dra. Fernanda Costa",
+      "specialty": "Ginecologia e Obstetrícia",
+      "crm_number": "66778",
+      "crm_uf": "DF",
+      "phone": "(61) 99888-7777",
+      "clinic": "Hospital Brasília",
+      "address_street": "SMHN Quadra 3",
+      "address_number": "Bloco A",
+      "city": "Brasília",
+      "state": "DF",
+      "zip_code": "70710-900"
+    },
+    {
+      "name": "Dr. Ricardo Almeida",
+      "specialty": "Psiquiatria",
+      "crm_number": "88990",
+      "crm_uf": "BA",
+      "phone": "(71) 98777-6666",
+      "clinic": "Instituto de Psiquiatria da Bahia",
+      "address_street": "Av. Tancredo Neves",
+      "address_number": "1500",
+      "city": "Salvador",
+      "state": "BA",
+      "zip_code": "41820-020"
+    }
+  ],
+  "treatments": [
+    {
+      "medicine_name": "Dipirona",
+      "dosage": "500mg",
+      "form": "Comprimido",
+      "frequency": "8 em 8 horas",
+      "start_time": "08:00",
+      "start_date": "2026-10-03",
+      "end_date": "2026-11-03",
+      "notes": "Tomar após refeições"
+    },
+    {
+      "medicine_name": "Losartana",
+      "dosage": "50mg",
+      "form": "Comprimido",
+      "frequency": "1 vez ao dia",
+      "start_time": "07:00",
+      "start_date": "2026-09-01",
+      "end_date": "2027-03-01",
+      "notes": "Para hipertensão, sempre pela manhã"
+    },
+    {
+      "medicine_name": "Omeprazol",
+      "dosage": "20mg",
+      "form": "Cápsula",
+      "frequency": "1 vez ao dia",
+      "start_time": "08:00",
+      "start_date": "2026-10-01",
+      "end_date": "2026-11-30",
+      "notes": "30 minutos antes do café"
+    },
+    {
+      "medicine_name": "Metformina",
+      "dosage": "850mg",
+      "form": "Comprimido",
+      "frequency": "2 vezes ao dia",
+      "start_time": "08:00",
+      "start_date": "2026-08-15",
+      "end_date": "2027-02-15",
+      "notes": "Junto com as refeições principais"
+    },
+    {
+      "medicine_name": "Prednisona",
+      "dosage": "20mg",
+      "form": "Comprimido",
+      "frequency": "1 vez ao dia",
+      "start_time": "08:00",
+      "start_date": "2026-10-03",
+      "end_date": "2026-10-10",
+      "notes": "Corticóide, tomar exatamente como prescrito"
+    },
+    {
+      "medicine_name": "Insulina NPH",
+      "dosage": "20 unidades",
+      "form": "Injetável",
+      "frequency": "2 vezes ao dia",
+      "start_time": "07:00 e 19:00",
+      "start_date": "2026-06-01",
+      "end_date": "2027-06-01",
+      "notes": "Aplicar no abdômen"
+    },
+    {
+      "medicine_name": "Ibuprofeno",
+      "dosage": "400mg",
+      "form": "Comprimido",
+      "frequency": "12 em 12 horas",
+      "start_time": "08:00",
+      "start_date": "2026-10-03",
+      "end_date": "2026-10-10",
+      "notes": "Somente em caso de dor"
+    }
+  ],
+  "consultations": [
+    {
+      "doctor_name": "Dra. Ana Paula Oliveira",
+      "date": "2026-10-10",
+      "time": "14:30",
+      "location": "Hospital Albert Einstein",
+      "notes": "Levar exames de sangue e eletrocardiograma",
+      "type": "Retorno"
+    },
+    {
+      "doctor_name": "Dr. Carlos Mendes",
+      "date": "2026-10-15",
+      "time": "10:00",
+      "location": "Clínica Ortopédica Rio",
+      "notes": "Avaliar joelho direito, trazer raio-x"
+    },
+    {
+      "doctor_name": "Dra. Beatriz Santos",
+      "date": "2026-10-05",
+      "time": "09:00",
+      "location": "Hospital das Clínicas UFMG",
+      "notes": "Check-up infantil, vacinas em dia",
+      "type": "Check-up"
+    },
+    {
+      "doctor_name": "Dr. João Silva Neto",
+      "date": "2026-10-20",
+      "time": "16:00",
+      "location": "Clínica de Dermatologia Porto Alegre",
+      "notes": "Avaliar lesão na pele"
+    },
+    {
+      "doctor_name": "Dra. Fernanda Costa",
+      "date": "2026-10-12",
+      "time": "13:30",
+      "location": "Hospital Brasília",
+      "notes": "Ultrassom morfológico",
+      "type": "Exame"
+    }
+  ]
+}

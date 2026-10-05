@@ -17,7 +17,7 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._();
 
   static const String _databaseName = 'remedios_app.db';
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 6;
 
   Database? _db;
   bool _isInitialized = false;
@@ -217,6 +217,39 @@ class DatabaseService {
         updated_at TEXT NOT NULL
       )
     ''');
+
+    // 6. User Profile table (linha única: perfil do usuário)
+    await db.execute('''
+      CREATE TABLE user_profile (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        nome TEXT NOT NULL DEFAULT '',
+        cpf TEXT,
+        data_nascimento TEXT,
+        foto_path TEXT,
+        tipo_sanguineo TEXT,
+        alergias TEXT NOT NULL DEFAULT '[]',
+        condicoes_cronicas TEXT NOT NULL DEFAULT '[]',
+        peso REAL,
+        altura REAL,
+        telefone TEXT,
+        observacoes TEXT,
+        consent_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // 7. Emergency Contacts table (N contatos)
+    await db.execute('''
+      CREATE TABLE emergency_contacts (
+        id TEXT PRIMARY KEY,
+        nome TEXT NOT NULL,
+        parentesco TEXT NOT NULL DEFAULT '',
+        telefone TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _onConfigure(Database db) async {
@@ -249,6 +282,44 @@ class DatabaseService {
           updated_at TEXT NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 4) {
+      // Version 4: Create user_profile and emergency_contacts tables
+      await db.execute('''
+        CREATE TABLE user_profile (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          nome TEXT NOT NULL DEFAULT '',
+          data_nascimento TEXT,
+          foto_path TEXT,
+          tipo_sanguineo TEXT,
+          alergias TEXT NOT NULL DEFAULT '[]',
+          condicoes_cronicas TEXT NOT NULL DEFAULT '[]',
+          peso REAL,
+          altura REAL,
+          telefone TEXT,
+          observacoes TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+      await db.execute('''
+        CREATE TABLE emergency_contacts (
+          id TEXT PRIMARY KEY,
+          nome TEXT NOT NULL,
+          parentesco TEXT NOT NULL DEFAULT '',
+          telefone TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 5) {
+      // Version 5: Add CPF column to user_profile
+      await db.execute('ALTER TABLE user_profile ADD COLUMN cpf TEXT');
+    }
+    if (oldVersion < 6) {
+      // Version 6: Add consent_at column (LGPD consent timestamp)
+      await db.execute('ALTER TABLE user_profile ADD COLUMN consent_at TEXT');
     }
   }
 
