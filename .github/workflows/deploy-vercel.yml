@@ -66,9 +66,18 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          curl -s -o /dev/null -w "GET /api/read-card -> %{http_code}\n" \
-            --max-time 30 https://remedios-app-flutter.vercel.app/api/read-card || true
+          echo "--- sondas de runtime (200 = launcher OK, 500 = runtime/config) ---"
+          for p in /api/ping /api/read-card; do
+            curl -s -o /dev/null -w "$p -> %{http_code}\n" \
+              --max-time 30 "https://remedios-app-flutter.vercel.app$p" || true
+          done
           echo "--- logs do deployment ---"
-          timeout 90 npx vercel@latest logs https://remedios-app-flutter.vercel.app \
-            --token="$VERCEL_TOKEN" --limit=20 2>&1 \
-            || echo "(vercel logs indisponível neste run)"
+          # Os logs chegam com atraso: na primeira tentativa, buscar 2s após o
+          # curl retornou "No logs found" mesmo com a função já respondendo 500.
+          for attempt in 1 2 3; do
+            sleep 20
+            echo "tentativa $attempt:"
+            timeout 60 npx vercel@latest logs https://remedios-app-flutter.vercel.app \
+              --token="$VERCEL_TOKEN" --limit=20 2>&1
+            sleep 5
+          done
