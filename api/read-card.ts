@@ -20,7 +20,8 @@
 import { createWorker, type Worker } from 'tesseract.js';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { parseCardText } from './parse-card.ts';
 
@@ -68,12 +69,35 @@ function jsonResponse(status: number, body: unknown): Response {
  */
 let workerPromise: Promise<Worker> | null = null;
 
+const TRAINEDDATA_FILE = 'por.traineddata';
+
+/**
+ * Onde o traineddata termina depois do `includeFiles` depende de como o
+ * builder da Vercel empacota a função: o arquivo é copiado preservando o
+ * caminho relativo ao repo, mas o ponto de entrada compilado pode ficar na
+ * raiz da função em vez de `api/`. Localmente apenas `./langdata/` resolve —
+ * é exatamente por isso que um caminho único fixo passaria no teste local e
+ * cairia no CDN em produção. Aqui testamos os candidatos e usamos o que existe.
+ */
+function resolveLocalLangPath(): string | undefined {
+  const candidates = [
+    fileURLToPath(new URL('./langdata/', import.meta.url)),
+    fileURLToPath(new URL('../api/langdata/', import.meta.url)),
+    join(process.cwd(), 'api', 'langdata'),
+  ];
+  for (const dir of candidates) {
+    if (existsSync(join(dir, TRAINEDDATA_FILE))) return dir;
+  }
+  return undefined;
+}
+
 function getWorker(): Promise<Worker> {
   if (!workerPromise) {
-    // O traineddata vem no repositório (2,3 MB). Se o pacote não tiver sido
-    // incluído no bundle, cai no CDN oficial do projeto Tesseract.
-    const localLangPath = fileURLToPath(new URL('./langdata/', import.meta.url));
-    const cachePath = `${tmpdir()}/tesseract-cache`;
+    // O traineddata vem no repositório (2,3 MB). Se não estiver no bundle,
+    // cai no CDN oficial do projeto Tesseract.
+    const localLangPath = resolveLocalLangPath();
+    // /tmp é o único diretório gravável no runtime de função da Vercel.
+    const cachePath = join(tmpdir(), 'tesseract-cache');
     mkdirSync(cachePath, { recursive: true });
     const attempt = (langPath?: string) =>
       createWorker('por', 1, {
@@ -83,7 +107,15 @@ function getWorker(): Promise<Worker> {
         // quando gzip=true (o padrão), e esse .gz não existe. No CDN ele existe.
         gzip: langPath ? false : true,
       });
-    workerPromise = attempt(localLangPath).catch(() => attempt(undefined));
+    const pending = localLangPath
+      ? attempt(localLangPath).catch(() => attempt(undefined))
+      : attempt(undefined);
+    workerPromise = pending;
+    // Sem este reset uma falha transitória deixaria a promise rejeitada presa
+    // em workerPromise, e a instância aquecida nunca mais tentaria de novo.
+    pending.catch(() => {
+      if (workerPromise === pending) workerPromise = null;
+    });
   }
   return workerPromise;
 }
