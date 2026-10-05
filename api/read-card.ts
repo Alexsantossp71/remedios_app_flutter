@@ -3,7 +3,8 @@
  *
  * Não existe mais chamada a API de visão nem chave de API: a imagem é
  * processada dentro da função e o texto extraído é interpretado por regex
- * determinísticas (`parse-card.ts`). Isso remove a dependência de terceiros,
+ * determinísticas (`server/parse-card.ts`). Isso remove a dependência de
+ * terceiros,
  * elimina a alucinação de dados (OCR não inventa texto que não está nos
  * pixels) e derruba o custo por leitura para zero.
  *
@@ -22,7 +23,7 @@ import { tmpdir } from 'node:os';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { parseCardText } from './parse-card.ts';
+import { parseCardText } from '../server/parse-card.ts';
 
 // Tesseract precisa de Node (usa fs e WASM), não roda no runtime Edge.
 export const config = { runtime: 'nodejs' };

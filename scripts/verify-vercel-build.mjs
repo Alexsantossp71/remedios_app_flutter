@@ -1,73 +1,101 @@
 /**
- * Carrega o artefato da função exatamente como a Vercel o empacotou e falha
- * se ele não carregar.
+ * Verifica o artefato que a Vercel empacotou, do jeito que a Lambda executa.
  *
  * Por que isto existe: `vercel build` e `vercel deploy` terminam com
  * "sucesso" mesmo quando a função está quebrada — o deploy só publica os
  * arquivos. O breakage só aparece em runtime, como 500
- * FUNCTION_INVOCATION_FAILED sem nenhuma mensagem útil no corpo da
- * resposta. Como o token da Vercel só existe no CI, este passo roda lá:
- * tenta require() no launcher gerado e imprime o erro de verdade, com
- * stack, no log do run.
+ * FUNCTION_INVOCATION_FAILED, cujo corpo é só "A server error has
+ * occurred", sem causa. Como o token da Vercel só existe no CI, este passo
+ * roda lá e imprime o erro de verdade, com stack.
  *
- * Sem ele, cada hipótese sobre a causa do 500 custa um deploy completo.
+ * Dois detalhes que make-or-break, e que já custaram um deploy cada:
+ *
+ * 1. O require() roda de uma CÓPIA fora do repositório. Se rodasse de dentro
+ *    dele, qualquer dependência ausente em .func/node_modules resolveria
+ *    silenciosamente no node_modules do repo, um diretório acima — e o teste
+ *    passaria enquanto a Lambda, que só tem o artefato, quebraria.
+ *
+ * 2. Não basta carregar: o handler é INVOCADO com um GET. Um módulo que
+ *    carrega e explode na primeira chamada é exatamente o 500 que estamos
+ *    caçando, e só a invocação mostra isso.
  */
 
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, existsSync, cpSync, mkdtempSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
 const FUNCS_DIR = '.vercel/output/functions';
+const sandboxes = [];
+
+function sandboxFor(name) {
+  const dir = mkdtempSync(join(tmpdir(), 'vfn-'));
+  sandboxes.push(dir);
+  cpSync(name, dir, { recursive: true });
+  return dir;
+}
 
 function findFuncDirs(dir) {
   const found = [];
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch (err) {
-    console.error(`ERRO: não consegui ler ${dir}: ${err.message}`);
-    process.exit(1);
-  }
-  for (const entry of entries) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
     const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name.endsWith('.func')) {
-        found.push(full);
-      } else {
-        found.push(...findFuncDirs(full));
-      }
-    }
+    if (entry.name.endsWith('.func')) found.push(full);
+    else found.push(...findFuncDirs(full));
   }
   return found;
 }
 
-/** Procura o launcher em qualquer subpasta (o .func preserva api/, lib/...). */
-function findIndexJs(dir, depth = 0) {
-  if (depth > 3) return null;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isFile()) continue;
-    if (entry.name === 'index.js' || entry.name === 'index.cjs') {
-      return join(dir, entry.name);
-    }
+function readJson(file) {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch {
+    return {};
   }
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory() && entry.name !== 'node_modules') {
-      const hit = findIndexJs(join(dir, entry.name), depth + 1);
-      if (hit) return hit;
-    }
-  }
-  return null;
 }
 
-function runtimeOf(funcDir) {
-  const p = join(funcDir, '.vc-config.json');
-  if (!existsSync(p)) return '(desconhecido)';
-  try {
-    return JSON.parse(readFileSync(p, 'utf8')).runtime ?? '(sem runtime)';
-  } catch {
-    return '(ilegível)';
+/**
+ * Tenta alcançar o handler real da Vercel. O bundle da função é um
+ * esbuild "universal" que entrelaça o código da aplicação com um
+ * `module.exports` sintético; o launcher que a Lambda executa é outro
+ * arquivo, gerado pelo @vercel/node, e é ele que recebe a requisição.
+ * Export `.default` sozinho não é o bastante para exercitar o caminho real.
+ */
+async function resolveHandler(requireFrom, entryDir, entryFile) {
+  const candidates = [];
+  const declared = readJson(join(entryDir, 'package.json')).main;
+  if (declared) candidates.push(join(entryDir, declared));
+  candidates.push(entryFile);
+
+  for (const entry of readdirSync(entryDir, { withFileTypes: true })) {
+    if (entry.isDirectory() && entry.name !== 'node_modules') {
+      candidates.push(join(entryDir, entry.name, '___vc_launcher.cjs'));
+      candidates.push(join(entryDir, entry.name, 'launcher.cjs'));
+    }
   }
+
+  const tried = [];
+  for (const candidate of candidates) {
+    if (!existsSync(candidate)) {
+      tried.push(`${candidate} (inexistente)`);
+      continue;
+    }
+    try {
+      const mod = requireFrom(candidate);
+      const fn =
+        typeof mod?.handler === 'function'
+          ? mod.handler
+          : typeof mod?.default === 'function'
+            ? mod.default
+            : null;
+      if (fn) return { fn, via: candidate };
+      tried.push(`${candidate} (carregou, mas sem handler)`);
+    } catch (err) {
+      tried.push(`${candidate} (${err.code ?? err.name}: ${err.message})`);
+    }
+  }
+  return { fn: null, tried };
 }
 
 if (!existsSync(FUNCS_DIR)) {
@@ -76,88 +104,89 @@ if (!existsSync(FUNCS_DIR)) {
 }
 
 const funcDirs = findFuncDirs(FUNCS_DIR);
-
 if (funcDirs.length === 0) {
   console.error(`ERRO: nenhuma pasta *.func em ${FUNCS_DIR}.`);
   process.exit(1);
 }
 
 console.log(`Funções empacotadas: ${funcDirs.length}`);
-for (const dir of funcDirs) console.log(`  ${dir}`);
 
 let failures = 0;
 
 for (const funcDir of funcDirs) {
-  const name = funcDir.split(/[\\/]/).slice(-2).join('/');
-  const pkgPath = join(funcDir, 'package.json');
+  const name = funcDir.split(/[\\/]/).slice(-2, -1)[0];
+  const vc = readJson(join(funcDir, '.vc-config.json'));
+  const handlerRel = vc.handler ?? null;
+  const entryFile = handlerRel ? resolve(funcDir, handlerRel) : null;
 
-  let pkg = {};
-  if (existsSync(pkgPath)) {
-    try {
-      pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-    } catch (err) {
-      console.error(`\n[${name}] package.json ilegível: ${err.message}`);
-      failures += 1;
-      continue;
-    }
-  }
+  console.log(`\n[${name}] runtime=${vc.runtime ?? '?'} handler=${handlerRel ?? '?'}`);
 
-  // O launcher não fica na raiz da pasta .func: o .vc-config.json diz onde
-  // está. Confiar em package.json.main erra, porque ele aponta para
-  // "index.js" enquanto o arquivo real vive em api/index.js.
-  const vcConfigPath = join(funcDir, '.vc-config.json');
-  let handler = null;
-  if (existsSync(vcConfigPath)) {
-    try {
-      handler = JSON.parse(readFileSync(vcConfigPath, 'utf8')).handler ?? null;
-    } catch {
-      /* segue com a busca recursiva */
-    }
-  }
-  const entryPath = handler
-    ? resolve(funcDir, handler)
-    : findIndexJs(funcDir);
-
-  console.log(`\n[${name}] type=${pkg.type ?? '(cjs)'} runtime=${runtimeOf(funcDir)} handler=${handler ?? '(desconhecido)'}`);
-
-  if (!entryPath || !existsSync(entryPath)) {
-    console.error(`[${name}] ENTRADA AUSENTE (handler=${handler ?? '?'})`);
+  if (!entryFile || !existsSync(entryFile)) {
+    console.error(`[${name}] ENTRADA AUSENTE — nada para carregar.`);
     failures += 1;
     continue;
   }
 
+  // Isolamento: cópia fora do repositório, para que deps ausentes no
+  // artefato não resolvam no node_modules do repo.
+  const isolated = sandboxFor(funcDir);
+  const isolatedEntry = join(isolated, handlerRel);
+  const requireFrom = createRequire(pathToFileURL(isolatedEntry));
+
+  let mod;
   try {
-    const require = createRequire(import.meta.url);
-    if (pkg.type === 'module') {
-      const mod = await import(pathToFileURL(entryPath).href);
-      console.log(`[${name}] OK (ESM) — exports: ${Object.keys(mod).join(', ') || '(nenhum)'}`);
-    } else {
-      const mod = require(entryPath);
-      const keys = Object.keys(mod);
-      const hasHandler =
-        typeof mod.default === 'function' ||
-        typeof mod.handler === 'function' ||
-        keys.length > 0;
-      console.log(`[${name}] OK (CJS) — exports: ${keys.join(', ') || '(nenhum)'}`);
-      if (!hasHandler) {
-        console.error(`[${name}] carregou sem nenhum handler exportado.`);
-        failures += 1;
-      }
+    mod = requireFrom(isolatedEntry);
+    console.log(`[${name}] carregou isolado sem vazar deps do repo`);
+  } catch (err) {
+    failures += 1;
+    console.error(`\n[${name}] *** FALHOU AO CARREGAR (isolado) ***`);
+    console.error(`[${name}] ${err.name}: ${err.message}`);
+    if (err.code) console.error(`[${name}] code: ${err.code}`);
+    if (err.stack) {
+      console.error(`[${name}] stack:\n${String(err.stack).split('\n').slice(0, 20).join('\n')}`);
+    }
+    continue;
+  }
+
+  console.log(`[${name}] exports: ${Object.keys(mod).join(', ') || '(nenhum)'}`);
+
+  const { fn, tried, via } = await resolveHandler(requireFrom, isolated, isolatedEntry);
+  if (!fn) {
+    failures += 1;
+    console.error(`[${name}] nenhum handler alcançável:`);
+    for (const t of tried) console.error(`[${name}]   ${t}`);
+    continue;
+  }
+  console.log(`[${name}] handler resolvido via ${via.replace(isolated, '<func>')}`);
+
+  // Um GET tem de responder 405 sem encostar no Tesseract: se explode aqui,
+  // o 500 é de invocação, não de OCR.
+  try {
+    const res = await fn(
+      new Request('https://exemplo.test/api/read-card', { method: 'GET' }),
+    );
+    const body = await res.text();
+    console.log(`[${name}] GET -> ${res.status} ${body.slice(0, 120)}`);
+    if (res.status !== 405) {
+      failures += 1;
+      console.error(`[${name}] GET deveria dar 405, deu ${res.status}.`);
     }
   } catch (err) {
     failures += 1;
-    console.error(`\n[${name}] *** FALHOU AO CARREGAR ***`);
-    console.error(`[${name}] ${err && err.name}: ${err && err.message}`);
-    if (err && err.code) console.error(`[${name}] code: ${err.code}`);
-    if (err && err.stack) {
-      console.error(`[${name}] stack:\n${String(err.stack).split('\n').slice(0, 18).join('\n')}`);
+    console.error(`\n[${name}] *** GET EXPLODIU NA INVOCAÇÃO ***`);
+    console.error(`[${name}] ${err.name}: ${err.message}`);
+    if (err.code) console.error(`[${name}] code: ${err.code}`);
+    if (err.stack) {
+      console.error(`[${name}] stack:\n${String(err.stack).split('\n').slice(0, 20).join('\n')}`);
     }
   }
 }
 
+for (const dir of sandboxes) rmSync(dir, { recursive: true, force: true });
+
 if (failures > 0) {
-  console.error(`\n${failures} função(ões) não carregam — não publicando esse build.`);
+  console.error(`\n${failures} verificação(ões) falharam — não publicando este build.`);
   process.exit(1);
 }
 
-console.log('\nTodas as funções carregam.');
+console.log('\nTodas as funções carregam isoladas e respondem.');

@@ -62,7 +62,7 @@ flutter build web --release
 
 A foto do cartão é enviada à função serverless `api/read-card.ts`, que faz o
 reconhecimento de texto com **Tesseract.js** dentro do próprio servidor e
-interpreta o resultado com regras determinísticas (`api/parse-card.ts`).
+interpreta o resultado com regras determinísticas (`server/parse-card.ts`).
 **Não existe chave de API**: o modelo de português
 (`api/langdata/por.traineddata`) fica no repositório e a imagem não é
 repassada a nenhum terceiro.

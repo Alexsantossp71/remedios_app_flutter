@@ -2,7 +2,7 @@
   "name": "remedios-app-flutter",
   "private": true,
   "scripts": {
-    "test:api": "node --test \"api/**/*.test.ts\"",
+    "test:api": "node --test \"server/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "verify:api": "esbuild api/read-card.ts --bundle --platform=node --target=node20 --format=cjs --outfile=node_modules/.cache/read-card.cjs && node -e \"require('./node_modules/.cache/read-card.cjs')\"",
     "verify:build": "node scripts/verify-vercel-build.mjs"
