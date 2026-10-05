@@ -1,7 +1,6 @@
 {
   "name": "remedios-app-flutter",
   "private": true,
-  "type": "module",
   "scripts": {
     "test:api": "node --test \"api/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
