@@ -7,7 +7,7 @@
       "includeFiles": "api/langdata/*.traineddata"
     }
   },
-  "redirects": [
+  "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/index.html"
