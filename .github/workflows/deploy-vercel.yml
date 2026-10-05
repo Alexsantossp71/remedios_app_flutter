@@ -54,3 +54,21 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx vercel@latest deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"
+
+      # Diagnóstico. O gate carrega o artefato e o handler responde 405,
+      # mas a Lambda em produção devolve 500: oLauncher que a Vercel
+      # executa NÃO está no artefato (awsLambdaHandler vazio), então o
+      # caminho real da requisição não é o testado. Sem o erro de
+      # runtime, cada hipótese custa um deploy inteiro.
+      - name: Logs de runtime da função
+        if: always()
+        continue-on-error: true
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          curl -s -o /dev/null -w "GET /api/read-card -> %{http_code}\n" \
+            --max-time 30 https://remedios-app-flutter.vercel.app/api/read-card || true
+          echo "--- logs do deployment ---"
+          timeout 90 npx vercel@latest logs https://remedios-app-flutter.vercel.app \
+            --token="$VERCEL_TOKEN" --limit=20 2>&1 \
+            || echo "(vercel logs indisponível neste run)"
