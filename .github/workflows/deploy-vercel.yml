@@ -40,23 +40,24 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx vercel@latest build --prod --yes --token="$VERCEL_TOKEN"
 
-      # O tracer da Vercel empacota o que o bundle IMPORTA: do
-      # tesseract.js-core ele leva o loader .js e descarta o .wasm, que
-      # ninguém importa — é lido por fetch quando o worker é criado. O
-      # resultado em produção era o loader de 89 KB sem nenhum binário ao
-      # lado, e o primeiro POST morria com ENOENT no tesseract-core-*.wasm,
-      # surfando como 502 "unreadable".
+      # Nem o .wasm nem o .traineddata são rastreados pela Vercel: nenhum dos
+      # dois é importado por alguém, e nenhum dos dois quebra o build — eles só
+      # faltam em produção, quando o worker é criado.
       #
-      # includeFiles não resolve: "node_modules/tesseract.js-core/*.wasm" é
-      # aceito no vercel.json sem erro e não casa com nada, porque os arquivos
-      # de dependência estão fora do alcance dele — o gate confirmou isso
-      # reportando "tesseract.js-core: 0 .wasm" com o glob no lugar.
+      #   failed to asynchronously prepare wasm: ENOENT .../tesseract-core-*.wasm
+      #   RuntimeError: Aborted(...)  ->  502 "unreadable"
+      #
+      # includeFiles não resolve: o vercel.json é aceito sem erro, o build
+      # passa, e os arquivos simplesmente não estão no artefato. O gate
+      # confirmou um por um — "tesseract.js-core: 0 .wasm" com o glob no
+      # lugar, e "por.traineddata AUSENTE" com o padrão do modelo. A chave foi
+      # removida do vercel.json para parar de sugerir que ela entrega algo.
       #
       # Como o deploy é --prebuilt, o artefato publicado é exatamente o que
       # está em .vercel/output/functions. A cópia é feita ali, logo após o
       # build, e antes do gate: assim o gate valida os bytes que vão subir.
-      - name: Injetar o WASM do Tesseract no bundle
-        run: npm run inject:wasm
+      - name: Injetar os assets do OCR no bundle
+        run: npm run inject:ocr-assets
 
       # `vercel build` emite o handler em ESM (o arquivo sai com
       # `import ... from`), mas a Lambda carrega /var/task/*.js como CommonJS.
