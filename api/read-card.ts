@@ -18,7 +18,6 @@
  */
 
 import { createWorker, type Worker } from 'tesseract.js';
-import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -72,18 +71,20 @@ let workerPromise: Promise<Worker> | null = null;
 const TRAINEDDATA_FILE = 'por.traineddata';
 
 /**
- * Onde o traineddata termina depois do `includeFiles` depende de como o
- * builder da Vercel empacota a função: o arquivo é copiado preservando o
- * caminho relativo ao repo, mas o ponto de entrada compilado pode ficar na
- * raiz da função em vez de `api/`. Localmente apenas `./langdata/` resolve —
- * é exatamente por isso que um caminho único fixo passaria no teste local e
- * cairia no CDN em produção. Aqui testamos os candidatos e usamos o que existe.
+ * Onde o traineddata fica depende de como a função foi empacotada: no repo é
+ * `api/langdata/`, mas o `includeFiles` da Vercel copia preservando o caminho
+ * relativo enquanto o ponto de entrada pode mudar de lugar. Por isso testamos
+ * candidatos em vez de assumir um só — um caminho fixo passaria no teste local
+ * e cairia no CDN só em produção.
+ *
+ * Só `process.cwd()`: `import.meta.url` é erro de sintaxe quando o builder
+ * emite CommonJS, e derrubaria o módulo inteiro no load.
  */
 function resolveLocalLangPath(): string | undefined {
   const candidates = [
-    fileURLToPath(new URL('./langdata/', import.meta.url)),
-    fileURLToPath(new URL('../api/langdata/', import.meta.url)),
     join(process.cwd(), 'api', 'langdata'),
+    join(process.cwd(), 'langdata'),
+    join(process.cwd(), '..', 'api', 'langdata'),
   ];
   for (const dir of candidates) {
     if (existsSync(join(dir, TRAINEDDATA_FILE))) return dir;
@@ -137,6 +138,10 @@ async function recognizeText(imageBase64: string): Promise<string> {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 export default async function handler(request: Request): Promise<Response> {
   if (request.method !== 'POST') {
     return jsonResponse(405, { error: 'method_not_allowed' });
@@ -147,10 +152,13 @@ export default async function handler(request: Request): Promise<Response> {
     'unknown';
   if (isRateLimited(ip)) return jsonResponse(429, { error: 'rate_limited' });
 
-  let payload: { image?: unknown; mimeType?: unknown };
+  let payload: unknown;
   try {
     payload = await request.json();
   } catch {
+    return jsonResponse(400, { error: 'invalid_request' });
+  }
+  if (!isRecord(payload)) {
     return jsonResponse(400, { error: 'invalid_request' });
   }
 

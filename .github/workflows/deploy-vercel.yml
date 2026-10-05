@@ -26,6 +26,13 @@ jobs:
       # As chaves de IA (NVIDIA_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY)
       # NÃO entram no build do cliente: vivem só como env vars do projeto na
       # Vercel e são usadas pela função serverless em api/read-card.ts.
+
+      # O build da Vercel NÃO falha em erro de tipo — ele transpila mesmo
+      # assim. Sem este gate, uma função com módulo quebrado era implantada
+      # com "sucesso" e só quebrava em runtime, como 500 FUNCTION_INVOCATION_FAILED.
+      - name: Install and typecheck API
+        run: npm ci && npm run typecheck
+
       - name: Build and deploy with Vercel (web + funções)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

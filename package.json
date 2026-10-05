@@ -3,9 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:api": "node --test \"api/**/*.test.ts\""
+    "test:api": "node --test \"api/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "verify:api": "esbuild api/read-card.ts --bundle --platform=node --target=node20 --format=cjs --outfile=node_modules/.cache/read-card.cjs && node -e \"require('./node_modules/.cache/read-card.cjs')\""
   },
   "dependencies": {
     "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
   }
 }
