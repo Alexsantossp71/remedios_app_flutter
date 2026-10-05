@@ -4,10 +4,7 @@
   "outputDirectory": "build/web",
   "functions": {
     "api/read-card.ts": {
-      "includeFiles": [
-        "api/langdata/*.traineddata",
-        "node_modules/tesseract.js-core/*.wasm"
-      ]
+      "includeFiles": "{api/langdata/*.traineddata,node_modules/tesseract.js-core/*.wasm}"
     }
   },
   "rewrites": [
