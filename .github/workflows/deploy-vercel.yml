@@ -69,7 +69,12 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: npx vercel@latest deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN"
+        run: |
+          npx vercel@latest deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN" 2>&1 | tee deploy-out.txt
+          # O hostname único é o que identifica ESTE deployment nos logs. O alias
+          # serve à requests de Instances antigas e não carrega os logs daqui.
+          grep -oE 'https://[a-z0-9-]+\.vercel\.app' deploy-out.txt | tail -1 > deployment-url.txt
+          echo "deployment: $(cat deployment-url.txt)"
 
       # Diagnóstico. O gate carrega o artefato e o handler responde 405,
       # mas a Lambda em produção devolve 500: oLauncher que a Vercel
@@ -82,18 +87,29 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
+          DEPLOY_URL=$(cat deployment-url.txt 2>/dev/null || true)
+          [ -n "$DEPLOY_URL" ] || DEPLOY_URL="https://remedios-app-flutter.vercel.app"
+          echo "deployment sob teste: $DEPLOY_URL"
           echo "--- sondas de runtime (200 = launcher OK, 500 = runtime/config) ---"
           for p in /api/ping /api/read-card; do
             curl -s -o /dev/null -w "$p -> %{http_code}\n" \
-              --max-time 30 "https://remedios-app-flutter.vercel.app$p" || true
+              --max-time 30 "$DEPLOY_URL$p" || true
           done
+          # Só GET não exercita o OCR: o caminho que quebra em produção é o
+          # POST, e sem ele nenhum log de erro é gerado para ser lido abaixo.
+          echo "--- POST real (caminho do OCR) ---"
+          PNG="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+          curl -s -w "\nPOST /api/read-card -> %{http_code} em %{time_total}s\n" \
+            --max-time 120 -X POST -H 'Content-Type: application/json' \
+            -d "{\"image\":\"$PNG\",\"mimeType\":\"image/png\"}" \
+            "$DEPLOY_URL/api/read-card" || true
           echo "--- logs do deployment ---"
           # Os logs chegam com atraso: na primeira tentativa, buscar 2s após o
           # curl retornou "No logs found" mesmo com a função já respondendo 500.
           for attempt in 1 2 3; do
             sleep 20
             echo "tentativa $attempt:"
-            timeout 60 npx vercel@latest logs https://remedios-app-flutter.vercel.app \
+            timeout 60 npx vercel@latest logs "$DEPLOY_URL" \
               --token="$VERCEL_TOKEN" --limit=20 2>&1
             sleep 5
           done

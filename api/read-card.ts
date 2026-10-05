@@ -228,7 +228,14 @@ export default async function handler(
   let rawText: string;
   try {
     rawText = await recognizeText(image);
-  } catch {
+  } catch (err) {
+    // Sem este log, "traineddata ausente", "WASM quebrado" e "timeout"
+    // chegam ao cliente como o mesmo 502 unreadable — indistinguíveis de fora,
+    // e cada hipótese custa um deploy inteiro.
+    console.error(
+      '[read-card] OCR falhou:',
+      err instanceof Error ? err.message : String(err),
+    );
     sendJson(res, 502, { error: 'unreadable' });
     return;
   }
