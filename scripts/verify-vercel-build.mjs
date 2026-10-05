@@ -117,7 +117,10 @@ function checkModuleFormat(name, entryFile) {
     console.error(`[${name}] o bundle usa sintaxe ESM, mas package.json declara "type": "${type}".`);
     console.error(`[${name}] A Lambda carrega /var/task/*.js como CommonJS e falha com:`);
     console.error(`[${name}]   SyntaxError: Cannot use import statement outside a module`);
-    console.error(`[${name}] Correção: "type": "module" no package.json.`);
+    console.error(`[${name}] Correção: rodar \`npm run package:cjs\` (reempacota o bundle como`);
+    console.error(`[${name}] CommonJS). NÃO usar "type": "module" no package.json: esse campo`);
+    console.error(`[${name}] vira o tipo de módulo do diretório inteiro da função em`);
+    console.error(`[${name}] /var/task e derruba o launcher da plataforma junto.`);
     return false;
   }
 
@@ -247,18 +250,65 @@ for (const funcDir of funcDirs) {
 
   // Um GET tem de responder 405 sem encostar no Tesseract: se explode aqui,
   // o 500 é de invocação, não de OCR.
+  //
+  // A invocação espelha o launcher Node: handler(req, res). Este era o furo
+  // que deixou três deploys irem a pé: o gate chamava com um `Request` de Web
+  // e lia o `Response` devolvido, então validava a assinatura do runtime Edge.
+  // O launcher Node passa (req, res) e espera `res.end()` — um handler
+  // assinado como Web function fica com a conexão aberta até o timeout
+  // (GET sem resposta nenhuma), que é o sintoma exato que a produção
+  // apresentava enquanto este gate ficava verde.
+  const makeRes = () => {
+    const state = { ended: false, status: null, body: null };
+    const res = {
+      status(code) {
+        state.status = code;
+        return res;
+      },
+      json(body) {
+        state.body = body;
+        state.ended = true;
+        return res;
+      },
+      end(body) {
+        if (body !== undefined) state.body = body;
+        state.ended = true;
+        return res;
+      },
+      setHeader() {
+        return res;
+      },
+      getHeader() {
+        return undefined;
+      },
+    };
+    return { res, state };
+  };
+
   try {
-    const res = await fn(
-      new Request('https://exemplo.test/api/read-card', { method: 'GET' }),
+    const { res, state } = makeRes();
+    await fn(
+      { method: 'GET', headers: {}, body: undefined, url: 'https://exemplo.test/api/x' },
+      res,
     );
-    const body = await res.text();
-    console.log(`[${name}] GET -> ${res.status} ${body.slice(0, 120)}`);
-    // O que importa aqui é INVOCAR sem explodir. 405 (read-card) e 200 (ping)
-    // estão ambos corretos; fixar um status transformava a sonda em mais um
-    // falso positivo. Só 5xx significa quebra de invocação.
-    if (res.status >= 500) {
+
+    const bodyText = state.body === undefined ? '' : JSON.stringify(state.body);
+    console.log(`[${name}] GET -> ${state.status} ${bodyText.slice(0, 120)}`);
+
+    if (!state.ended) {
       failures += 1;
-      console.error(`[${name}] GET respondeu ${res.status} — o handler está devolvendo erro.`);
+      console.error(`\n[${name}] *** O HANDLER NÃO RESPONDEU ***`);
+      console.error(`[${name}] A função foi chamada como (req, res) e nunca chamou`);
+      console.error(`[${name}] res.end()/res.json(). O launcher Node fica esperando uma`);
+      console.error(`[${name}] resposta que não chega: a requisição pendura até o timeout`);
+      console.error(`[${name}] e a Vercel devolve erro sem corpo. Assinatura (req, res) é`);
+      console.error(`[${name}] obrigatória para runtime Node; (Request) -> Response é Edge.`);
+      continue;
+    }
+
+    if (state.status !== null && state.status >= 500) {
+      failures += 1;
+      console.error(`[${name}] GET respondeu ${state.status} — o handler está devolvendo erro.`);
     }
   } catch (err) {
     failures += 1;

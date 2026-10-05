@@ -16,6 +16,12 @@
  *   413  { "error": "image_too_large" }
  *   429  { "error": "rate_limited" }
  *   502  { "error": "unreadable" }  (a imagem não pôde ser processada)
+ *
+ * Assinatura (req, res) e NÃO (Request) -> Response: o launcher Node da Vercel
+ * chama a função como Express e espera `res.end()`. Uma função que devolve um
+ * `Response` sem tocar em `res` deixa a requisição pendurar até o timeout — foi
+ * exatamente o sintoma de GET sem resposta. `req.headers` também é um objeto
+ * comum aqui, sem `.get()`.
  */
 
 import { createWorker, type Worker } from 'tesseract.js';
@@ -56,11 +62,43 @@ function registerHit(ip: string): void {
   if (entry && entry.day === today()) entry.count += 1;
 }
 
-function jsonResponse(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+interface NodeRequestLike {
+  method?: string;
+  headers?: Record<string, string | string[] | undefined>;
+  body?: unknown;
+}
+
+interface NodeResponseLike {
+  status(code: number): NodeResponseLike;
+  json(body: unknown): unknown;
+}
+
+function sendJson(
+  res: NodeResponseLike,
+  status: number,
+  body: unknown,
+): unknown {
+  return res.status(status).json(body);
+}
+
+function clientIp(req: NodeRequestLike): string {
+  const forwarded = req.headers?.['x-forwarded-for'];
+  const value = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  return value?.split(',')[0]?.trim() ?? 'unknown';
+}
+
+/**
+ * O launcher Node já entrega `body` desserializado quando o content-type é
+ * JSON, mas tratar string mantém o handler correto se o body chegar cru.
+ */
+function parseBody(req: NodeRequestLike): unknown {
+  const body = req.body;
+  if (typeof body !== 'string') return body;
+  try {
+    return JSON.parse(body);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -143,24 +181,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-export default async function handler(request: Request): Promise<Response> {
-  if (request.method !== 'POST') {
-    return jsonResponse(405, { error: 'method_not_allowed' });
+export default async function handler(
+  req: NodeRequestLike,
+  res: NodeResponseLike,
+): Promise<void> {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'method_not_allowed' });
+    return;
   }
 
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    'unknown';
-  if (isRateLimited(ip)) return jsonResponse(429, { error: 'rate_limited' });
-
-  let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return jsonResponse(400, { error: 'invalid_request' });
+  const ip = clientIp(req);
+  if (isRateLimited(ip)) {
+    sendJson(res, 429, { error: 'rate_limited' });
+    return;
   }
+
+  const payload = parseBody(req);
   if (!isRecord(payload)) {
-    return jsonResponse(400, { error: 'invalid_request' });
+    sendJson(res, 400, { error: 'invalid_request' });
+    return;
   }
 
   const image = payload.image;
@@ -171,10 +210,12 @@ export default async function handler(request: Request): Promise<Response> {
     typeof mimeType !== 'string' ||
     !ALLOWED_MIME.has(mimeType)
   ) {
-    return jsonResponse(400, { error: 'invalid_request' });
+    sendJson(res, 400, { error: 'invalid_request' });
+    return;
   }
   if (image.length > MAX_BASE64_LENGTH) {
-    return jsonResponse(413, { error: 'image_too_large' });
+    sendJson(res, 413, { error: 'image_too_large' });
+    return;
   }
 
   registerHit(ip);
@@ -183,13 +224,14 @@ export default async function handler(request: Request): Promise<Response> {
   try {
     rawText = await recognizeText(image);
   } catch {
-    return jsonResponse(502, { error: 'unreadable' });
+    sendJson(res, 502, { error: 'unreadable' });
+    return;
   }
 
   // Texto vazio (foto sem nada legível) não é erro: os campos vão vazios e o
   // cliente Dart já mostra "não encontrei dados, tente outra foto".
   const card = parseCardText(rawText);
-  return jsonResponse(200, {
+  sendJson(res, 200, {
     content: JSON.stringify(card),
     model: 'tesseract-ocr',
   });

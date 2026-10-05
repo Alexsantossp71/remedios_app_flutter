@@ -1,12 +1,15 @@
 // Sonda de runtime. Não importa nada e não tem dependência nenhuma:
-// se ESTA função responder 200 em produção, o launcher da Vercel funciona
-// e o 500 do read-card está no código/bundle dele. Se ela também der 500,
-// o problema é do runtime ou da configuração, não do OCR.
+// se ESTA função responder 200 em produção, o launcher da Vercel funciona.
+// Ela usa a assinatura (req, res) porque é assim que o launcher Node invoca a
+// função e espera `res.end()` — devolver um `Response` deixaria a requisição
+// pendurar até o timeout.
 export const config = { runtime: 'nodejs' };
 
-export default function handler(): Response {
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
-  });
+interface NodeResponseLike {
+  status(code: number): NodeResponseLike;
+  json(body: unknown): unknown;
+}
+
+export default function handler(_req: unknown, res: NodeResponseLike): void {
+  res.status(200).json({ ok: true });
 }
