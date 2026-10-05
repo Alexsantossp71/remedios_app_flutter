@@ -56,6 +56,40 @@ function readJson(file) {
 }
 
 /**
+ * Lista o conteúdo do artefato. Sem isto, um 500 em produção não tem
+ * explicação: o bundle carrega e o handler responde certo quando chamado
+ * direto, então a diferença está no launcher que a Vercel coloca entre a
+ * Lambda e o módulo. Só vendo os arquivos dá para saber qual é ele e como
+ * a Lambda o executa.
+ */
+function describeArtifact(funcDir, indent = '    ') {
+  const skip = new Set(['node_modules']);
+  const rows = [];
+  const walk = (dir, rel, depth) => {
+    if (depth > 3) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (skip.has(entry.name)) continue;
+      const full = join(dir, entry.name);
+      const r = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) walk(full, r, depth + 1);
+      else rows.push(`${r} (${readFileSync(full).length}b)`);
+    }
+  };
+  walk(funcDir, '', 0);
+  for (const row of rows.slice(0, 40)) console.log(`${indent}${row}`);
+  if (rows.length > 40) console.log(`${indent}... +${rows.length - 40} arquivos`);
+
+  const nm = join(funcDir, 'node_modules');
+  if (existsSync(nm)) {
+    const pkgs = readdirSync(nm, { withFileTypes: true })
+      .filter((e) => e.isDirectory() || e.isSymbolicLink())
+      .map((e) => (e.name.startsWith('@') ? readdirSync(join(nm, e.name)).map((s) => `${e.name}/${s}`) : [e.name]))
+      .flat();
+    console.log(`${indent}node_modules: ${pkgs.length} pacotes -> ${pkgs.slice(0, 25).join(', ')}`);
+  }
+}
+
+/**
  * Tenta alcançar o handler real da Vercel. O bundle da função é um
  * esbuild "universal" que entrelaça o código da aplicação com um
  * `module.exports` sintético; o launcher que a Lambda executa é outro
@@ -68,12 +102,22 @@ async function resolveHandler(requireFrom, entryDir, entryFile) {
   if (declared) candidates.push(join(entryDir, declared));
   candidates.push(entryFile);
 
-  for (const entry of readdirSync(entryDir, { withFileTypes: true })) {
-    if (entry.isDirectory() && entry.name !== 'node_modules') {
-      candidates.push(join(entryDir, entry.name, '___vc_launcher.cjs'));
-      candidates.push(join(entryDir, entry.name, 'launcher.cjs'));
+  // Descoberta em vez de chute: qualquer arquivo cujo nome sugira o
+  // launcher entra na lista, em qualquer nível. A Lambda executa esse
+  // arquivo, não o .default do bundle — se o teste chamar o .default
+  // direto, ele mede um caminho que produção não percorre.
+  const LAUNCHER = /(launcher|___vc|\.cjs$)/i;
+  const scan = (dir, rel, depth) => {
+    if (depth > 3) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules') continue;
+      const full = join(dir, entry.name);
+      const r = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) scan(full, r, depth + 1);
+      else if (LAUNCHER.test(entry.name)) candidates.push(full);
     }
-  }
+  };
+  scan(entryDir, '', 0);
 
   const tried = [];
   for (const candidate of candidates) {
@@ -120,6 +164,8 @@ for (const funcDir of funcDirs) {
   const entryFile = handlerRel ? resolve(funcDir, handlerRel) : null;
 
   console.log(`\n[${name}] runtime=${vc.runtime ?? '?'} handler=${handlerRel ?? '?'}`);
+  console.log(`  .vc-config.json: ${JSON.stringify(vc)}`);
+  describeArtifact(funcDir);
 
   if (!entryFile || !existsSync(entryFile)) {
     console.error(`[${name}] ENTRADA AUSENTE — nada para carregar.`);
