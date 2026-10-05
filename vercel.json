@@ -1,6 +1,12 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "flutter build web --release",
   "outputDirectory": "build/web",
+  "functions": {
+    "api/read-card.ts": {
+      "includeFiles": "api/langdata/*.traineddata"
+    }
+  },
   "redirects": [
     {
       "source": "/(.*)",

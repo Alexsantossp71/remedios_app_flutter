@@ -58,6 +58,24 @@ flutter build web --release
 
 ## 📖 Documentação
 
+### Leitura do cartão de plano de saúde (OCR)
+
+A foto do cartão é enviada à função serverless `api/read-card.ts`, que faz o
+reconhecimento de texto com **Tesseract.js** dentro do próprio servidor e
+interpreta o resultado com regras determinísticas (`api/parse-card.ts`).
+**Não existe chave de API**: o modelo de português
+(`api/langdata/por.traineddata`) fica no repositório e a imagem não é
+repassada a nenhum terceiro.
+
+Como o OCR apenas lê, ele não inventa: um campo que não aparece na imagem fica
+vazio e a tela de conferência pede o dado ao usuário. O envio da imagem exige
+o consentimento LGPD do usuário (art. 11) e internet; o cadastro manual
+funciona sem ambos.
+
+A função depende do runtime Node (`runtime: 'nodejs'`) e do pacote
+`tesseract.js`. Secrets do GitHub Actions para deploy: `VERCEL_TOKEN`,
+`VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (obtidos com `vercel link`).
+
 Para mais informações sobre Flutter, acesse:
 - [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
 - [Flutter Cookbook](https://docs.flutter.dev/cookbook)

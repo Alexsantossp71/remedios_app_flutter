@@ -1,0 +1,11 @@
+{
+  "name": "remedios-app-flutter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:api": "node --test \"api/**/*.test.ts\""
+  },
+  "dependencies": {
+    "tesseract.js": "^7.0.0"
+  }
+}
