@@ -16,7 +16,14 @@ import 'health_plan_review_screen.dart';
 
 /// Screen for managing health plans and medical insurance.
 class HealthPlansScreen extends StatelessWidget {
-  const HealthPlansScreen({super.key});
+  const HealthPlansScreen({super.key, this.cardReaderFactory});
+
+  /// Fábrica do serviço de leitura do cartão.
+  ///
+  /// Existe apenas para permitir injetar um cliente HTTP nos testes de widget;
+  /// sem isso, qualquer teste que chegue ao `_scanCard` dispararia uma chamada
+  /// real para o endpoint de produção.
+  final CardReaderService Function()? cardReaderFactory;
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +196,7 @@ class HealthPlansScreen extends StatelessWidget {
     CardReadResult? data;
     String? error;
     try {
-      data = await CardReaderService().readCard(
+      data = await (cardReaderFactory?.call() ?? CardReaderService()).readCard(
         imageBytes: bytes,
         mimeType: _mimeTypeOf(file),
       );
