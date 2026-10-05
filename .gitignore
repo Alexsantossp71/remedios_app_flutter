@@ -50,3 +50,26 @@ node_modules/
 # Secrets (API keys) - never commit
 .env
 *.env.local
+
+# Chromium baixado para rodar e2e (binarios + perfil) - nao versionar
+chrome-win32/
+chrome-data/
+
+# Saida de build do Playwright
+e2e/playwright-report/
+e2e/test-results/
+
+# Scratch de debug (nao versionar)
+_dump_hps.txt
+hp_screen.txt
+health_plans_screen_raw.txt
+health_plans_screen_full.txt
+read_file.py
+CHROMEDRIVER_SETUP.md
+CHROME_155_SETUP.md
+run_playwright_e2e.ps1
+run_e2e_tests.sh
+run_e2e_tests.ps1
+
+# Estado interno de agente
+.omo/
