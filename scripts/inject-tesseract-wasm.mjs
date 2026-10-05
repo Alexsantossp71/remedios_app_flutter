@@ -59,13 +59,24 @@ if (!existsSync(FUNCS_DIR)) {
   process.exit(1);
 }
 
+function findFuncDirs(dir) {
+  const found = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const full = join(dir, entry.name);
+    if (entry.name.endsWith('.func')) found.push(full);
+    else found.push(...findFuncDirs(full));
+  }
+  return found;
+}
+
 // Só as funções que realmente tracem o tesseract.js-core precisam do binário.
 // Descobrir pelo próprio artefato evita assumir o nome read-card.func e
-// funciona se a Vercel mudar o nome do diretório.
-const targets = readdirSync(FUNCS_DIR, { withFileTypes: true })
-  .filter((e) => e.isDirectory() && e.name.endsWith('.func'))
-  .map((e) => e.name)
-  .filter((name) => existsSync(join(FUNCS_DIR, name, 'node_modules', 'tesseract.js-core')));
+// funciona se a Vercel mudar o nome do diretório. A busca é recursiva porque as
+// pastas .func podem vir aninhadas (functions/api/read-card.func).
+const targets = findFuncDirs(FUNCS_DIR).filter((dir) =>
+  existsSync(join(dir, 'node_modules', 'tesseract.js-core')),
+);
 
 if (targets.length === 0) {
   failures += 1;
@@ -74,8 +85,9 @@ if (targets.length === 0) {
   process.exit(1);
 }
 
-for (const name of targets) {
-  const destDir = join(FUNCS_DIR, name, 'node_modules', 'tesseract.js-core');
+for (const funcDir of targets) {
+  const name = funcDir.split(/[\\/]/).pop();
+  const destDir = join(funcDir, 'node_modules', 'tesseract.js-core');
   mkdirSync(destDir, { recursive: true });
 
   const copied = [];
