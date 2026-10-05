@@ -42,6 +42,34 @@ function findFuncDirs(dir) {
   return found;
 }
 
+/** Procura o launcher em qualquer subpasta (o .func preserva api/, lib/...). */
+function findIndexJs(dir, depth = 0) {
+  if (depth > 3) return null;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    if (entry.name === 'index.js' || entry.name === 'index.cjs') {
+      return join(dir, entry.name);
+    }
+  }
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory() && entry.name !== 'node_modules') {
+      const hit = findIndexJs(join(dir, entry.name), depth + 1);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
+function runtimeOf(funcDir) {
+  const p = join(funcDir, '.vc-config.json');
+  if (!existsSync(p)) return '(desconhecido)';
+  try {
+    return JSON.parse(readFileSync(p, 'utf8')).runtime ?? '(sem runtime)';
+  } catch {
+    return '(ilegível)';
+  }
+}
+
 if (!existsSync(FUNCS_DIR)) {
   console.error(`ERRO: ${FUNCS_DIR} não existe — o vercel build não gerou funções.`);
   process.exit(1);
@@ -74,15 +102,26 @@ for (const funcDir of funcDirs) {
     }
   }
 
-  const entryName = pkg.main ?? 'index.js';
-  const entryPath = resolve(funcDir, entryName);
+  // O launcher não fica na raiz da pasta .func: o .vc-config.json diz onde
+  // está. Confiar em package.json.main erra, porque ele aponta para
+  // "index.js" enquanto o arquivo real vive em api/index.js.
+  const vcConfigPath = join(funcDir, '.vc-config.json');
+  let handler = null;
+  if (existsSync(vcConfigPath)) {
+    try {
+      handler = JSON.parse(readFileSync(vcConfigPath, 'utf8')).handler ?? null;
+    } catch {
+      /* segue com a busca recursiva */
+    }
+  }
+  const entryPath = handler
+    ? resolve(funcDir, handler)
+    : findIndexJs(funcDir);
 
-  console.log(`\n[${name}] type=${pkg.type ?? '(cjs)'} main=${entryName}`);
+  console.log(`\n[${name}] type=${pkg.type ?? '(cjs)'} runtime=${runtimeOf(funcDir)} handler=${handler ?? '(desconhecido)'}`);
 
-  if (!existsSync(entryPath)) {
-    console.error(`[${name}] ENTRADA AUSENTE: ${entryPath}`);
-    const listing = readdirSync(funcDir).slice(0, 20);
-    console.error(`[${name}] conteúdo: ${listing.join(', ')}`);
+  if (!entryPath || !existsSync(entryPath)) {
+    console.error(`[${name}] ENTRADA AUSENTE (handler=${handler ?? '?'})`);
     failures += 1;
     continue;
   }
