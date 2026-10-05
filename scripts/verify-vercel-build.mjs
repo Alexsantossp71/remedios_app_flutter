@@ -90,6 +90,44 @@ function describeArtifact(funcDir, indent = '    ') {
 }
 
 /**
+ * O bug que a Lambda mostrou e que o require() do CI não mostra.
+ *
+ * O builder da Vercel emite ESM — o bundle sai com `import ... from` — mas a
+ * Lambda carrega /var/task/*.js conforme o package.json do projeto. Sem
+ * "type": "module", o Node trata .js como CommonJS e morre ANTES do handler
+ * rodar:
+ *
+ *   /var/task/api/read-card.js:20
+ *   import { createWorker } from 'tesseract.js';
+ *   SyntaxError: Cannot use import statement outside a module
+ *
+ * requiring() esse mesmo arquivo no CI passava, porque o require(esm) do
+ * Node 24 tolera a mistura: o gate ficava verde e a produção caía com 500.
+ * Por isso a verificação é feita no texto, no formato em que a Lambda vai
+ * encontrar o arquivo — e não no que o Node local aceita.
+ */
+function checkModuleFormat(name, entryFile) {
+  const type = readJson('package.json').type ?? 'commonjs';
+  const src = readFileSync(entryFile, 'utf8');
+  const usesEsm = /^\s*(import[\s{]|export[\s{])/m.test(src);
+
+  if (usesEsm && type !== 'module') {
+    failures += 1;
+    console.error(`\n[${name}] *** FORMATO DE MÓDULO INCOMPATÍVEL COM A LAMBDA ***`);
+    console.error(`[${name}] o bundle usa sintaxe ESM, mas package.json declara "type": "${type}".`);
+    console.error(`[${name}] A Lambda carrega /var/task/*.js como CommonJS e falha com:`);
+    console.error(`[${name}]   SyntaxError: Cannot use import statement outside a module`);
+    console.error(`[${name}] Correção: "type": "module" no package.json.`);
+    return false;
+  }
+
+  console.log(
+    `[${name}] formato OK (bundle ${usesEsm ? 'ESM' : 'CJS'}, package.json type="${type}")`,
+  );
+  return true;
+}
+
+/**
  * Tenta alcançar o handler real da Vercel. O bundle da função é um
  * esbuild "universal" que entrelaça o código da aplicação com um
  * `module.exports` sintético; o launcher que a Lambda executa é outro
@@ -173,6 +211,8 @@ for (const funcDir of funcDirs) {
     continue;
   }
 
+  if (!checkModuleFormat(name, entryFile)) continue;
+
   // Isolamento: cópia fora do repositório, para que deps ausentes no
   // artefato não resolvam no node_modules do repo.
   const isolated = sandboxFor(funcDir);
@@ -213,9 +253,12 @@ for (const funcDir of funcDirs) {
     );
     const body = await res.text();
     console.log(`[${name}] GET -> ${res.status} ${body.slice(0, 120)}`);
-    if (res.status !== 405) {
+    // O que importa aqui é INVOCAR sem explodir. 405 (read-card) e 200 (ping)
+    // estão ambos corretos; fixar um status transformava a sonda em mais um
+    // falso positivo. Só 5xx significa quebra de invocação.
+    if (res.status >= 500) {
       failures += 1;
-      console.error(`[${name}] GET deveria dar 405, deu ${res.status}.`);
+      console.error(`[${name}] GET respondeu ${res.status} — o handler está devolvendo erro.`);
     }
   } catch (err) {
     failures += 1;
