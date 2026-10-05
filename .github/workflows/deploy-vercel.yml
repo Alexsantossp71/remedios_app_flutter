@@ -40,6 +40,22 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx vercel@latest build --prod --yes --token="$VERCEL_TOKEN"
 
+      # `vercel build` emite o handler em ESM (o arquivo sai com
+      # `import ... from`), mas a Lambda carrega /var/task/*.js como CommonJS.
+      # O Node morre antes do handler rodar:
+      #   SyntaxError: Cannot use import statement outside a module
+      # Ou seja, 500 em toda requisição. Não dá para resolver com
+      # "type": "module" no package.json: esse campo é copiado para
+      # /var/task/package.json e vira o tipo de módulo do diretório inteiro da
+      # função, derrubando junto o launcher da plataforma — a função de
+      # sondagem, que não importa nada, também deixa de responder.
+      # Como o deploy é --prebuilt, o artefato publicado é exatamente o que
+      # está em .vercel/output/functions: reempacotar ali é controle direto do
+      # formato, sem mexer no runtime. Precisa vir ANTES do gate, para que o
+      # gate valide o artefato que realmente será publicado.
+      - name: Reempacotar handlers como CommonJS
+        run: npm run package:cjs
+
       # `vercel deploy` publica os arquivos e reporta sucesso mesmo com a
       # função quebrada: o erro só aparece em runtime, como 500
       # FUNCTION_INVOCATION_FAILED sem mensagem. Este passo carrega o
