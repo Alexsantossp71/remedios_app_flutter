@@ -201,3 +201,120 @@ DIPIRONA 500MG
   assert.equal(receita.medicamentos.length, 1);
   assert.equal(receita.medicamentos[0].nome, 'DIPIRONA');
 });
+
+// Receituário eletrônico (padrão My Prescription/ICP Brasil): layout de
+// tabela com dados do paciente, do emitente, hash de assinatura e colunas
+// "Uso | Medicamento | Dosagem | Posologia | Frequência | Duração". O OCR
+// real devolve tudo isso junto — o medicamento é uma linha só.
+const RECEITA_ELETRONICA = `My Prescription
+Paciente: José da Silva DT. NASC': 23/06/2000
+Endereço: Rua José da Silva, 111 CPF: 000.000.000-00
+Bairro: José da Silva CEP: 00000-000
+IDENTIFICAÇÃO DO EMITENTE
+Nome da Instituição: Meu consultório
+| Endereço: Rua José da Silva, 112 |
+| CEP: 00000-000 |
+Telefone: (00) 00000-0000
+RECEITUARIO CONTROLE ESPECIAL
+Medicamentos Prescritos
+Uso: Medicamento: Dosagem: Posologia: Frequência: Duração:
+ORAL TRAMAL 100 MG COM REVL 1COMP 12/12 HORAS 30 DIAS
+Observações:
+Data: 29 de Maio de 2020 Assinado com certificado digital - ICP Brasil
+931f£27432240bcebaf46dec592bfedo9e - 29/05/2020 18:56:28
+Dr(a). Júlio
+Cirurgião Geral
+C.R.M: 000000 - SP
+IDENTIFICAÇÃO DO COMPRADOR IDENTIFICAÇÃO DO FORNECEDOR
+Nome:
+| Ident: Org. Emissor: | |
+| Endereço: |
+| Cidade: | |
+Telefone: Assinatura do Farmacêutico
+ACESSE A RECEITA DIGITAL
+= . E] Otsensação: IC P
+Em conformidade com à Portaria MS nº 467/2020 a autenticidade do documento deve ser checada no site https://assinaturadigital.iti.gov.br; Brasil
+A Conferir, por meio do site www.cfm.org.br (menu CIDADÃO, sub menu BUSCA POR MÉDICO), se o prescritor é realmente médico:
+[=] Fr "e Este receituário permanecerá disponível para acesso em meio eletrônico através do link disponível no OR Code,`;
+
+test('receituário eletrônico devolve só o medicamento, completo', () => {
+  const receita = parseReceitaText(RECEITA_ELETRONICA);
+  assert.equal(receita.medicamentos.length, 1);
+
+  const [tramal] = receita.medicamentos;
+  // A linha de tabela carrega a coluna "Uso" (ORAL) e a posologia; o nome
+  // reconhecido no índice da ANVISA reduz o header a "TRAMAL".
+  assert.equal(tramal.nome, 'TRAMAL');
+  assert.equal(tramal.dosagem, '100 MG');
+  assert.equal(tramal.intervaloHoras, 12);
+  assert.equal(tramal.vezesAoDia, 2);
+  assert.deepEqual(tramal.horarios, ['08:00', '20:00']);
+  // "30 DIAS" na coluna Duração, sem "por" na frente.
+  assert.equal(tramal.duracaoDias, 30);
+  assert.equal(tramal.diasAlternados, false);
+  // Posologia limpa: sem hash de assinatura, sem rótulo de formulário.
+  assert.equal(tramal.observacao, '12/12 HORAS 30 DIAS');
+});
+
+test('rótulos do formulário não viram medicamento', () => {
+  const receita = parseReceitaText(`
+My Prescription
+Medicamentos Prescritos
+Observações
+IDENTIFICAÇÃO DO EMITENTE
+Ao, "* -*
+= . E] Otsensação: IC P
+  `);
+  assert.deepEqual(receita.medicamentos, []);
+});
+
+test('nome conhecido sozinho abre medicamento', () => {
+  const receita = parseReceitaText(`
+Dr. Júlio CRM 000000
+TRAMAL
+12/12 HORAS 30 DIAS
+  `);
+  assert.equal(receita.medicamentos.length, 1);
+  assert.equal(receita.medicamentos[0].nome, 'TRAMAL');
+  assert.equal(receita.medicamentos[0].intervaloHoras, 12);
+  assert.equal(receita.medicamentos[0].duracaoDias, 30);
+});
+
+test('nome desconhecido sozinho não abre medicamento', () => {
+  const receita = parseReceitaText(`
+IDENTIFICACAO DO EMITENTE
+  `);
+  assert.deepEqual(receita.medicamentos, []);
+});
+
+test('manipulado fora do catálogo mantém o nome limpo', () => {
+  const receita = parseReceitaText(`
+ORAL FORMULA MANIPULADA 30 CAPSULAS
+Tomar 1 capsula de 12/12 horas por 20 dias
+  `);
+  assert.equal(receita.medicamentos.length, 1);
+  const [manipulado] = receita.medicamentos;
+  // Via de administração e quantidade saem; o nome segue editável na conferência.
+  assert.equal(manipulado.nome, 'FORMULA MANIPULADA');
+  assert.equal(manipulado.apresentacao, 'cápsula');
+  assert.equal(manipulado.intervaloHoras, 12);
+  assert.equal(manipulado.duracaoDias, 20);
+});
+
+test('grafia do nome vem da própria receita, não do catálogo', () => {
+  const receita = parseReceitaText(`
+Tramal 100mg
+12/12 horas 30 dias
+  `);
+  assert.equal(receita.medicamentos[0].nome, 'Tramal');
+  assert.equal(receita.medicamentos[0].dosagem, '100MG');
+});
+
+test('linha de continuação sem informação não suja a posologia', () => {
+  const receita = parseReceitaText(`
+TRAMAL 100MG
+12/12 HORAS 30 DIAS
+= . E] Otsensação: IC P
+  `);
+  assert.equal(receita.medicamentos[0].observacao, '12/12 HORAS 30 DIAS');
+});
