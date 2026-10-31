@@ -39,4 +39,19 @@ class MedicineData {
 
     return matches.expand((group) => group).take(limit).toList(growable: false);
   }
+
+  /// Resolve um código de barras (EAN/UPC) para um medicamento do catálogo.
+  ///
+  /// Busca linear de propósito: ~25 mil itens com listas curtas de EAN
+  /// percorrem em milissegundos e não justificam manter um índice em
+  /// memória ao lado do autocomplete.
+  static Future<Medicine?> findByEan(String ean) async {
+    final digits = ean.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return null;
+    final medicines = await load();
+    for (final medicine in medicines) {
+      if (medicine.eans.contains(digits)) return medicine;
+    }
+    return null;
+  }
 }

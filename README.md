@@ -15,6 +15,7 @@ Um aplicativo Flutter completo para gerenciar medicamentos, terapias e lembretes
 - ✅ Atalho gratuito para conferir registro na busca pública do CFM
 - ✅ Atalhos para ligar e abrir endereços no Google Maps
 - ✅ Sistema de lembretes de doses
+- ✅ Cadastro facilitado: busca por nome (25 mil medicamentos ANVISA), leitura de código de barras pela câmera (offline, catálogo local com ~19 mil EANs) e presets de horário ("a cada 8h", café/almoço/janta/dormir) com prévia das próximas doses
 - ✅ Notificação do sistema no horário da dose no APK (funciona com o app fechado; web relembra ao acessar)
 - ✅ Acompanhamento de histórico de medicações
 - ✅ Visualização do progresso do tratamento
