@@ -78,6 +78,29 @@ void main() {
     expect(createMedicine('1 FA - 3G').listedDosage, '');
   });
 
+  test('extracts listed strengths that start after the pharmaceutical form',
+      () {
+    Medicine createMedicine(String presentation) => Medicine(
+          name: 'Produto',
+          dosage: '',
+          presentation: presentation,
+        );
+
+    // O caso real da tela: apresentação que começa pela forma, não pela dose.
+    expect(
+      createMedicine('SODICA - 500MG CX C/ 100 CPR').listedDosage,
+      '500MG',
+    );
+    expect(createMedicine('XAROPE 5MG/ML X 200ML').listedDosage, '5MG/ML');
+    expect(
+      createMedicine('COM CT BL AL PLAS AMB X 16').listedDosage,
+      '',
+    );
+    // Contagem de unidades não é dose por toma, mesmo perto de um número.
+    expect(createMedicine('CX C/ 100 CPR').listedDosage, '');
+    expect(createMedicine('FRASCO X 1 U').listedDosage, '');
+  });
+
   test('finds commercial reference names and the manual lookup term', () async {
     final medicines = await MedicineData.load();
 

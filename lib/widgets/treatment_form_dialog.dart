@@ -5,13 +5,18 @@ import 'package:uuid/uuid.dart';
 import '../data/medicine_data.dart';
 import '../models/medicine.dart';
 import '../models/treatment.dart';
+import '../models/treatment_draft.dart';
 import '../screens/barcode_scan_screen.dart';
 import '../services/dose_schedule_presets.dart';
 
 class TreatmentFormDialog extends StatefulWidget {
-  const TreatmentFormDialog({super.key, this.initialTreatment});
+  const TreatmentFormDialog({super.key, this.initialTreatment, this.draft});
 
   final Treatment? initialTreatment;
+
+  /// Rascunho de leitura automática (receita por OCR): preenche o formulário
+  /// de um tratamento NOVO — nunca usado quando [initialTreatment] existe.
+  final TreatmentDraft? draft;
 
   @override
   State<TreatmentFormDialog> createState() => _TreatmentFormDialogState();
@@ -41,6 +46,21 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
     _medicineCatalogFuture = MedicineData.load();
     final treatment = widget.initialTreatment;
     if (treatment == null) {
+      // Rascunho de leitura automática: preenche e deixa o usuário conferir.
+      final draft = widget.draft;
+      if (draft != null) {
+        _nameController.text = draft.name;
+        _dosageController.text = draft.dosage;
+        _presentationController.text = draft.presentation;
+        _instructionsController.text = draft.instructions;
+        if (draft.doseTimes.isNotEmpty) {
+          _doseTimes.addAll(draft.doseTimes);
+        } else {
+          _doseTimes.add(const DoseTime(hour: 8, minute: 0));
+        }
+        _endDate = draft.endDate;
+        return;
+      }
       _doseTimes.add(const DoseTime(hour: 8, minute: 0));
       return;
     }

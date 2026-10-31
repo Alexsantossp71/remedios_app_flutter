@@ -8,6 +8,8 @@ class EmptyState extends StatelessWidget {
     required this.description,
     this.actionLabel,
     this.onAction,
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
   });
 
   final IconData icon;
@@ -15,6 +17,8 @@ class EmptyState extends StatelessWidget {
   final String description;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final String? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +63,14 @@ class EmptyState extends StatelessWidget {
                 onPressed: onAction,
                 icon: const Icon(Icons.add),
                 label: Text(actionLabel!),
+              ),
+            ],
+            if (secondaryActionLabel != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: onSecondaryAction,
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: Text(secondaryActionLabel!),
               ),
             ],
           ],
