@@ -3,7 +3,7 @@ description: "Remédio na Hora - Flutter implementation."
 publish_to: 'none'
 version: 3.0.0+0
 environment:
-  sdk: '>=3.2.3 <4.0.0'
+  sdk: '>=3.7.0 <4.0.0'
 dependencies:
   flutter:
     sdk: flutter
@@ -24,6 +24,7 @@ dependencies:
   sqflite_common_ffi: ^2.3.6
   sqflite_common_ffi_web: ^1.0.2
   image_picker: ^1.1.2
+  mobile_scanner: ^7.4.3
   timezone: ^0.10.1
 dev_dependencies:
   flutter_test:
