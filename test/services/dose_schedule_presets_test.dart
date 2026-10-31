@@ -62,14 +62,18 @@ void main() {
 
     test('respeita a frequência de dias úteis', () {
       final treatment = _treatment(frequency: TreatmentFrequency.weekdays);
+      // Quinta-feira, 5 de novembro de 2026, 09:00 — a janela de 4 doses
+      // cruza o fim de semana: qui 20h, sex 8h, sex 20h e SEG 8h (sábado
+      // e domingo ficam de fora).
+      final thursday9am = DateTime(2026, 11, 5, 9, 0);
       final instants = DoseSchedulePresets.upcomingInstants(
         doseTimes: treatment.doseTimes,
         isScheduledOn: treatment.isScheduledOn,
-        now: monday9am,
+        now: thursday9am,
         count: 4,
       );
-      // seg (20h), ter, qua e qui às 08h — sábado e domingo fora.
-      expect(instants.map((instant) => instant.weekday), [1, 2, 3, 4]);
+      expect(instants.map((instant) => instant.weekday), [4, 5, 5, 1]);
+      expect(instants.last, DateTime(2026, 11, 9, 8, 0));
     });
   });
 

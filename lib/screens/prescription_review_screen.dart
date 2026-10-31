@@ -36,6 +36,7 @@ class _EditableMed {
   _EditableMed(this.original)
       : name = TextEditingController(text: original.nome),
         dosage = TextEditingController(text: original.dosagem),
+        presentation = original.apresentacao,
         times = original.suggestedDoseTimes.isEmpty
             ? <DoseTime>[const DoseTime(hour: 8, minute: 0)]
             : original.suggestedDoseTimes.toList();
@@ -296,8 +297,8 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
                 ),
                 Expanded(
                   child: Text(
-                    'Lido da receita' +
-                        (badges.isEmpty ? '' : ' · ${badges.join(' · ')}'),
+                    'Lido da receita'
+                    '${badges.isEmpty ? '' : ' · ${badges.join(' · ')}'}',
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

@@ -58,7 +58,7 @@ class PrescriptionMedication {
       vezesAoDia: intOrNull('vezesAoDia'),
       horarios: (json['horarios'] as List<dynamic>? ?? const [])
           .map((time) => time.toString().trim())
-          .where((time) => _timePattern.hasMatch(time))
+          .where(_isValidTime)
           .toList(growable: false),
       duracaoDias: intOrNull('duracaoDias'),
       usoContinuo: json['usoContinuo'] == true,
@@ -108,6 +108,16 @@ class PrescriptionMedication {
   }
 
   static final RegExp _timePattern = RegExp(r'^(\d{1,2}):(\d{2})$');
+
+  /// Formato E faixa: "25:00" passa no formato, mas não é horário — lixo
+  /// de OCR não pode virar dose impossível. Rejeita também "7h60" e "8:5".
+  static bool _isValidTime(String time) {
+    final match = _timePattern.firstMatch(time);
+    if (match == null) return false;
+    final hour = int.parse(match.group(1)!);
+    final minute = int.parse(match.group(2)!);
+    return hour <= 23 && minute <= 59;
+  }
 }
 
 /// Resultado da leitura da receita: medicamentos + texto bruto para conferência.
