@@ -21,6 +21,7 @@ class PrescriptionMedication {
     this.horarios = const [],
     this.duracaoDias,
     this.usoContinuo = false,
+    this.diasAlternados = false,
     this.observacao = '',
   });
 
@@ -33,6 +34,9 @@ class PrescriptionMedication {
   final List<String> horarios;
   final int? duracaoDias;
   final bool usoContinuo;
+  /// A receita diz "dia sim, dia não" ou "em dias alternados": vira frequência
+  /// no rascunho (o formulário abre com ela, o usuário confere).
+  final bool diasAlternados;
   final String observacao;
 
   bool get hasName => nome.trim().isNotEmpty;
@@ -62,6 +66,7 @@ class PrescriptionMedication {
           .toList(growable: false),
       duracaoDias: intOrNull('duracaoDias'),
       usoContinuo: json['usoContinuo'] == true,
+      diasAlternados: json['diasAlternados'] == true,
       observacao: text('observacao'),
     );
   }
@@ -86,7 +91,8 @@ class PrescriptionMedication {
   /// Rascunho pronto para o formulário de tratamento conferir e salvar.
   ///
   /// O texto de posologia cru vai para as observações (o usuário edita); uso
-  /// contínuo e duração viram data de término quando existe.
+  /// contínuo e duração viram data de término quando existe; "dia sim, dia
+  /// não" vira frequência — tudo conferível, nada salvo sem o usuário.
   TreatmentDraft toTreatmentDraft({required DateTime today}) {
     final schedule = suggestedDoseTimes.isEmpty
         ? const [DoseTime(hour: 8, minute: 0)]
@@ -104,6 +110,8 @@ class PrescriptionMedication {
       endDate: duracaoDias == null
           ? null
           : today.add(Duration(days: duracaoDias!)),
+      frequency:
+          diasAlternados ? TreatmentFrequency.everyOtherDay : null,
     );
   }
 

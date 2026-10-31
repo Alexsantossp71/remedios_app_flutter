@@ -154,6 +154,43 @@ Tomar 1 comprimido a cada 8 horas por 5 dias
   assert.equal(receita.medicamentos[0].nome, 'DIPIRONA');
 });
 
+test('"dia sim, dia não" marca dias alternados', () => {
+  const receita = parseReceitaText(`
+CALCITRIOL 0,5MG
+Tomar 1 cápsula pela manhã, dia sim, dia não
+  `);
+  const [calcitriol] = receita.medicamentos;
+  assert.equal(calcitriol.nome, 'CALCITRIOL');
+  assert.equal(calcitriol.diasAlternados, true);
+  assert.deepEqual(calcitriol.horarios, ['08:00']);
+});
+
+test('"em dias alternados" (variação escrita) também marca', () => {
+  const receita = parseReceitaText(`
+PREDNISONA 20MG
+Tomar 2 comprimidos pela manhã em dias alternados
+  `);
+  const [prednisona] = receita.medicamentos;
+  assert.equal(prednisona.diasAlternados, true);
+});
+
+test('posologia comum não marca dias alternados', () => {
+  const receita = parseReceitaText(RECEITA_CLASSICA);
+  for (const med of receita.medicamentos) {
+    assert.equal(med.diasAlternados, false, med.nome);
+  }
+});
+
+test('dia sim, dia não na mesma linha do nome é dividido', () => {
+  const receita = parseReceitaText(`
+SUPLEMENTO D 2000UI DIA SIM DIA NÃO
+Tomar 1 cápsula pela manhã
+  `);
+  const [suplemento] = receita.medicamentos;
+  assert.equal(suplemento.nome, 'SUPLEMENTO D');
+  assert.equal(suplemento.diasAlternados, true);
+});
+
 test('hospital e farmácia também são ruído', () => {
   const receita = parseReceitaText(`
 HOSPITAL DAS CLINICAS

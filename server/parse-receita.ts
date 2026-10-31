@@ -28,6 +28,11 @@ export interface ReceitaMed {
   horarios: string[];
   duracaoDias: number | null;
   usoContinuo: boolean;
+  /**
+   * "Dia sim, dia não" / "em dias alternados" na posologia — vira frequência
+   * no rascunho (TreatmentFrequency.everyOtherDay), sempre conferível.
+   */
+  diasAlternados: boolean;
   /** Posologia crua, para conferência humana na tela de revisão. */
   observacao: string;
 }
@@ -78,6 +83,7 @@ const POSOLOGY_SIGNALS: RegExp[] = [
   /\b\d{1,2}\s*(?:X|VEZES?)\s+AO\s+DIA\b/,
   /\b(?:MANHA|TARDE|NOITE|JEJUM|ACORDAR|DORMIR|ALMOCO|JANTAR|JANTA|CAFE)\b/,
   /\b(?:POR|DURANTE)\s+\d{1,3}\s+(?:DIAS?|SEMANAS?|MES(?:ES)?)\b/,
+  /\bDIA\s+SIM\b|\bDIAS?\s+ALTERNADOS?\b/,
   /\bUSO\s+CONT[I]?NUO\b|\bCONT[I]?NUO\b/,
   /\b(?:TOMAR|TOMA|TOME|USAR|USO|ADMINISTRAR|APLICAR|INGERIR|TOMANDO|USANDO)\b/,
   /\bHORAS?\b/,
@@ -239,6 +245,20 @@ function extractUnitCount(folded: string): number | null {
   return Number.isFinite(count) && count >= 1 && count <= 6 ? count : null;
 }
 
+/**
+ * "DIA SIM, DIA NÃO" e "EM DIAS ALTERNADOS" — a receita define a frequência,
+ * não só os horários. fold() remove acentos, então "não" chega como "NAO".
+ * Só há frequência especial quando o texto diz: "todo dia" não casa aqui.
+ */
+const ALTERNATE_DAY_PATTERNS: RegExp[] = [
+  /\bDIAS?\s+ALTERNADOS?\b/,
+  /\bDIA\s+SIM\b[^\n]{0,12}\bDIA\s+NAO\b/,
+];
+
+function extractAlternateDays(folded: string): boolean {
+  return ALTERNATE_DAY_PATTERNS.some((pattern) => pattern.test(folded));
+}
+
 function extractDuration(folded: string): number | null {
   for (const [index, pattern] of DURATION_PATTERNS.entries()) {
     const match = pattern.exec(folded);
@@ -326,6 +346,7 @@ export function parseReceitaText(rawText: string): ReceitaFields {
 
     const usoContinuo = /\bUSO\s+CONT[I]?NUO\b|\bCONT[I]?NUO\b/.test(posologyFolded);
     const duracaoDias = usoContinuo ? null : extractDuration(posologyFolded);
+    const diasAlternados = extractAlternateDays(posologyFolded);
 
     medicamentos.push({
       nome,
@@ -336,6 +357,7 @@ export function parseReceitaText(rawText: string): ReceitaFields {
       horarios,
       duracaoDias,
       usoContinuo,
+      diasAlternados,
       observacao: block.posologyLines.join('\n').slice(0, 300),
     });
   }
