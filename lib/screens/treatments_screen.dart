@@ -1,10 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/treatment.dart';
+import '../models/treatment_draft.dart';
 import '../providers/therapy_provider.dart';
+import '../providers/user_profile_provider.dart';
+import '../screens/prescription_review_screen.dart';
+import '../services/prescription_reader_service.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/privacy_notice.dart';
 import '../widgets/section_header.dart';
 import '../widgets/treatment_form_dialog.dart';
 
@@ -27,6 +35,167 @@ class TreatmentsScreen extends StatelessWidget {
     } else {
       await provider.updateTreatment(result);
     }
+  }
+
+  /// Foto da receita: ler, conferir e salvar um tratamento por medicamento.
+  /// Cada rascunho passa pelo formulário de tratamento — a leitura só
+  /// preenche, quem salva é o usuário.
+  Future<void> _startPrescriptionFlow(BuildContext context) async {
+    final consented = await _ensurePrescriptionConsent(context);
+    if (!consented || !context.mounted) return;
+
+    final source = await _pickImageSource(context);
+    if (source == null || !context.mounted) return;
+
+    final XFile? file;
+    try {
+      file = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 85,
+      );
+    } catch (_) {
+      if (context.mounted) {
+        _showSnack(context, 'Não foi possível acessar a imagem.');
+      }
+      return;
+    }
+    if (file == null) return;
+
+    final bytes = await file.readAsBytes();
+    if (!context.mounted) return;
+
+    // Diálogo sem await: só é dispensado quando a leitura termina, e awaitar
+    // aqui travaria a tela sem nunca enviar a imagem (padrão da leitura de
+    // cartão).
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const _ReadingPrescriptionDialog(),
+      ),
+    );
+
+    PrescriptionReadResult? result;
+    String? error;
+    try {
+      result = await PrescriptionReaderService().readPrescription(
+        imageBytes: bytes,
+        mimeType: _mimeTypeOf(file),
+      );
+    } on PrescriptionReaderException catch (e) {
+      error = e.message;
+    } catch (_) {
+      error = 'Não foi possível ler a receita. Tente outra foto ou cadastre '
+          'manualmente.';
+    }
+
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // fecha o diálogo de leitura
+
+    if (result == null) {
+      _showSnack(context, error!);
+      return;
+    }
+
+    final drafts = await Navigator.of(context).push<List<TreatmentDraft>>(
+      MaterialPageRoute(
+        builder: (_) => PrescriptionReviewScreen(result: result!),
+      ),
+    );
+    if (drafts == null || drafts.isEmpty || !context.mounted) return;
+
+    final provider = context.read<TherapyProvider>();
+    for (final draft in drafts) {
+      if (!context.mounted) return;
+      final saved = await showDialog<Treatment>(
+        context: context,
+        builder: (_) => TreatmentFormDialog(draft: draft),
+      );
+      if (saved != null) {
+        await provider.addTreatment(saved);
+      }
+    }
+  }
+
+  Future<bool> _ensurePrescriptionConsent(BuildContext context) async {
+    final userProvider = context.read<UserProfileProvider>();
+    if (userProvider.profile?.consentAt != null) return true;
+
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Autorização necessária'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Para ler a foto da receita, a imagem é enviada ao nosso '
+                'servidor e descartada após a leitura por OCR. Essa opção '
+                'usa a internet; o cadastro manual não envia nada.',
+              ),
+              SizedBox(height: 12),
+              PrivacyNoticeCard(),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Aceito e autorizo'),
+          ),
+        ],
+      ),
+    );
+
+    if (accepted != true || !context.mounted) return false;
+    await userProvider.grantConsent();
+    return true;
+  }
+
+  Future<ImageSource?> _pickImageSource(BuildContext context) {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Tirar foto da receita'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Escolher imagem da galeria'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSnack(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  static String _mimeTypeOf(XFile file) {
+    final path = file.path.toLowerCase();
+    if (path.endsWith('.png')) return 'image/png';
+    if (path.endsWith('.webp')) return 'image/webp';
+    return 'image/jpeg';
   }
 
   Future<void> _confirmArchive(
@@ -116,6 +285,8 @@ class TreatmentsScreen extends StatelessWidget {
                       'Cadastre seu primeiro medicamento para receber uma rotina organizada de doses.',
                   actionLabel: 'Adicionar medicamento',
                   onAction: () => _openTreatmentForm(context),
+                  secondaryActionLabel: 'Usar foto da receita',
+                  onSecondaryAction: () => _startPrescriptionFlow(context),
                 ),
               )
             else
@@ -142,10 +313,24 @@ class TreatmentsScreen extends StatelessWidget {
       ),
       floatingActionButton: treatments.isEmpty
           ? null
-          : FloatingActionButton.extended(
-              onPressed: () => _openTreatmentForm(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Adicionar'),
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton.extended(
+                  heroTag: 'prescription-scan-fab',
+                  onPressed: () => _startPrescriptionFlow(context),
+                  icon: const Icon(Icons.photo_camera_outlined),
+                  label: const Text('Foto da receita'),
+                ),
+                const SizedBox(height: 12),
+                FloatingActionButton.extended(
+                  heroTag: 'add-treatment-fab',
+                  onPressed: () => _openTreatmentForm(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Adicionar'),
+                ),
+              ],
             ),
     );
   }
@@ -416,6 +601,42 @@ class _InfoChip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Tela cheia enquanto o OCR roda: não é dispensável e não revela estado —
+/// só deixa claro que a imagem está sendo lida (padrão da leitura de cartão).
+class _ReadingPrescriptionDialog extends StatelessWidget {
+  const _ReadingPrescriptionDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Lendo receita…',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Pode levar alguns segundos.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

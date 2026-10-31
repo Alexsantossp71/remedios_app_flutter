@@ -46,11 +46,33 @@ class Medicine {
     );
   }
 
+  /// Dosagem que a própria apresentação carrega ("500MG", "10MG/ML",
+  /// "5MG + 65MG").
+  ///
+  /// Primeiro tenta casar no início do texto (comportamento histórico); se
+  /// não casar, procura a dosagem em qualquer posição. É o caso comum de
+  /// apresentações que começam pelo nome da forma farmacêutica, como
+  /// "SODICA - 500MG CX C/ 100 CPR".
+  ///
+  /// A busca solta exclui unidades ambíguas de 1 letra (U, L, G): sem elas,
+  /// "CX C/ 100 CPR" e "1 FA - 3G" continuam sem dosagem sugerida — que é a
+  /// intenção: frasco-ampola e contagem de unidades não são dose por toma.
+  static final RegExp _anchoredDosage = RegExp(
+    r'^\s*\(?\s*[\d.,]+(?:\s*(?:MCG|UG|MG|KG|G|UI|IU|U|ML|L)\b)?(?:\s*\+\s*[\d.,]+(?:\s*(?:MCG|UG|MG|KG|G|UI|IU|U|ML|L)\b)?)*\s*\)?\s*(?:MCG|UG|MG|KG|G|UI|IU|U|ML|L)\b(?:\s*/\s*(?:[\d.,]+\s*)?(?:MCG|UG|MG|G|ML|L)\b)?',
+    caseSensitive: false,
+  );
+
+  static final RegExp _looseDosage = RegExp(
+    r'\d[\d.,]*\s*(?:MCG|UG|MG|KG|UI|IU|ML)\b'
+    r'(?:\s*/\s*\d[\d.,]*\s*(?:MCG|UG|MG|ML)\b)?'
+    r'(?:\s*\+\s*\d[\d.,]*\s*(?:MCG|UG|MG|KG|UI|IU|ML)\b)*',
+    caseSensitive: false,
+  );
+
   String get listedDosage {
-    final match = RegExp(
-      r'^\s*\(?\s*[\d.,]+(?:\s*(?:MCG|UG|MG|KG|G|UI|IU|U|ML|L)\b)?(?:\s*\+\s*[\d.,]+(?:\s*(?:MCG|UG|MG|KG|G|UI|IU|U|ML|L)\b)?)*\s*\)?\s*(?:MCG|UG|MG|KG|G|UI|IU|U|ML|L)\b(?:\s*/\s*(?:[\d.,]+\s*)?(?:MCG|UG|MG|G|ML|L)\b)?',
-      caseSensitive: false,
-    ).firstMatch(presentation);
+    final match =
+        _anchoredDosage.firstMatch(presentation) ??
+        _looseDosage.firstMatch(presentation);
     return match?.group(0)?.trim().replaceAll(RegExp(r'[()]'), '').trim() ?? '';
   }
 
