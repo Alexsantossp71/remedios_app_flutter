@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/treatment.dart';
 import '../models/treatment_draft.dart';
 import '../services/dose_schedule_presets.dart';
 import '../services/prescription_reader_service.dart';
