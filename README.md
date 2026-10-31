@@ -15,6 +15,7 @@ Um aplicativo Flutter completo para gerenciar medicamentos, terapias e lembretes
 - ✅ Atalho gratuito para conferir registro na busca pública do CFM
 - ✅ Atalhos para ligar e abrir endereços no Google Maps
 - ✅ Sistema de lembretes de doses
+- ✅ Notificação do sistema no horário da dose no APK (funciona com o app fechado; web relembra ao acessar)
 - ✅ Acompanhamento de histórico de medicações
 - ✅ Visualização do progresso do tratamento
 - ✅ Armazenamento local com SharedPreferences

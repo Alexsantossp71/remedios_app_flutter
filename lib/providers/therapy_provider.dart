@@ -5,13 +5,19 @@ import 'package:uuid/uuid.dart';
 
 import '../models/dose_event.dart';
 import '../models/treatment.dart';
+import '../services/dose_notification_planner.dart';
+import '../services/notification_service.dart';
 import '../services/therapy_storage_service.dart';
 
 class TherapyProvider extends ChangeNotifier {
-  TherapyProvider({TherapyStorageService? storage})
-      : _storage = storage ?? TherapyStorageService();
+  TherapyProvider({
+    TherapyStorageService? storage,
+    NotificationService? notifications,
+  })  : _storage = storage ?? TherapyStorageService(),
+        _notifications = notifications ?? NotificationService.instance;
 
   final TherapyStorageService _storage;
+  final NotificationService _notifications;
   final Uuid _uuid = const Uuid();
 
   List<Treatment> _treatments = [];
@@ -31,6 +37,7 @@ class TherapyProvider extends ChangeNotifier {
     _treatments = await _storage.loadTreatments();
     _doseEvents = await _storage.loadDoseEvents();
     await ensureDoseEventsFor(DateTime.now(), notify: false);
+    await _syncDoseNotifications();
 
     _isLoading = false;
     notifyListeners();
@@ -57,6 +64,7 @@ class TherapyProvider extends ChangeNotifier {
     _treatments = [..._treatments, treatment];
     await _storage.saveTreatment(treatment);
     await ensureDoseEventsFor(DateTime.now(), notify: false);
+    await _syncDoseNotifications();
     notifyListeners();
   }
 
@@ -66,6 +74,7 @@ class TherapyProvider extends ChangeNotifier {
         .toList();
     await _storage.saveTreatment(treatment);
     await ensureDoseEventsFor(DateTime.now(), notify: false);
+    await _syncDoseNotifications();
     notifyListeners();
   }
 
@@ -142,6 +151,7 @@ class TherapyProvider extends ChangeNotifier {
       _storage.saveDoseEvent(updatedEvent),
       _storage.saveTreatment(updatedTreatment),
     ]);
+    await _syncDoseNotifications();
     notifyListeners();
   }
 
@@ -150,6 +160,22 @@ class TherapyProvider extends ChangeNotifier {
     final completed = events.where((event) => event.status != DoseStatus.pending).length;
     final taken = events.where((event) => event.status == DoseStatus.taken).length;
     return DayAdherence(total: events.length, completed: completed, taken: taken);
+  }
+
+  /// Keeps system alarms aligned with the current treatment rules and dose
+  /// statuses (ADR 0005). Never throws: notifications are best-effort on top
+  /// of the core flows, so any failure here is logged and swallowed.
+  Future<void> _syncDoseNotifications() async {
+    if (!_notifications.isReady) return;
+    try {
+      final planned = const DoseNotificationPlanner().plan(
+        treatments: activeTreatments.toList(),
+        now: DateTime.now(),
+      );
+      await _notifications.sync(planned);
+    } catch (error) {
+      debugPrint('[TherapyProvider] notification sync falhou: $error');
+    }
   }
 
   static DateTime _dateOnly(DateTime date) =>
