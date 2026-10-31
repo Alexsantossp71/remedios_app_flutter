@@ -41,7 +41,8 @@ class NotificationService {
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         iOS: DarwinInitializationSettings(),
       );
-      await _plugin.initialize(initializationSettings);
+      // v20 do plugin recebe os parâmetros por nome (era posicional antes).
+      await _plugin.initialize(settings: initializationSettings);
 
       final android = _plugin.resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin>();
@@ -90,11 +91,11 @@ class NotificationService {
         );
         try {
           await _plugin.zonedSchedule(
-            dose.notificationId,
-            'Hora do remédio',
-            '${dose.treatmentName} — ${dose.dosage}',
-            when,
-            details,
+            id: dose.notificationId,
+            title: 'Hora do remédio',
+            body: '${dose.treatmentName} — ${dose.dosage}',
+            scheduledDate: when,
+            notificationDetails: details,
             androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
             payload: dose.treatmentId,
           );
@@ -103,11 +104,11 @@ class NotificationService {
           // Android 12+. Degrade to inexact instead of losing the reminder
           // entirely.
           await _plugin.zonedSchedule(
-            dose.notificationId,
-            'Hora do remédio',
-            '${dose.treatmentName} — ${dose.dosage}',
-            when,
-            details,
+            id: dose.notificationId,
+            title: 'Hora do remédio',
+            body: '${dose.treatmentName} — ${dose.dosage}',
+            scheduledDate: when,
+            notificationDetails: details,
             androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
             payload: dose.treatmentId,
           );
