@@ -334,7 +334,6 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
               children: [
                 _buildMedicineSearch(),
                 const SizedBox(height: 12),
-                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
