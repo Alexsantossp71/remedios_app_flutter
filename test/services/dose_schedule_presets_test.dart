@@ -41,6 +41,61 @@ void main() {
     });
   });
 
+  group('everyTimesPerDay', () {
+    test('3x ao dia a partir das 07:00 gera 07:00, 15:00 e 23:00', () {
+      final times = DoseSchedulePresets.everyTimesPerDay(
+        firstDose: const DoseTime(hour: 7, minute: 0),
+        timesPerDay: 3,
+      );
+      expect(
+        times.map((time) => '${time.hour}:${time.minute.toString().padLeft(2, '0')}'),
+        ['7:00', '15:00', '23:00'],
+      );
+    });
+
+    test('2x ao dia a partir das 22:00 envolve a meia-noite', () {
+      final times = DoseSchedulePresets.everyTimesPerDay(
+        firstDose: const DoseTime(hour: 22, minute: 0),
+        timesPerDay: 2,
+      );
+      expect(times.map((time) => time.hour), [10, 22]);
+    });
+
+    test('4x ao dia preserva os minutos da 1ª dose', () {
+      final times = DoseSchedulePresets.everyTimesPerDay(
+        firstDose: const DoseTime(hour: 6, minute: 30),
+        timesPerDay: 4,
+      );
+      expect(
+        times,
+        const [
+          DoseTime(hour: 0, minute: 30),
+          DoseTime(hour: 6, minute: 30),
+          DoseTime(hour: 12, minute: 30),
+          DoseTime(hour: 18, minute: 30),
+        ],
+      );
+    });
+
+    test('uma toma ao dia é só a âncora e nenhuma grade repete horário', () {
+      expect(
+        DoseSchedulePresets.everyTimesPerDay(
+          firstDose: const DoseTime(hour: 8, minute: 0),
+          timesPerDay: 1,
+        ),
+        [const DoseTime(hour: 8, minute: 0)],
+      );
+      for (var count = 2; count <= 6; count++) {
+        final times = DoseSchedulePresets.everyTimesPerDay(
+          firstDose: const DoseTime(hour: 9, minute: 15),
+          timesPerDay: count,
+        );
+        expect(times.toSet().length, times.length, reason: 'count=$count');
+        expect(times, hasLength(count));
+      }
+    });
+  });
+
   group('upcomingInstants', () {
     // Segunda-feira, 2 de novembro de 2026, 09:00 — data fixa para o teste
     // ser determinístico.

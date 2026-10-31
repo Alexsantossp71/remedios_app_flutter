@@ -46,4 +46,20 @@ void main() {
     expect(find.widgetWithText(Chip, '08:00'), findsOneWidget);
     expect(find.widgetWithText(Chip, '12:00'), findsNothing);
   });
+
+  testWidgets('frequência lida da receita abre pré-selecionada para conferência',
+      (tester) async {
+    const draft = TreatmentDraft(
+      name: 'CALCITRIOL',
+      doseTimes: [DoseTime(hour: 8, minute: 0)],
+      frequency: TreatmentFrequency.everyOtherDay,
+    );
+
+    await tester.pumpWidget(buildSubject(draft));
+    await tester.pumpAndSettle();
+
+    // O dropdown abre já com "Dia sim, dia não": o usuário VÊ a frequência
+    // que a leitura inferiu e pode trocar antes de salvar.
+    expect(find.text('Dia sim, dia não'), findsOneWidget);
+  });
 }

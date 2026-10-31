@@ -33,6 +33,29 @@ class DoseSchedulePresets {
   static DoseTime _fromMinutes(int minutes) =>
       DoseTime(hour: minutes ~/ 60, minute: minutes % 60);
 
+  /// Gera os horários de um dia para [timesPerDay] tomas igualmente
+  /// espaçadas, ancoradas no horário da primeira dose — o par do
+  /// [everyIntervalHours] para receitas que dizem "3x ao dia" sem dar o
+  /// intervalo: "3x ao dia" com 1ª toma às 07:00 gera 07:00, 15:00 e 23:00.
+  static List<DoseTime> everyTimesPerDay({
+    required DoseTime firstDose,
+    required int timesPerDay,
+  }) {
+    if (timesPerDay <= 1) return [firstDose];
+    final dayMinutes = 24 * 60;
+    final step = (dayMinutes / timesPerDay).round();
+    final times = <int, DoseTime>{};
+    for (var i = 0; i < timesPerDay; i++) {
+      final minutes =
+          (firstDose.minutesSinceMidnight + i * step) % dayMinutes;
+      times[minutes] = _fromMinutes(minutes);
+    }
+    final values = times.values.toList(growable: false)
+      ..sort((first, second) =>
+          first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight));
+    return values;
+  }
+
   /// Chips de rotina: um toque marca, outro desmarca.
   static const List<({String label, DoseTime time})> routinePresets = [
     (label: 'Café 08:00', time: DoseTime(hour: 8, minute: 0)),

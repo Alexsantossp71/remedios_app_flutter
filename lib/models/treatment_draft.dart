@@ -12,6 +12,7 @@ class TreatmentDraft {
     this.instructions = '',
     this.doseTimes = const [],
     this.endDate,
+    this.frequency,
   });
 
   final String name;
@@ -20,4 +21,9 @@ class TreatmentDraft {
   final String instructions;
   final List<DoseTime> doseTimes;
   final DateTime? endDate;
+
+  /// Frequência lida da receita ("dia sim, dia não" vira
+  /// [TreatmentFrequency.everyOtherDay]). Nulo = receita não disse nada e o
+  /// formulário fica no padrão diário — ausência de informação não é inferência.
+  final TreatmentFrequency? frequency;
 }

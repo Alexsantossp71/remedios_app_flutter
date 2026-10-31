@@ -66,6 +66,28 @@ Aqui está o resultado:
       expect(result.medicamentos.single.horarios, ['08:00']);
     });
 
+    test('"dia sim, dia não" do servidor vira frequência no rascunho', () {
+      const content = '''
+{"medicamentos": [
+  {"nome": "CALCITRIOL", "horarios": ["08:00"], "diasAlternados": true},
+  {"nome": "DIPIRONA", "horarios": ["08:00"]}
+], "rawText": ""}
+''';
+      final result = PrescriptionReaderService.parseContent(content);
+      final today = DateTime(2026, 11, 1);
+
+      // Calculitriol: receita definiu a frequência; Dipirona: nada dito —
+      // e ausência de informação não é inferência, o rascunho fica nulo.
+      expect(
+        result.medicamentos[0].toTreatmentDraft(today: today).frequency,
+        TreatmentFrequency.everyOtherDay,
+      );
+      expect(
+        result.medicamentos[1].toTreatmentDraft(today: today).frequency,
+        isNull,
+      );
+    });
+
     test('sem medicamentos lança exceção com mensagem orientada', () {
       const content = '{"medicamentos": [], "rawText": "nada"}';
       expect(
@@ -131,6 +153,16 @@ Aqui está o resultado:
       final draft = med.toTreatmentDraft(today: DateTime(2026, 10, 31));
       expect(draft.doseTimes, const [DoseTime(hour: 8, minute: 0)]);
       expect(draft.endDate, isNull);
+    });
+
+    test('dias alternados construído direto carrega a frequência', () {
+      const med = PrescriptionMedication(
+        nome: 'PREDNISONA',
+        horarios: ['08:00'],
+        diasAlternados: true,
+      );
+      final draft = med.toTreatmentDraft(today: DateTime(2026, 10, 31));
+      expect(draft.frequency, TreatmentFrequency.everyOtherDay);
     });
   });
 }

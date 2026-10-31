@@ -59,6 +59,9 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
           _doseTimes.add(const DoseTime(hour: 8, minute: 0));
         }
         _endDate = draft.endDate;
+        // Frequência lida da receita ("dia sim, dia não" vira
+        // "Dia sim, dia não"): pré-selecionada, nunca escondida do usuário.
+        if (draft.frequency != null) _frequency = draft.frequency!;
         return;
       }
       _doseTimes.add(const DoseTime(hour: 8, minute: 0));
