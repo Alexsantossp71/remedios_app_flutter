@@ -10,12 +10,18 @@ import 'providers/health_plan_provider.dart';
 import 'providers/therapy_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'screens/main_shell.dart';
+import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR');
 
-  final therapyProvider = TherapyProvider();
+  // No-op on web; on mobile it also asks for the notification permission
+  // (Android 13+) and creates the dose channel before any alarm is set.
+  final notifications = NotificationService.instance;
+  await notifications.init();
+
+  final therapyProvider = TherapyProvider(notifications: notifications);
   final doctorProvider = DoctorProvider();
   final consultationProvider = ConsultationProvider();
   final healthPlanProvider = HealthPlanProvider();
