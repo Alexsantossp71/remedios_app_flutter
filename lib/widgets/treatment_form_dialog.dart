@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/medicine_data.dart';
 import '../models/medicine.dart';
 import '../models/treatment.dart';
+import '../screens/barcode_scan_screen.dart';
+import '../services/dose_schedule_presets.dart';
 
 class TreatmentFormDialog extends StatefulWidget {
   const TreatmentFormDialog({super.key, this.initialTreatment});
@@ -107,11 +110,78 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
     });
   }
 
-  static const _quickPickTimes = [
-    DoseTime(hour: 8, minute: 0),
-    DoseTime(hour: 12, minute: 0),
-    DoseTime(hour: 18, minute: 0),
-  ];
+  bool _hasDoseTime(DoseTime time) =>
+      _doseTimes.any((item) => item.minutesSinceMidnight == time.minutesSinceMidnight);
+
+  /// Um toque nos presets de rotina marca, outro desmarca — sem passar pelo
+  /// time picker para o caso comum (café/almoço/janta/dormir).
+  void _toggleDoseTime(DoseTime time) {
+    if (_hasDoseTime(time)) {
+      setState(() => _doseTimes.removeWhere(
+          (item) => item.minutesSinceMidnight == time.minutesSinceMidnight));
+      return;
+    }
+    _addDoseTime(time);
+  }
+
+  /// "A cada Xh" é âncora na primeira dose (convenção médica), não no
+  /// relógio: pergunta a 1ª toma e gera o dia inteiro de uma vez.
+  Future<void> _applyInterval(int intervalHours) async {
+    final anchor = _doseTimes.isNotEmpty
+        ? TimeOfDay(
+            hour: _doseTimes.first.hour, minute: _doseTimes.first.minute)
+        : const TimeOfDay(hour: 8, minute: 0);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: anchor,
+      helpText: 'Horário da primeira dose',
+    );
+    if (picked == null) return;
+    final firstDose = DoseTime(hour: picked.hour, minute: picked.minute);
+    setState(() {
+      _doseTimes
+        ..clear()
+        ..addAll(
+          DoseSchedulePresets.everyIntervalHours(
+            firstDose: firstDose,
+            intervalHours: intervalHours,
+          ),
+        );
+      _doseTimes.sort((first, second) =>
+          first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight));
+    });
+  }
+
+  /// Lê o EAN com a câmera e preenche o que o catálogo local souber. O
+  /// usuário sempre confere: preencher não é salvar.
+  Future<void> _scanBarcode() async {
+    final ean = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => const BarcodeScanScreen()),
+    );
+    if (ean == null || !mounted) return;
+    final match = await MedicineData.findByEan(ean);
+    if (!mounted) return;
+    if (match == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Código $ean não está no catálogo local. Digite o nome do remédio.',
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _nameController.text = match.name;
+      final dosage =
+          match.dosage.isNotEmpty ? match.dosage : match.listedDosage;
+      if (dosage.isNotEmpty) _dosageController.text = dosage;
+      if (match.presentation.isNotEmpty) {
+        _presentationController.text = match.presentation;
+      }
+      _medicineQuery = '';
+    });
+  }
 
   void _selectMedicine(Medicine medicine) {
     setState(() {
@@ -124,10 +194,18 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   }
 
   InputDecoration _medicineInputDecoration() {
-    return const InputDecoration(
+    return InputDecoration(
       labelText: 'Buscar medicamento',
       hintText: 'Nome comercial ou princípio ativo',
-      prefixIcon: Icon(Icons.search),
+      prefixIcon: const Icon(Icons.search),
+      // Scanner de barras só existe onde existe câmera (APK).
+      suffixIcon: kIsWeb
+          ? null
+          : IconButton(
+              tooltip: 'Escanear código de barras',
+              icon: const Icon(Icons.qr_code_scanner),
+              onPressed: _scanBarcode,
+            ),
     );
   }
 
@@ -314,12 +392,21 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
                     spacing: 8,
                     runSpacing: 4,
                     children: [
-                      for (final time in _quickPickTimes)
+                      for (final intervalHours in const [8, 12, 24])
                         ActionChip(
-                          label: Text(
-                            '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                          label: Text('A cada ${intervalHours}h'),
+                          onPressed: () => _applyInterval(intervalHours),
+                        ),
+                      for (final preset in DoseSchedulePresets.routinePresets)
+                        ActionChip(
+                          avatar: Icon(
+                            _hasDoseTime(preset.time)
+                                ? Icons.check
+                                : Icons.add,
+                            size: 18,
                           ),
-                          onPressed: () => _addDoseTime(time),
+                          label: Text(preset.label),
+                          onPressed: () => _toggleDoseTime(preset.time),
                         ),
                     ],
                   ),
@@ -348,6 +435,8 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 8),
+                _buildUpcomingPreview(),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -425,6 +514,42 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
         ),
         FilledButton(onPressed: _save, child: const Text('Salvar')),
       ],
+    );
+  }
+
+  /// Mostra as próximas doses reais antes de salvar — o feedback que tira a
+  /// dúvida de "a cada 8h a partir de quando?" e de frequências especiais.
+  Widget _buildUpcomingPreview() {
+    if (_doseTimes.isEmpty) return const SizedBox.shrink();
+    final now = DateTime.now();
+    // O Treatment de regra só existe para reusar isScheduledOn (fonte única
+    // de verdade da frequência). Os campos obrigatórios não vazios são
+    // placeholders: nada disto é exibido além da regra de frequência.
+    final rule = Treatment(
+      id: 'preview',
+      name: 'prévia',
+      dosage: '1x',
+      presentation: 'un',
+      instructions: '',
+      startDate: _startDate,
+      endDate: _endDate,
+      frequency: _frequency,
+      doseTimes: List.unmodifiable(_doseTimes),
+      stock: null,
+      refillThreshold: null,
+    );
+    final instants = DoseSchedulePresets.upcomingInstants(
+      doseTimes: _doseTimes,
+      isScheduledOn: rule.isScheduledOn,
+      now: now,
+    );
+    if (instants.isEmpty) return const SizedBox.shrink();
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        'Próximas doses: ${DoseSchedulePresets.formatInstants(instants, now)}',
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
     );
   }
 
