@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../data/medicine_data.dart';
+import '../models/medicine.dart';
 import '../models/treatment.dart';
 import '../models/treatment_draft.dart';
 import '../services/dose_schedule_presets.dart';
@@ -13,9 +15,17 @@ import '../services/prescription_reader_service.dart';
 /// por medicamento selecionado — o formulário de tratamento continua sendo
 /// a última palavra.
 class PrescriptionReviewScreen extends StatefulWidget {
-  const PrescriptionReviewScreen({super.key, required this.result});
+  const PrescriptionReviewScreen({
+    super.key,
+    required this.result,
+    this.catalogFuture,
+  });
 
   final PrescriptionReadResult result;
+
+  /// Sobrescrita para testes: sem ela, o catálogo real (25 mil itens) é lido
+  /// do asset via [MedicineData.load].
+  final Future<List<Medicine>>? catalogFuture;
 
   @override
   State<PrescriptionReviewScreen> createState() =>
@@ -33,6 +43,9 @@ class _EditableMed {
   final PrescriptionMedication original;
   final TextEditingController name;
   final TextEditingController dosage;
+
+  /// Nasce com o que o parser achou e pode ganhar apresentação do catálogo.
+  String presentation;
   final List<DoseTime> times;
   bool selected = true;
 
@@ -47,7 +60,7 @@ class _EditableMed {
     return TreatmentDraft(
       name: name.text.trim(),
       dosage: dosage.text.trim(),
-      presentation: original.apresentacao,
+      presentation: presentation,
       instructions: original.observacao.trim(),
       doseTimes: List.unmodifiable(times),
       endDate: original.duracaoDias == null
@@ -161,6 +174,98 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
     );
   }
 
+  /// Casamento do nome lido com o catálogo ANVISA: corrige grafia de OCR e
+  /// completa apresentação/dosagem vazias com um toque. Nunca aplica sozinho —
+  /// a conferência existe para o usuário decidir.
+  Widget _buildCatalogSuggestion(_EditableMed med) {
+    return FutureBuilder<List<Medicine>>(
+      future: widget.catalogFuture ?? MedicineData.load(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final suggestion =
+            MedicineData.bestMatch(snapshot.data!, med.name.text);
+        if (suggestion == null || !_hasSomethingToGain(med, suggestion)) {
+          return const SizedBox.shrink();
+        }
+        final details = [
+          if (suggestion.presentation.isNotEmpty) suggestion.presentation,
+        ].join(' · ');
+        return Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Material(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () =>
+                  setState(() => _applyCatalogSuggestion(med, suggestion)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Catálogo: ${suggestion.name}'
+                        '${details.isEmpty ? '' : ' · $details'}',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    Icon(
+                      Icons.touch_app_outlined,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Só há o que ganhar se o catálogo corrige a grafia OU completa campo
+  /// vazio — sugerir o que já está certo é ruído na conferência.
+  bool _hasSomethingToGain(_EditableMed med, Medicine suggestion) {
+    if (!_sameFold(med.name.text, suggestion.name)) return true;
+    final catalogDosage =
+        suggestion.dosage.isNotEmpty ? suggestion.dosage : suggestion.listedDosage;
+    if (med.dosage.text.trim().isEmpty && catalogDosage.isNotEmpty) return true;
+    if (med.presentation.isEmpty && suggestion.presentation.isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
+  void _applyCatalogSuggestion(_EditableMed med, Medicine suggestion) {
+    if (!_sameFold(med.name.text, suggestion.name)) {
+      med.name.text = suggestion.name;
+    }
+    final catalogDosage =
+        suggestion.dosage.isNotEmpty ? suggestion.dosage : suggestion.listedDosage;
+    if (med.dosage.text.trim().isEmpty && catalogDosage.isNotEmpty) {
+      med.dosage.text = catalogDosage;
+    }
+    if (med.presentation.isEmpty && suggestion.presentation.isNotEmpty) {
+      med.presentation = suggestion.presentation;
+    }
+  }
+
+  static bool _sameFold(String first, String second) =>
+      normalizeMedicineText(first) == normalizeMedicineText(second);
+
   Widget _medCard(_EditableMed med, ThemeData theme) {
     final original = med.original;
     final badges = <String>[
@@ -208,6 +313,7 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
               textCapitalization: TextCapitalization.characters,
               onChanged: (_) => setState(() {}),
             ),
+            _buildCatalogSuggestion(med),
             const SizedBox(height: 8),
             TextFormField(
               controller: med.dosage,

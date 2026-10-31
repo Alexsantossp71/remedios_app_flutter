@@ -115,3 +115,23 @@ void main() {
     expect(enterogermina.single.presentation, isEmpty);
   });
 }
+
+test('bestMatch casa estrito: nome exato e prefixo, nada além disso',
+    () async {
+  final medicines = await MedicineData.load();
+
+  final exact = MedicineData.bestMatch(medicines, '  dipirona  ');
+  expect(exact, isNotNull);
+  expect(normalizeMedicineText(exact!.name), 'dipirona');
+
+  final prefixed = MedicineData.bestMatch(medicines, 'DIPIRONA COMP');
+  expect(prefixed, isNotNull);
+  expect(
+    normalizeMedicineText(prefixed!.name),
+    startsWith('dipirona'),
+  );
+
+  // OCR destruído demais não gera palpite: só conferência humana.
+  expect(MedicineData.bestMatch(medicines, 'qxzjw vvvk'), isNull);
+  expect(MedicineData.bestMatch(medicines, '   '), isNull);
+});
