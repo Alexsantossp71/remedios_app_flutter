@@ -64,7 +64,7 @@ class Medicine {
 
   static final RegExp _looseDosage = RegExp(
     r'\d[\d.,]*\s*(?:MCG|UG|MG|KG|UI|IU|ML)\b'
-    r'(?:\s*/\s*\d[\d.,]*\s*(?:MCG|UG|MG|ML)\b)?'
+    r'(?:\s*/\s*(?:\d[\d.,]*\s*)?(?:MCG|UG|MG|ML)\b)?'
     r'(?:\s*\+\s*\d[\d.,]*\s*(?:MCG|UG|MG|KG|UI|IU|ML)\b)*',
     caseSensitive: false,
   );

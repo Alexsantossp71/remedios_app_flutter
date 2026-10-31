@@ -114,4 +114,30 @@ void main() {
     expect(enterogermina.single.registrationNumber, isEmpty);
     expect(enterogermina.single.presentation, isEmpty);
   });
+
+  test('bestMatch casa estrito: nome exato e prefixo, nada além disso',
+      () async {
+    final medicines = await MedicineData.load();
+
+    final exact = MedicineData.bestMatch(medicines, '  dipirona  ');
+    expect(exact, isNotNull);
+    expect(normalizeMedicineText(exact!.name), 'dipirona');
+
+    // Prefixo de UMA palavra: o catálogo real tem "DIPIRONA SODICA" (e
+    // até um "DIPIRON" truncado, que ganharia por match exato) — por isso
+    // o prefixo usado aqui não colide com nome exato nenhum.
+    final prefixed = MedicineData.bestMatch(medicines, 'dipirona s');
+    expect(prefixed, isNotNull);
+    expect(
+      normalizeMedicineText(prefixed!.name),
+      startsWith('dipirona s'),
+    );
+
+    // Duas palavras que não formam prefixo de nenhum nome não palpitam.
+    expect(MedicineData.bestMatch(medicines, 'dipirona comp'), isNull);
+
+    // OCR destruído demais não gera palpite: só conferência humana.
+    expect(MedicineData.bestMatch(medicines, 'qxzjw vvvk'), isNull);
+    expect(MedicineData.bestMatch(medicines, '   '), isNull);
+  });
 }

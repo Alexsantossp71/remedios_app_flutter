@@ -18,6 +18,21 @@ class DoseTime {
   Map<String, dynamic> toJson() => {'hour': hour, 'minute': minute};
 
   int get minutesSinceMidnight => (hour * 60) + minute;
+
+  /// Valor, não identidade: "08:00" gerado pelo preset e "08:00" vindo do
+  /// JSON são o mesmo horário — sem isto, expect(times, [DoseTime(...)])
+  /// falha e dedup por igualdade nunca acontece.
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DoseTime && other.hour == hour && other.minute == minute;
+
+  @override
+  int get hashCode => Object.hash(hour, minute);
+
+  @override
+  String toString() =>
+      'DoseTime(${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')})';
 }
 
 class Treatment {

@@ -13,20 +13,25 @@ class DoseSchedulePresets {
   /// Gera os horários de um dia para doses em intervalo fixo de
   /// [intervalHours], ancoradas no horário da primeira dose. A convenção
   /// médica de "de 8 em 8 horas" é a partir da 1ª toma, não do relógio:
-  /// 1ª dose às 22:00 gera 22:00, 06:00 e 14:00.
+  /// 1ª dose às 22:00 gera 22:00, 06:00 e 14:00 — e 08:00 gera 08:00,
+  /// 16:00 e 00:00. O ciclo fecha em 24h: um intervalo de 8h significa
+  /// 3 tomas por dia, inclusive a que cruza a meia-noite.
   static List<DoseTime> everyIntervalHours({
     required DoseTime firstDose,
     required int intervalHours,
   }) {
-    if (intervalHours <= 0) return [firstDose];
-    final times = <DoseTime>[];
-    for (var minutes = firstDose.minutesSinceMidnight;
-        minutes < 24 * 60;
-        minutes += intervalHours * 60) {
-      times.add(DoseTime(hour: minutes ~/ 60, minute: minutes % 60));
-    }
-    return times;
+    if (intervalHours <= 0 || intervalHours >= 24 * 60) return [firstDose];
+    final step = intervalHours * 60;
+    final dayMinutes = 24 * 60;
+    final dosesPerDay = (dayMinutes / step).round();
+    return [
+      for (var i = 0; i < dosesPerDay; i++)
+        _fromMinutes((firstDose.minutesSinceMidnight + i * step) % dayMinutes),
+    ];
   }
+
+  static DoseTime _fromMinutes(int minutes) =>
+      DoseTime(hour: minutes ~/ 60, minute: minutes % 60);
 
   /// Chips de rotina: um toque marca, outro desmarca.
   static const List<({String label, DoseTime time})> routinePresets = [

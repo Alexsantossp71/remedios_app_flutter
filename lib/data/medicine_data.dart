@@ -54,4 +54,27 @@ class MedicineData {
     }
     return null;
   }
+
+  /// Melhor entrada do catálogo para um nome lido por OCR na receita.
+  ///
+  /// Casamento ESTRICTO de propósito: só EAN, nome/alias exato ou prefixo
+  /// (rank ≤ 4). "Contém" (rank 6) fica de fora — OCR estragado demais
+  /// merece conferência humana, não o palpite mais parecido; é o mesmo
+  /// contrato da conferência da receita: sugerir nunca é salvar.
+  static Medicine? bestMatch(Iterable<Medicine> medicines, String query) {
+    final normalizedQuery = normalizeMedicineText(query);
+    if (normalizedQuery.isEmpty) return null;
+    Medicine? best;
+    var bestRank = 1 << 30;
+    for (final medicine in medicines) {
+      final rank = medicine.matchRank(normalizedQuery);
+      if (rank >= 0 && rank < bestRank) {
+        best = medicine;
+        bestRank = rank;
+        if (bestRank == 0) break; // EAN exato não tem como melhorar
+      }
+    }
+    if (best == null || bestRank > 4) return null;
+    return best;
+  }
 }
