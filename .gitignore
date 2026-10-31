@@ -73,3 +73,7 @@ run_e2e_tests.ps1
 
 # Estado interno de agente
 .omo/
+
+# Caches de ferramentas de desenvolvimento (não versionar)
+.tmp/
+.serena/
