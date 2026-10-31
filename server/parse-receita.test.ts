@@ -141,3 +141,26 @@ Tomar 1 comprimido à noite por 2 semanas
   const [clonazepam] = receita.medicamentos;
   assert.equal(clonazepam.duracaoDias, 14);
 });
+
+test('cabeçalho de clínica não vira medicamento', () => {
+  const receita = parseReceitaText(`
+CLINICA MEDICA SAO LUCAS
+Dr. Ana Souza - CRM 123456
+Paciente: Joao Pereira Data: 31/10/2026
+DIPIRONA 500MG
+Tomar 1 comprimido a cada 8 horas por 5 dias
+  `);
+  assert.equal(receita.medicamentos.length, 1);
+  assert.equal(receita.medicamentos[0].nome, 'DIPIRONA');
+});
+
+test('hospital e farmácia também são ruído', () => {
+  const receita = parseReceitaText(`
+HOSPITAL DAS CLINICAS
+FARMACIA POPULAR
+DIPIRONA 500MG
+8/8 horas
+  `);
+  assert.equal(receita.medicamentos.length, 1);
+  assert.equal(receita.medicamentos[0].nome, 'DIPIRONA');
+});
