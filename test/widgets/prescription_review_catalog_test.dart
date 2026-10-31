@@ -110,4 +110,91 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('item fora do catálogo começa desmarcado e avisado',
+      (tester) async {
+    await openReview(
+      tester,
+      PrescriptionReadResult(
+        medicamentos: const [
+          PrescriptionMedication(nome: 'DIPIRONA', horarios: ['08:00']),
+          // Rótulo de formulário que escaparia do parser: não é medicamento.
+          PrescriptionMedication(
+            nome: 'IDENTIFICAÇÃO DO EMITENTE',
+            horarios: ['08:00'],
+          ),
+        ],
+        rawText: 'DIPIRONA 500MG',
+      ),
+    );
+
+    // Reconhecido segue marcado; desconhecido não vira tratamento sozinho.
+    expect(find.text('Continuar com 1 tratamento(s)'), findsOneWidget);
+    expect(find.text('No catálogo da ANVISA'), findsOneWidget);
+    // O segundo card está abaixo da dobra da ListView — rolar até o aviso.
+    await tester.scrollUntilVisible(
+      find.text('Não encontrei no catálogo da ANVISA — confira o nome'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      find.text(
+        'Não encontrei no catálogo da ANVISA — confira o nome',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('catálogo vazio não desmarca nada (fail-open)', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PrescriptionReviewScreen(
+            result: const PrescriptionReadResult(
+              medicamentos: [
+                PrescriptionMedication(nome: 'XPTO', horarios: ['08:00']),
+              ],
+              rawText: 'XPTO',
+            ),
+            catalogFuture: Future.value(const []),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Sem catálogo não há veredicto: nada de badge e nada de desmarcador.
+    expect(find.text('Continuar com 1 tratamento(s)'), findsOneWidget);
+    expect(find.text('No catálogo da ANVISA'), findsNothing);
+    expect(
+      find.text('Não encontrei no catálogo da ANVISA — confira o nome'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('editar o nome reavalia o catálogo', (tester) async {
+    await openReview(
+      tester,
+      PrescriptionReadResult(
+        medicamentos: const [
+          PrescriptionMedication(nome: 'XPTO', horarios: ['08:00']),
+        ],
+        rawText: 'XPTO',
+      ),
+    );
+
+    expect(
+      find.text('Não encontrei no catálogo da ANVISA — confira o nome'),
+      findsOneWidget,
+    );
+
+    await tester.enterText(find.byType(TextFormField).first, 'DIPIRONA');
+    await tester.pump();
+
+    expect(find.text('No catálogo da ANVISA'), findsOneWidget);
+    expect(
+      find.text('Não encontrei no catálogo da ANVISA — confira o nome'),
+      findsNothing,
+    );
+  });
 }

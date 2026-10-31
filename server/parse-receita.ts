@@ -6,17 +6,32 @@
  * inventa pixels, e o parser não inventa medicamentos.
  *
  * O formato livre do receituário brasileiro é tratado em blocos: uma linha
- * que parece medicamento (nome + dosagem) abre um bloco; as linhas de
+ * só abre um bloco de medicamento quando carrega evidência real — dosagem,
+ * apresentação, posologia ou nome conhecido no índice da ANVISA
+ * (`med-name-index.ts`). Rótulos do formulário ("Identificação do
+ * emitente"), dados do paciente/CRM e ruído de OCR ficam de fora: resposta
+ * menor e certa vale mais que lista cheia de fantasma. As linhas de
  * posologia seguintes ("Tomar 1 comprimido de 8/8 horas por 7 dias")
- * pertencem ao bloco aberto. Linhas de rodapé (CRM, paciente, data) são
- * ruído e nunca viram medicamento.
+ * pertencem ao bloco aberto.
+ *
+ * O índice da ANVISA também limpa o nome: "ORAL TRAMAL COM REVL 1COMP"
+ * (linha de tabela do receituário eletrônico) reduz a "TRAMAL" — o nome
+ * sai do texto da própria receita, o catálogo só aponta onde ele começa e
+ * termina.
  *
  * Limitações conscientes (documentadas, não escondidas):
  * - "Tomar Dipirona 8/8h" na primeira linha da receita perde o nome (a linha
  *   começa com verbo de posologia). A conferência no app cobre o caso.
+ * - Medicamento fora do catálogo ANVISA precisa de dosagem, apresentação ou
+ *   posologia na própria linha para abrir bloco — nome sozinho desconhecido
+ *   é provavelmente rótulo, não remédio.
+ * - Linha de continuação sem posologia, dosagem, apresentação ou nome
+ *   conhecido (ex.: "com alimentos") não é anexada ao bloco aberto.
  * - Prescrições totalmente manuscritas fora do padrão podem não casar nada —
  *   e a resposta é uma lista vazia, não um palpite.
  */
+
+import { MED_NAMES, MED_NAME_MAX_TOKENS } from './med-name-index.ts';
 
 export interface ReceitaMed {
   nome: string;
@@ -51,6 +66,68 @@ function fold(text: string): string {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase();
+}
+
+interface HeaderToken {
+  /** Conteúdo fold do token (maiúsculo, sem acento). */
+  text: string;
+  /** Posição do token no texto ORIGINAL (para devolver o trecho lido). */
+  start: number;
+  end: number;
+}
+
+/**
+ * Palavra isolada que nunca é medicamento por si só — via de administração e
+ * rótulos de formulário que andam colados no nome na linha de tabela.
+ */
+const SINGLE_TOKEN_BLOCKLIST = new Set([
+  'ORAL', 'USO', 'NASAL', 'TOPICO', 'TOPICA', 'OFTALMICO', 'OFTALMICA',
+  'OTOLOGICO', 'OTICO', 'VAGINAL', 'RETAL', 'SUBLINGUAL', 'INALATORIO',
+  'INALACAO', 'INJETAVEL', 'DERMATOLOGICO', 'COMPRIMIDO', 'CAPSULA',
+  'MEDICAMENTO', 'MEDICAMENTOS', 'DOSAGEM', 'POSOLOGIA', 'FREQUENCIA',
+  'DURACAO', 'PACIENTE', 'NOME', 'DATA', 'DIAS', 'DIA',
+]);
+
+function tokenize(text: string): HeaderToken[] {
+  const tokens: HeaderToken[] = [];
+  const pattern = /[A-Za-z0-9À-ÿ]+/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text)) !== null) {
+    tokens.push({
+      text: fold(match[0]),
+      start: match.index,
+      end: match.index + match[0].length,
+    });
+  }
+  return tokens;
+}
+
+/**
+ * Acha o nome de medicamento dentro de um texto qualquer: o n-grama (do mais
+ * longo para o mais curto) que casa com uma entrada do índice da ANVISA.
+ * "ORAL TRAMAL COM REVL 1COMP" → "TRAMAL". Palavra isolada só conta com 5+
+ * caracteres e fora da lista de rótulos — "ORAL" e "COM" não são remédio.
+ * Devolve as posições no texto original, não o texto fold.
+ */
+function findMedSpan(
+  tokens: HeaderToken[],
+): { start: number; end: number } | null {
+  const count = tokens.length;
+  if (count === 0) return null;
+  for (let n = Math.min(MED_NAME_MAX_TOKENS, count); n >= 1; n -= 1) {
+    for (let i = 0; i + n <= count; i += 1) {
+      const gram = tokens
+        .slice(i, i + n)
+        .map((token) => token.text)
+        .join(' ');
+      if (!MED_NAMES.has(gram)) continue;
+      if (n === 1 && (gram.length < 5 || SINGLE_TOKEN_BLOCKLIST.has(gram))) {
+        continue;
+      }
+      return { start: tokens[i].start, end: tokens[i + n - 1].end };
+    }
+  }
+  return null;
 }
 
 const DOSAGE_PATTERN =
@@ -90,7 +167,28 @@ const POSOLOGY_SIGNALS: RegExp[] = [
 ];
 
 const NOISE_PATTERN =
-  /\b(?:CRM|CRO|COREN|DR\.?|DRA\.?|PACIENTE|RECEITUARIO|RECEITA|RECEITAS|DATA|ENDERECO|TELEFONE|CPF|RG\b|NASCIMENTO|CONSULTA|RETORNO|ASSINATURA|CARIMBO|MEDICO|MEDICAMENTOS?\s+DE\s+CONTROLE|PORTARIA|VALOR|CONVENIO|CLINICA|HOSPITAL|FARMACIA|CONSULTORIO|UBS|UNIDADE\s+DE\s+SAUDE|POSTO\s+DE\s+SAUDE|CENTRO\s+MEDICO)\b/;
+  /\b(?:C\.?R\.?M\.?|C\.?R\.?O\.?|C\.?O\.?R\.?E\.?N\.?|DR\.?|DRA\.?|PACIENTE|RECEITUARIO|RECEITA|RECEITAS|PRESCRIPTION|DATA|ENDERECO|BAIRRO|CIDADE|CEP|TELEFONE|CPF|RG\b|NASCIMENTO|CONSULTA|RETORNO|ASSINATURA|ASSINAD[OA]|CARIMBO|MEDICO|MEDICAMENTOS?\s+DE\s+CONTROLE|MEDICAMENTOS?\s+PRESCRITOS|PORTARIA|CERTIFICADO|VALOR|CONVENIO|CLINICA|HOSPITAL|FARMACIA|FARMACEUTICO|CONSULTORIO|INSTITUICAO|EMITENTE|COMPRADOR|FORNECEDOR|EMISSOR|IDENTIFICACAO|IDENT\b|OBSERVACOES?|NOME\b|CIRURGIAO|POSOLOGIA|DOSAGEM|FREQUENCIA|DURACAO|UBS|UNIDADE\s+DE\s+SAUDE|POSTO\s+DE\s+SAUDE|CENTRO\s+MEDICO)\b/;
+
+/** Hash de assinatura digital (ICP Brasil) — run hexadecimal longa. */
+const SIGNATURE_HASH_PATTERN = /\b[0-9A-F]{16,}\b/;
+
+/**
+ * Linha de cabeçalho de tabela do receituário eletrônico
+ * ("Uso: Medicamento: Dosagem: Posologia: Frequência: Duração:").
+ */
+const TABLE_HEADER_WORDS =
+  /\b(?:USO|MEDICAMENTOS?|DOSAGEM|POSOLOGIA|FREQUENCIA|DURACAO)\b/g;
+
+function isTableHeaderRow(folded: string): boolean {
+  let count = 0;
+  for (const _ of folded.matchAll(TABLE_HEADER_WORDS)) count += 1;
+  return count >= 3;
+}
+
+/** Datas "31/10/2026" não são posologia — tiram o "8/8" do ar. */
+function withoutDates(folded: string): string {
+  return folded.replace(/\b\d{1,2}\s*\/\s*\d{1,2}\s*\/\s*\d{2,4}\b/g, ' ');
+}
 
 const INTERVAL_PATTERNS: RegExp[] = [
   /\b(\d{1,2})\s*\/\s*\d{1,2}\s*(?:H|HS|HRS|HORAS?)?\b/,
@@ -103,6 +201,8 @@ const DURATION_PATTERNS: RegExp[] = [
   /\b(?:POR|DURANTE|PELO?S?)\s+(\d{1,3})\s+DIAS?\b/,
   /\b(?:POR|DURANTE)\s+(\d{1,2})\s+SEMANAS?\b/,
   /\b(?:POR|DURANTE)\s+(\d{1,2})\s+MES(?:ES)?\b/,
+  // "30 DIAS" na coluna Duração do receituário eletrônico — sem "por".
+  /\b(\d{1,3})\s+DIAS?\b/,
 ];
 
 function toIntervalHours(match: RegExpMatchArray): number | null {
@@ -164,6 +264,33 @@ interface Block {
 }
 
 /**
+ * Via de administração na frente do nome (coluna "Uso" do receituário
+ * eletrônico): "USO ORAL FÓRMULA MANIPULADA" → "FÓRMULA MANIPULADA".
+ */
+const ROUTE_PREFIX =
+  /^(?:(?:USO\s+)?(?:ORAL|NASAL|TOPIC[OA]|OFTALMIC[OA]|OTOLOGIC[OA]|OTIC[OA]|VAGINAL|RETAL|SUBLINGUAL|INALATORI[OA]|INALAC[AO][OA]|INJETAVEL|DERMATOLOGIC[OA])\s+)+/i;
+
+/**
+ * Refina o nome lido: primeiro tenta achar o medicamento da ANVISA dentro do
+ * texto (mantém a grafia da própria receita, só corta o que não é nome);
+ * sem reconhecimento, tira a via de administração da frente e a quantidade
+ * (número solto) do fim — manipulados e fórmulas não estão no catálogo e
+ * seguem editáveis na conferência. Nome conhecido não passa por aqui: nomes
+ * da ANVISA que terminam em número ("ALBUREX 20") são preservados pelo
+ * caminho do dicionário.
+ */
+function refineName(nome: string): string {
+  const span = findMedSpan(tokenize(nome));
+  if (span) return nome.slice(span.start, span.end).trim();
+  let stripped = nome.replace(ROUTE_PREFIX, '').trim();
+  // Quantidade no fim: "FÓRMULA MANIPULADA 30" (de "30 cápsulas").
+  while (/\s+\d{1,4}$/.test(stripped)) {
+    stripped = stripped.replace(/\s+\d{1,4}$/, '').trim();
+  }
+  return stripped.length >= 2 ? stripped : nome;
+}
+
+/**
  * Decide se a linha abre medicamento: corta a linha no primeiro sinal de
  * posologia e avalia o pedaço de cima. "DIPIRONA 500MG 8/8H" rende cabeçalho
  * "DIPIRONA 500MG" e posologia "8/8H" na mesma linha; "Tomar 1 comprimido"
@@ -190,6 +317,18 @@ function splitHeader(line: string, folded: string): {
   // medicamento se carregar uma dosagem: "1 comprimido pela manhã" vira
   // posologia do bloco aberto, não um remédio fantasma.
   if (cut < folded.length && !DOSAGE_PATTERN.test(headerFolded)) return null;
+  // Linha SEM posologia só abre bloco com evidência de medicamento: dosagem,
+  // apresentação ou nome conhecido na ANVISA. "My Prescription",
+  // "Identificação do emitente" e lixo de OCR não têm nenhuma das três.
+  if (cut >= folded.length) {
+    const hasDosage = DOSAGE_PATTERN.test(headerFolded);
+    const hasPresentation = PRESENTATION_WORDS.some(([pattern]) => {
+      pattern.lastIndex = 0;
+      return pattern.test(headerFolded);
+    });
+    const knownMedication = findMedSpan(tokenize(header)) !== null;
+    if (!hasDosage && !hasPresentation && !knownMedication) return null;
+  }
   return { header, posology };
 }
 
@@ -287,6 +426,8 @@ export function parseReceitaText(rawText: string): ReceitaFields {
   const blocks: Block[] = [];
   for (const line of lines) {
     const folded = fold(line);
+    // Linha de rótulo de tabela do receituário eletrônico não é nada.
+    if (isTableHeaderRow(folded)) continue;
     const headerSplit = splitHeader(line, folded);
     if (headerSplit) {
       blocks.push({
@@ -296,8 +437,24 @@ export function parseReceitaText(rawText: string): ReceitaFields {
       });
       continue;
     }
-    const isNoise = NOISE_PATTERN.test(folded) && !POSOLOGY_SIGNALS.some((s) => s.test(folded));
+    const sansDates = withoutDates(folded);
+    const isNoise =
+      (NOISE_PATTERN.test(folded) || SIGNATURE_HASH_PATTERN.test(folded)) &&
+      !POSOLOGY_SIGNALS.some((s) => s.test(sansDates));
     if (isNoise) continue;
+    // Continuação precisa levar informação de verdade — posologia (sem datas),
+    // dosagem, apresentação, nome conhecido ou "N dias". Borda de tabela e
+    // lixo de OCR ("= . E] Otsensação: IC P") não somam nada ao bloco aberto.
+    const carriesInfo =
+      POSOLOGY_SIGNALS.some((s) => s.test(sansDates)) ||
+      /\b\d{1,3}\s+DIAS?\b/.test(sansDates) ||
+      DOSAGE_PATTERN.test(folded) ||
+      PRESENTATION_WORDS.some(([pattern]) => {
+        pattern.lastIndex = 0;
+        return pattern.test(folded);
+      }) ||
+      findMedSpan(tokenize(line)) !== null;
+    if (!carriesInfo) continue;
     // Linha de posologia ou um detalhe a mais do medicamento aberto.
     if (blocks.length > 0) {
       blocks[blocks.length - 1].posologyLines.push(line);
@@ -307,7 +464,10 @@ export function parseReceitaText(rawText: string): ReceitaFields {
 
   const medicamentos: ReceitaMed[] = [];
   for (const block of blocks) {
-    const { nome, apresentacao: headerPresentation } = cleanName(block.headerLine);
+    const { nome: rawName, apresentacao: headerPresentation } = cleanName(
+      block.headerLine,
+    );
+    const nome = refineName(rawName);
     if ((nome.match(/[A-Za-zÀ-ú]/g) ?? []).length < 2) continue;
 
     const posologyFolded = fold(block.posologyLines.join(' · '));

@@ -11,9 +11,11 @@ import '../services/prescription_reader_service.dart';
 ///
 /// Preencher não é salvar: cada medicamento vem com nome e dosagem editáveis,
 /// horários em chips (um toque marca, outro desmarca) e uma caixa para
-/// excluir o que o parser inventou. "Continuar" devolve um [TreatmentDraft]
-/// por medicamento selecionado — o formulário de tratamento continua sendo
-/// a última palavra.
+/// excluir o que o parser inventou. O catálogo da ANVISA dá o veredicto de
+/// reconhecimento — ✓ no catálogo segue marcado; itens não encontrados
+/// começam desmarcados e avisados, porque virar tratamento é decisão do
+/// usuário. "Continuar" devolve um [TreatmentDraft] por medicamento
+/// selecionado — o formulário de tratamento continua sendo a última palavra.
 class PrescriptionReviewScreen extends StatefulWidget {
   const PrescriptionReviewScreen({
     super.key,
@@ -53,6 +55,10 @@ class _EditableMed {
   final List<DoseTime> times;
   bool selected = true;
 
+  /// Melhor entrada do catálogo para o nome atual — cache da conferência.
+  /// Nula = fora do catálogo ANVISA (ou catálogo não carregado).
+  Medicine? catalogHit;
+
   /// Frequência lida da receita ("dia sim, dia não"); nula = nada dito.
   TreatmentFrequency? frequency;
 
@@ -81,10 +87,42 @@ class _EditableMed {
 class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
   late final List<_EditableMed> _meds;
 
+  /// Catálogo carregado uma vez; vazio/nulo = sem veredicto (fail-open:
+  /// tudo marcado, sem badge — nunca desmarcar por falta de dados).
+  List<Medicine>? _catalog;
+
   @override
   void initState() {
     super.initState();
     _meds = widget.result.medicamentos.map(_EditableMed.new).toList();
+    _loadCatalog();
+  }
+
+  Future<void> _loadCatalog() async {
+    List<Medicine> catalog;
+    try {
+      catalog = await (widget.catalogFuture ?? MedicineData.load());
+    } catch (_) {
+      return; // catálogo indisponível: sem veredicto, nada muda.
+    }
+    if (!mounted) return;
+    setState(() {
+      _catalog = catalog;
+      if (catalog.isEmpty) return;
+      for (final med in _meds) {
+        med.catalogHit = MedicineData.bestMatch(catalog, med.name.text);
+        // Fora do catálogo começa desmarcado: o caminho fácil é o que a
+        // ANVISA reconhece; o resto vira tratamento por decisão explícita.
+        if (med.catalogHit == null) med.selected = false;
+      }
+    });
+  }
+
+  /// Nome editado → veredicto novo (badge e sugestão acompanham o texto).
+  void _refreshCatalogHit(_EditableMed med) {
+    final catalog = _catalog;
+    if (catalog == null || catalog.isEmpty) return;
+    med.catalogHit = MedicineData.bestMatch(catalog, med.name.text);
   }
 
   @override
@@ -196,6 +234,9 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final unknownCount = _catalog != null && _catalog!.isNotEmpty
+        ? _meds.where((med) => med.catalogHit == null).length
+        : 0;
     return Scaffold(
       appBar: AppBar(title: const Text('Conferir receita')),
       body: ListView(
@@ -208,6 +249,17 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+          if (unknownCount > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              '$unknownCount item(ns) não estão no catálogo da ANVISA e '
+              'começam desmarcados — confira o nome e marque os que forem '
+              'medicamentos.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           for (final med in _meds) _medCard(med, theme),
           ExpansionTile(
@@ -249,61 +301,54 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
   /// completa apresentação/dosagem vazias com um toque. Nunca aplica sozinho —
   /// a conferência existe para o usuário decidir.
   Widget _buildCatalogSuggestion(_EditableMed med) {
-    return FutureBuilder<List<Medicine>>(
-      future: widget.catalogFuture ?? MedicineData.load(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
-        final suggestion =
-            MedicineData.bestMatch(snapshot.data!, med.name.text);
-        if (suggestion == null || !_hasSomethingToGain(med, suggestion)) {
-          return const SizedBox.shrink();
-        }
-        final details = [
-          if (suggestion.presentation.isNotEmpty) suggestion.presentation,
-        ].join(' · ');
-        return Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Material(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(8),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: () =>
-                  setState(() => _applyCatalogSuggestion(med, suggestion)),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+    final suggestion = med.catalogHit;
+    if (suggestion == null || !_hasSomethingToGain(med, suggestion)) {
+      return const SizedBox.shrink();
+    }
+    final details = [
+      if (suggestion.presentation.isNotEmpty) suggestion.presentation,
+    ].join(' · ');
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Material(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () =>
+              setState(() => _applyCatalogSuggestion(med, suggestion)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 8,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.inventory_2_outlined,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.inventory_2_outlined,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Catálogo: ${suggestion.name}'
-                        '${details.isEmpty ? '' : ' · $details'}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ),
-                    Icon(
-                      Icons.touch_app_outlined,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Catálogo: ${suggestion.name}'
+                    '${details.isEmpty ? '' : ' · $details'}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
-              ),
+                Icon(
+                  Icons.touch_app_outlined,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -336,6 +381,39 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
 
   static bool _sameFold(String first, String second) =>
       normalizeMedicineText(first) == normalizeMedicineText(second);
+
+  /// Veredicto do catálogo logo abaixo do nome: é a resposta direta à
+  /// pergunta "isto é um remédio?" — reconhecido segue marcado, desconhecido
+  /// começa desmarcado com aviso. Sem catálogo carregado, sem veredicto.
+  Widget _buildCatalogStatus(_EditableMed med, ThemeData theme) {
+    final catalog = _catalog;
+    if (catalog == null || catalog.isEmpty || !med.hasName) {
+      return const SizedBox.shrink();
+    }
+    final known = med.catalogHit != null;
+    final color = known ? theme.colorScheme.primary : Colors.amber.shade800;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          Icon(
+            known ? Icons.verified : Icons.help_outline,
+            size: 16,
+            color: color,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              known
+                  ? 'No catálogo da ANVISA'
+                  : 'Não encontrei no catálogo da ANVISA — confira o nome',
+              style: theme.textTheme.bodySmall?.copyWith(color: color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _medCard(_EditableMed med, ThemeData theme) {
     final original = med.original;
@@ -382,8 +460,9 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
               controller: med.name,
               decoration: const InputDecoration(labelText: 'Medicamento'),
               textCapitalization: TextCapitalization.characters,
-              onChanged: (_) => setState(() {}),
+              onChanged: (_) => setState(() => _refreshCatalogHit(med)),
             ),
+            _buildCatalogStatus(med, theme),
             _buildCatalogSuggestion(med),
             const SizedBox(height: 8),
             TextFormField(
