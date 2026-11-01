@@ -152,15 +152,52 @@ class PrescriptionMedication {
   }
 }
 
-/// Resultado da leitura da receita: medicamentos + texto bruto para conferência.
+/// Médico identificado na receita — nome e/ou CRM, tudo opcional porque
+/// o OCR pode falhar em parte. Nunca salvo direto: preenche o formulário
+/// de médico para conferência (padrão do rascunho de tratamento).
+class PrescriptionDoctor {
+  const PrescriptionDoctor({
+    this.nome = '',
+    this.crm = '',
+    this.uf = '',
+  });
+
+  final String nome;
+  final String crm;
+  final String uf;
+
+  bool get hasName => nome.trim().isNotEmpty;
+  bool get hasCrm => crm.trim().isNotEmpty;
+  bool get hasAnything => hasName || hasCrm;
+
+  factory PrescriptionDoctor.fromJson(Map<String, dynamic> json) {
+    String text(String key) {
+      final value = json[key];
+      return value == null ? '' : value.toString().trim();
+    }
+
+    return PrescriptionDoctor(
+      nome: text('nome'),
+      crm: text('crm').replaceAll(RegExp(r'\D'), ''),
+      uf: text('uf').toUpperCase(),
+    );
+  }
+}
+
+/// Resultado da leitura da receita: medicamentos + médico (quando houver)
+/// + texto bruto para conferência.
 class PrescriptionReadResult {
   const PrescriptionReadResult({
     required this.medicamentos,
     required this.rawText,
+    this.medico,
   });
 
   final List<PrescriptionMedication> medicamentos;
   final String rawText;
+
+  /// Médico emissor quando a receita trouxe evidência real de nome/CRM.
+  final PrescriptionDoctor? medico;
 }
 
 /// Erro de leitura da receita com mensagem pronta para o usuário.
@@ -205,6 +242,57 @@ class PrescriptionReaderService {
     required Uint8List imageBytes,
     String mimeType = 'image/jpeg',
   }) async {
+    final content = await _readImage(imageBytes: imageBytes, mimeType: mimeType);
+    return parseContent(content);
+  }
+
+  /// Lê a foto da receita procurando o MÉDICO (nome + CRM) para o cadastro
+  /// de médico. Diferente de [readPrescription]: não exige medicamentos —
+  /// uma foto do cabeçalho da receita já basta. Lança quando nada legível
+  /// de médico for encontrado.
+  Future<PrescriptionDoctor> readDoctorFromImage({
+    required Uint8List imageBytes,
+    String mimeType = 'image/jpeg',
+  }) async {
+    final content = await _readImage(imageBytes: imageBytes, mimeType: mimeType);
+
+    final jsonText = _extractJsonObject(content);
+    if (jsonText.isEmpty) {
+      throw const PrescriptionReaderException(
+        'Não foi possível entender a foto da receita. Tente uma foto mais '
+        'nítida ou cadastre manualmente.',
+      );
+    }
+    try {
+      final decoded = jsonDecode(jsonText);
+      if (decoded is! Map<String, dynamic>) throw const FormatException();
+      final medicoJson = decoded['medico'];
+      final medico = medicoJson is Map<String, dynamic>
+          ? PrescriptionDoctor.fromJson(medicoJson)
+          : null;
+      if (medico == null || !medico.hasAnything) {
+        throw const PrescriptionReaderException(
+          'Não encontrei nome ou CRM de médico legíveis nessa receita. '
+          'Fotografe o cabeçalho/rodapé com a identificação ou cadastre '
+          'manualmente.',
+        );
+      }
+      return medico;
+    } on PrescriptionReaderException {
+      rethrow;
+    } on FormatException {
+      throw const PrescriptionReaderException(
+        'Não foi possível entender a foto da receita. Tente uma foto mais '
+        'nítida ou cadastre manualmente.',
+      );
+    }
+  }
+
+  /// POST compartilhado das leituras (medicamentos e médico).
+  Future<String> _readImage({
+    required Uint8List imageBytes,
+    required String mimeType,
+  }) async {
     final http.Response response;
     try {
       response = await _client
@@ -236,15 +324,18 @@ class PrescriptionReaderService {
         'cadastre manualmente.',
       );
     }
-
-    return parseContent(content);
+    return content;
   }
 
   /// Converte o JSON retornado pelo servidor em [PrescriptionReadResult].
   ///
   /// Tolera cercas de código (```json), texto antes/depois do objeto e
-  /// campos ausentes.
-  static PrescriptionReadResult parseContent(String content) {
+  /// campos ausentes. Com [requireMedications] desligado (leitura de
+  /// médico), a ausência de medicamentos não é erro.
+  static PrescriptionReadResult parseContent(
+    String content, {
+    bool requireMedications = true,
+  }) {
     final jsonText = _extractJsonObject(content);
     if (jsonText.isEmpty) {
       throw const PrescriptionReaderException(
@@ -271,17 +362,21 @@ class PrescriptionReaderService {
         .where((med) => med.hasName)
         .toList(growable: false);
 
-    if (medicamentos.isEmpty) {
+    if (requireMedications && medicamentos.isEmpty) {
       throw const PrescriptionReaderException(
         'Não encontrei medicamentos legíveis nessa receita. Tente uma foto '
         'mais próxima do texto ou cadastre manualmente.',
       );
     }
 
+    final medicoJson = json['medico'];
     final rawText = json['rawText'];
     return PrescriptionReadResult(
       medicamentos: medicamentos,
       rawText: rawText is String ? rawText : '',
+      medico: medicoJson is Map<String, dynamic>
+          ? PrescriptionDoctor.fromJson(medicoJson)
+          : null,
     );
   }
 

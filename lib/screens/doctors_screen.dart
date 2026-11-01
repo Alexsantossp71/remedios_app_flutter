@@ -1,11 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/doctor.dart';
+import '../models/doctor_draft.dart';
 import '../providers/doctor_provider.dart';
+import '../providers/user_profile_provider.dart';
+import '../services/prescription_reader_service.dart';
 import '../widgets/doctor_form_dialog.dart';
+import '../widgets/privacy_notice.dart';
 
 class DoctorsScreen extends StatefulWidget {
   const DoctorsScreen({super.key});
@@ -22,6 +29,162 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Foto da receita: identifica o médico emissor (nome + CRM) por OCR e
+  /// abre o formulário preenchido para conferência — a leitura só preenche,
+  /// quem salva é o usuário.
+  Future<void> _startDoctorReceiptFlow(BuildContext context) async {
+    final consented = await _ensurePrescriptionConsent(context);
+    if (!consented || !context.mounted) return;
+
+    final source = await _pickImageSource(context);
+    if (source == null || !context.mounted) return;
+
+    final XFile? file;
+    try {
+      file = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1600,
+        maxHeight: 1600,
+        imageQuality: 85,
+      );
+    } catch (_) {
+      if (context.mounted) {
+        _showMessage('Não foi possível acessar a imagem.');
+      }
+      return;
+    }
+    if (file == null) return;
+
+    final bytes = await file.readAsBytes();
+    if (!context.mounted) return;
+
+    // Diálogo sem await: só é dispensado quando a leitura termina (padrão
+    // do fluxo de tratamentos).
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const _ReadingDoctorDialog(),
+      ),
+    );
+
+    PrescriptionDoctor? medico;
+    String? error;
+    try {
+      medico = await PrescriptionReaderService().readDoctorFromImage(
+        imageBytes: bytes,
+        mimeType: _mimeTypeOf(file),
+      );
+    } on PrescriptionReaderException catch (e) {
+      error = e.message;
+    } catch (_) {
+      error = 'Não foi possível ler a receita. Tente outra foto ou cadastre '
+          'manualmente.';
+    }
+
+    if (!context.mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // fecha o diálogo de leitura
+
+    if (medico == null) {
+      _showMessage(error!);
+      return;
+    }
+
+    final provider = context.read<DoctorProvider>();
+    // Variável final: a promoção de nulos sobrevive à captura do builder.
+    final medicoDraft = medico;
+    final saved = await showDialog<Doctor>(
+      context: context,
+      builder: (dialogContext) => DoctorFormDialog(
+        draft: DoctorDraft(
+          name: medicoDraft.nome,
+          crm: medicoDraft.crm,
+          crmState: medicoDraft.uf,
+        ),
+        knownSpecialties: provider.doctors
+            .map((item) => item.specialty)
+            .where((specialty) => specialty.trim().isNotEmpty)
+            .toList(),
+      ),
+    );
+    if (saved != null && context.mounted) {
+      await provider.saveDoctor(saved);
+    }
+  }
+
+  Future<bool> _ensurePrescriptionConsent(BuildContext context) async {
+    final userProvider = context.read<UserProfileProvider>();
+    if (userProvider.profile?.consentAt != null) return true;
+
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Autorização necessária'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Para ler a foto da receita, a imagem é enviada ao nosso '
+                'servidor e descartada após a leitura por OCR. Essa opção '
+                'usa a internet; o cadastro manual não envia nada.',
+              ),
+              SizedBox(height: 12),
+              PrivacyNoticeCard(),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Aceito e autorizo'),
+          ),
+        ],
+      ),
+    );
+
+    if (accepted != true || !context.mounted) return false;
+    await userProvider.grantConsent();
+    return true;
+  }
+
+  Future<ImageSource?> _pickImageSource(BuildContext context) {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Tirar foto da receita'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Escolher imagem da galeria'),
+              onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _mimeTypeOf(XFile file) {
+    final path = file.path.toLowerCase();
+    if (path.endsWith('.png')) return 'image/png';
+    if (path.endsWith('.webp')) return 'image/webp';
+    return 'image/jpeg';
   }
 
   Future<void> _editDoctor(DoctorProvider provider, [Doctor? doctor]) async {
@@ -176,10 +339,23 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                           ],
                         ),
                       ),
-                      FilledButton.icon(
-                        onPressed: () => _editDoctor(provider),
-                        icon: const Icon(Icons.person_add_alt_1),
-                        label: const Text('Adicionar'),
+                      Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: 10,
+                        runSpacing: 8,
+                        children: [
+                          FilledButton.tonalIcon(
+                            onPressed: () =>
+                                _startDoctorReceiptFlow(context),
+                            icon: const Icon(Icons.photo_camera_outlined),
+                            label: const Text('Foto da receita'),
+                          ),
+                          FilledButton.icon(
+                            onPressed: () => _editDoctor(provider),
+                            icon: const Icon(Icons.person_add_alt_1),
+                            label: const Text('Adicionar'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -229,7 +405,10 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   ],
                   const SizedBox(height: 18),
                   if (provider.doctors.isEmpty)
-                    _EmptyDoctors(onAdd: () => _editDoctor(provider))
+                    _EmptyDoctors(
+                      onAdd: () => _editDoctor(provider),
+                      onReceipt: () => _startDoctorReceiptFlow(context),
+                    )
                   else if (doctors.isEmpty)
                     const _NoSearchResults()
                   else
@@ -394,9 +573,10 @@ class _DoctorTile extends StatelessWidget {
 }
 
 class _EmptyDoctors extends StatelessWidget {
-  const _EmptyDoctors({required this.onAdd});
+  const _EmptyDoctors({required this.onAdd, required this.onReceipt});
 
   final VoidCallback onAdd;
+  final VoidCallback onReceipt;
 
   @override
   Widget build(BuildContext context) {
@@ -426,12 +606,54 @@ class _EmptyDoctors extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 18),
+          FilledButton.tonalIcon(
+            onPressed: onReceipt,
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: const Text('Foto da receita'),
+          ),
+          const SizedBox(height: 10),
           FilledButton.icon(
             onPressed: onAdd,
             icon: const Icon(Icons.person_add_alt_1),
             label: const Text('Cadastrar primeiro médico'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Diálogo de leitura da receita do médico — mesmo desenho do fluxo de
+/// tratamentos.
+class _ReadingDoctorDialog extends StatelessWidget {
+  const _ReadingDoctorDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Dialog(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Lendo receita…',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Procurando o médico que assinou.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

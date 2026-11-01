@@ -66,7 +66,22 @@ export interface ReceitaMed {
 
 export interface ReceitaFields {
   medicamentos: ReceitaMed[];
+  /**
+   * Médico identificado na receita (nome + CRM), para preencher o cadastro
+   * de médico — sempre conferido pelo usuário antes de salvar. Nulo quando
+   * o texto não traz evidência real (o parser não inventa profissional).
+   */
+  medico: ReceitaDoctor | null;
   rawText: string;
+}
+
+export interface ReceitaDoctor {
+  /** Nome como lido na receita (caixa original do OCR) — sem prefixo Dr./Dra. */
+  nome: string;
+  /** Só dígitos. Vazio quando a receita não traz número legível. */
+  crm: string;
+  /** Duas letras ("SP") ou vazio quando a receita não traz a UF. */
+  uf: string;
 }
 
 /**
@@ -186,6 +201,157 @@ const NOISE_PATTERN =
 
 /** Hash de assinatura digital (ICP Brasil) — run hexadecimal longa. */
 const SIGNATURE_HASH_PATTERN = /\b[0-9A-F]{16,}\b/;
+
+// ─── Identificação do médico emissor ─────────────────────────────────────────
+// A receita brasileira assina no cabeçalho ou rodapé: "Dr. João da Silva -
+// CRM 123456", "CRM/SP 123.456-7", "MEDICO RESPONSÁVEL: DRA. X CRM-SP 333".
+// Extração determinística: só preenche o que casa de verdade.
+
+/**
+ * CRM seguido de UF — "CRM/SP 123456", "CRM-SP 123.456", "CRM SP 33333".
+ * Os pontos do número (grupos de 3) e o dígito verificador ("123.456-7")
+ * são tolerados; os separadores viram lixo de OCR com frequência.
+ */
+const CRM_WITH_UF_PATTERN =
+  /C\.?R\.?M\.?\s*(?:\/|-|–)?\s*([A-Z]{2})\s*(?:[-:\/\\]|\s)+\s*(\d[\d\s.\-]{2,16})/;
+
+/** CRM sem UF — "Dr. João da Silva - CRM 123456". */
+const CRM_BARE_PATTERN = /C\.?R\.?M\.?\s*(?:\/|-)?\s*(\d[\d\s.\-]{2,16})/;
+
+/**
+ * UF logo depois do número — "CRM 123456 SP". Exige o número colado à UF
+ * para não pegar "SP" de "SÃO PAULO" no meio do endereço.
+ */
+const UF_AFTER_NUMBER_PATTERN = /\d[\d\s.\-]*?\s*[-:]?\s*\b([A-Z]{2})\b\s*$/;
+
+/** Prefixo de título do nome — "DR.", "DRA", "DOUTORA". */
+const DOCTOR_TITLE_PATTERN = /^\s*(?:DR\.?|DRA\.?|DOUTOR\.?|DOUTORA)\s+/i;
+
+/**
+ * Rótulos de formulário que antecedem o nome do médico — tolerantes a
+ * acento porque recortam o texto ORIGINAL ("RESPONSÁVEL").
+ */
+const DOCTOR_LABEL_PATTERN =
+  /^\s*(?:MEDIC[OA]|RESPONS[AÁ]VEL|EMITENTE|NOME)\b\s*[:\-–—]?\s*/i;
+
+const LEADING_PUNCTUATION = /^[\s:\-–—;,]+/;
+
+/** Repete título/rótulo/pontuação até a linha parar de encolher — "MEDICO
+ * RESPONSÁVEL: DRA. X" e "DRA. X" terminam iguais, em qualquer ordem. */
+function stripDoctorLineNoise(nome: string): string {
+  let current = nome.trim();
+  for (;;) {
+    const before = current;
+    current = current
+      .replace(DOCTOR_LABEL_PATTERN, '')
+      .replace(DOCTOR_TITLE_PATTERN, '')
+      .replace(LEADING_PUNCTUATION, '');
+    if (current === before) break;
+  }
+  return current.trim();
+}
+
+function digitsOfCrm(raw: string): string {
+  // Dígito verificador após hífen ("123.456-7") não faz parte do registro.
+  const withoutVerifier = raw.replace(/-\s*\d\s*$/, '');
+  const digits = withoutVerifier.replace(/\D/g, '');
+  // CRM tem 2 a 8 dígitos no Brasil; sequência maior é ruído de OCR
+  // (hash de assinatura, telefone) — melhor nada do que número inventado.
+  return digits.length >= 3 && digits.length <= 8 ? digits : '';
+}
+
+function isPlausibleDoctorName(nome: string): boolean {
+  const words = nome
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.replace(/[^A-Za-zÀ-ú]/g, '').length >= 2);
+  if (words.length < 2) return false;
+  const letters = (nome.match(/[A-Za-zÀ-ú]/g) ?? []).length;
+  return letters >= 4;
+}
+
+/**
+ * Nome do médico a partir da linha do CRM: "DRA. SANDRA ALPENDRE CRM/SP
+ * 33333" → "SANDRA ALPENDRE". Índices do fold() preservam a posição do
+ * texto original, então o recorte mantém a grafia da própria receita.
+ */
+function nameFromCrmLine(line: string, crmIndex: number): string {
+  let nome = line.slice(0, crmIndex);
+  nome = nome.replace(/[\s\-–—:;,]+$/, '');
+  nome = stripDoctorLineNoise(nome);
+  return isPlausibleDoctorName(nome) ? nome : '';
+}
+
+/**
+ * Procura "Dr./Dra. Nome" em linha própria (receitas que separam o CRM
+ * do nome). Linhas de paciente/cuídado ficam de fora — "PACIENTE:" não
+ * é emitente, e a linha de assinatura sem título não diz quem é.
+ */
+function nameFromTitleLine(line: string): string {
+  const folded = fold(line);
+  if (/\bPACIENTE\b|\bCOMPRADOR\b|\bFORNECEDOR\b/.test(folded)) return '';
+  let nome = line.replace(DOCTOR_TITLE_PATTERN, '').trim();
+  // Corta em rótulos que costumam seguir o nome na mesma linha.
+  const cut = folded.search(/\b(?:CRM|MEDICO|RESPONSAVEL|ENDERE|TELEFONE|CPF)\b/);
+  if (cut > 0) nome = nome.slice(0, cut);
+  nome = stripDoctorLineNoise(nome);
+  return isPlausibleDoctorName(nome) ? nome : '';
+}
+
+/**
+ * Identifica o médico emissor: a linha do CRM manda; sem CRM, a primeira
+ * linha com título "Dr./Dra." vale. Nada casa → null (nada é inventado).
+ */
+export function extractReceitaDoctor(
+  lines: string[],
+): ReceitaDoctor | null {
+  let titleLineName = '';
+  for (const line of lines) {
+    const folded = fold(line);
+    let crm = '';
+    let uf = '';
+    let crmIndex = -1;
+
+    const withUf = CRM_WITH_UF_PATTERN.exec(folded);
+    if (withUf && withUf.index !== undefined) {
+      uf = withUf[1];
+      crm = digitsOfCrm(withUf[2]);
+      crmIndex = withUf.index;
+    } else {
+      const bare = CRM_BARE_PATTERN.exec(folded);
+      if (bare && bare.index !== undefined) {
+        crm = digitsOfCrm(bare[1]);
+        crmIndex = bare.index;
+        if (crm !== '') {
+          const tailUf = UF_AFTER_NUMBER_PATTERN.exec(folded.slice(bare.index));
+          if (tailUf) uf = tailUf[1];
+        }
+      }
+    }
+
+    if (crmIndex >= 0) {
+      const sameLine = nameFromCrmLine(line, crmIndex);
+      if (sameLine !== '') {
+        return { nome: sameLine, crm, uf };
+      }
+      // CRM sozinho na linha: guarda o nome de um "Dr. X" visto antes e
+      // casa os dois quando a receita os separa em linhas.
+      if (titleLineName !== '' && crm !== '') {
+        return { nome: titleLineName, crm, uf };
+      }
+      if (crm !== '') {
+        return { nome: '', crm, uf };
+      }
+    }
+
+    if (titleLineName === '' && /\bDR\.?\b|\bDRA\.?\b|\bDOUTOR[A]?\b/.test(folded)) {
+      titleLineName = nameFromTitleLine(line);
+    }
+  }
+
+  if (titleLineName !== '') return { nome: titleLineName, crm: '', uf: '' };
+  return null;
+}
 
 /**
  * Linha de cabeçalho de tabela do receituário eletrônico
@@ -600,5 +766,5 @@ export function parseReceitaText(rawText: string): ReceitaFields {
     });
   }
 
-  return { medicamentos, rawText };
+  return { medicamentos, medico: extractReceitaDoctor(lines), rawText };
 }

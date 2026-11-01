@@ -1,12 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/medical_specialties.dart';
 import '../models/doctor.dart';
+import '../models/doctor_draft.dart';
 import '../services/cep_lookup_service.dart';
 import '../services/crm_lookup_service.dart';
+import '../services/places_search_service.dart';
 import 'br_input_formatters.dart';
 
+/// Cadastro de médico no MESMO padrão do formulário de tratamentos:
+/// diálogo com seções rotuladas, atalhos de preenchimento (foto da receita,
+/// consulta CREMESP, CEP, busca de endereço no OSM) e o usuário conferindo
+/// tudo antes de salvar. Só o nome é obrigatório.
 class DoctorFormDialog extends StatefulWidget {
   const DoctorFormDialog({
     super.key,
@@ -14,12 +22,24 @@ class DoctorFormDialog extends StatefulWidget {
     this.knownSpecialties = const [],
     this.cepLookup,
     this.crmLookup,
+    this.placesSearch,
+    this.draft,
   });
 
   final Doctor? initialDoctor;
+
   final Iterable<String> knownSpecialties;
+
   final CepLookupService? cepLookup;
+
   final CrmLookupService? crmLookup;
+
+  final PlacesSearchService? placesSearch;
+
+  /// Rascunho de leitura automática (médico identificado na receita por
+  /// OCR): preenche o formulário de um médico NOVO — nunca usado quando
+  /// [initialDoctor] existe.
+  final DoctorDraft? draft;
 
   @override
   State<DoctorFormDialog> createState() => _DoctorFormDialogState();
@@ -29,6 +49,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final CepLookupService _cepLookup;
   late final CrmLookupService _crmLookup;
+  late final PlacesSearchService _placesSearch;
   late final TextEditingController _nameController;
   late final TextEditingController _specialtyController;
   late final TextEditingController _crmController;
@@ -54,6 +75,15 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
   String? _cepMessage;
   String? _lastLookedCep;
 
+  /// Busca de endereço no OSM: sugestões com debounce, preenchimento
+  /// sempre conferível nos campos estruturados.
+  Timer? _placesDebounce;
+  List<PlaceSuggestion> _placeSuggestions = const [];
+  bool _searchingPlaces = false;
+
+  /// Aviso de origem quando o formulário abre preenchido pela receita.
+  String? _draftMessage;
+
   bool get _isEditing => widget.initialDoctor != null;
 
   @override
@@ -61,6 +91,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     super.initState();
     _cepLookup = widget.cepLookup ?? CepLookupService();
     _crmLookup = widget.crmLookup ?? CrmLookupService();
+    _placesSearch = widget.placesSearch ?? PlacesSearchService();
     final doctor = widget.initialDoctor;
     _nameController = TextEditingController(text: doctor?.name ?? '');
     _specialtyController = TextEditingController(text: doctor?.specialty ?? '');
@@ -70,11 +101,13 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     _clinicController = TextEditingController(text: doctor?.clinic ?? '');
     _streetController = TextEditingController(text: doctor?.street ?? '');
     _numberController = TextEditingController(text: doctor?.number ?? '');
-    _complementController = TextEditingController(text: doctor?.complement ?? '');
+    _complementController =
+        TextEditingController(text: doctor?.complement ?? '');
     _neighborhoodController =
         TextEditingController(text: doctor?.neighborhood ?? '');
     _cityController = TextEditingController(text: doctor?.city ?? '');
-    _postalCodeController = TextEditingController(text: doctor?.postalCode ?? '');
+    _postalCodeController =
+        TextEditingController(text: doctor?.postalCode ?? '');
     _healthPlansController =
         TextEditingController(text: doctor?.healthPlans ?? '');
     _notesController = TextEditingController(text: doctor?.notes ?? '');
@@ -92,6 +125,21 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     _showExtras = doctor != null &&
         [doctor.email, doctor.healthPlans, doctor.notes]
             .any((value) => value.trim().isNotEmpty);
+
+    // Rascunho da receita: preenche um médico NOVO e avisa que é confiança
+    // por conferência — preencher não é salvar.
+    final draft = widget.draft;
+    if (doctor == null && draft != null && !draft.isEmpty) {
+      if (draft.name.trim().isNotEmpty) {
+        _nameController.text = titleCaseName(draft.name);
+      }
+      if (draft.crm.isNotEmpty) _crmController.text = draft.crm;
+      if (isValidBrazilianUf(draft.crmState.trim().toUpperCase())) {
+        _crmState = draft.crmState.trim().toUpperCase();
+      }
+      _draftMessage =
+          'Preenchido pela foto da receita — confira antes de salvar.';
+    }
   }
 
   String? _normalizedUf(String? value) {
@@ -102,6 +150,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
 
   @override
   void dispose() {
+    _placesDebounce?.cancel();
     _nameController.dispose();
     _specialtyController.dispose();
     _crmController.dispose();
@@ -118,6 +167,8 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     _notesController.dispose();
     super.dispose();
   }
+
+  // ── CEP (ViaCEP) ──────────────────────────────────────────────────────────
 
   Future<void> _lookupCep({bool force = false}) async {
     final digits = digitsOnly(_postalCodeController.text);
@@ -154,6 +205,8 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
       _cepMessage = 'Endereço preenchido pelo CEP.';
     });
   }
+
+  // ── CRM (CREMESP) ─────────────────────────────────────────────────────────
 
   void _showCrmSnack(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -232,6 +285,68 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
         _showCrmSnack('Falha na consulta. Tente novamente.');
     }
   }
+
+  // ── Endereço por busca (OpenStreetMap) ────────────────────────────────────
+
+  void _onPlaceQueryChanged(String value) {
+    _placesDebounce?.cancel();
+    final query = value.trim();
+    if (query.length < 3) {
+      if (_placeSuggestions.isNotEmpty) {
+        setState(() => _placeSuggestions = const []);
+      }
+      return;
+    }
+    _placesDebounce =
+        Timer(const Duration(milliseconds: 450), () => _searchPlaces(query));
+  }
+
+  Future<void> _searchPlaces(String query) async {
+    setState(() => _searchingPlaces = true);
+    final results = await _placesSearch.search(query);
+    if (!mounted) return;
+    setState(() {
+      _searchingPlaces = false;
+      _placeSuggestions = results;
+    });
+  }
+
+  /// Escolher a sugestão preenche os campos estruturados — a fonte da
+  /// verdade continua sendo o formulário, editável campo a campo.
+  void _selectPlace(PlaceSuggestion place) {
+    setState(() {
+      _placeSuggestions = const [];
+      if (place.street.isNotEmpty) _streetController.text = place.street;
+      if (place.number.isNotEmpty) _numberController.text = place.number;
+      if (place.neighborhood.isNotEmpty) {
+        _neighborhoodController.text = place.neighborhood;
+      }
+      if (place.city.isNotEmpty) _cityController.text = place.city;
+      final cep = digitsOnly(place.postalCode);
+      if (cep.length == 8) {
+        _postalCodeController.text = '${cep.substring(0, 5)}-${cep.substring(5)}';
+      }
+      final uf = place.uf.trim().toUpperCase();
+      if (isValidBrazilianUf(uf)) _addressState = uf;
+      _showAddress = true;
+    });
+  }
+
+  String _placeSubtitle(PlaceSuggestion place) {
+    return [
+      [
+        place.street,
+        place.number,
+      ].where((part) => part.isNotEmpty).join(', '),
+      place.neighborhood,
+      [
+        place.city,
+        place.uf,
+      ].where((part) => part.isNotEmpty).join('/'),
+    ].where((part) => part.isNotEmpty).join(' · ');
+  }
+
+  // ── Convênios, validação e salvamento ─────────────────────────────────────
 
   void _toggleHealthPlan(String plan) {
     final current = _healthPlansController.text
@@ -317,6 +432,20 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     );
   }
 
+  /// Cabeçalho de seção — mesmo padrão do rótulo "Horários" do formulário
+  /// de tratamentos.
+  Widget _sectionLabel(String text) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -337,7 +466,19 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
+                if (_draftMessage != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    _draftMessage!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 14),
+                _sectionLabel('Quem atende você'),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameController,
                   textCapitalization: TextCapitalization.words,
@@ -351,7 +492,8 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                 ),
                 const SizedBox(height: 12),
                 Autocomplete<String>(
-                  initialValue: TextEditingValue(text: _specialtyController.text),
+                  initialValue:
+                      TextEditingValue(text: _specialtyController.text),
                   optionsBuilder: (value) {
                     return suggestSpecialties(
                       value.text,
@@ -380,6 +522,20 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                   },
                 ),
                 const SizedBox(height: 12),
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [PhoneInputFormatter()],
+                  validator: _validatePhone,
+                  decoration: _decoration(
+                    'Telefone',
+                    hint: '(11) 99999-0000',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _sectionLabel('Registro profissional (opcional)'),
+                const SizedBox(height: 8),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -427,19 +583,9 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _phoneController,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                  inputFormatters: [PhoneInputFormatter()],
-                  validator: _validatePhone,
-                  decoration: _decoration(
-                    'Telefone',
-                    hint: '(11) 99999-0000',
-                  ),
-                ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                _sectionLabel('Onde atende'),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _clinicController,
                   textCapitalization: TextCapitalization.words,
@@ -449,14 +595,13 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                     hint: 'Opcional',
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Endereço',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
+                _buildPlaceSearch(),
+                if (_placeSuggestions.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  _buildPlaceSuggestions(),
+                ],
+                const SizedBox(height: 12),
                 TextFormField(
                   controller: _postalCodeController,
                   keyboardType: TextInputType.number,
@@ -633,12 +778,82 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        FilledButton.icon(
+        FilledButton(
           onPressed: _save,
-          icon: const Icon(Icons.save_outlined),
-          label: Text(_isEditing ? 'Salvar' : 'Cadastrar'),
+          child: Text(_isEditing ? 'Salvar' : 'Cadastrar'),
         ),
       ],
+    );
+  }
+
+  /// Campo de busca de endereço no OSM — mesmo desenho da busca de
+  /// medicamento: digita, espera as sugestões, toca e confere nos campos.
+  Widget _buildPlaceSearch() {
+    return TextFormField(
+      decoration: InputDecoration(
+        labelText: 'Buscar endereço',
+        hintText: 'Ex.: Rua Ada Pereira, Campinas',
+        prefixIcon: const Icon(Icons.travel_explore),
+        suffixIcon: _searchingPlaces
+            ? const Padding(
+                padding: EdgeInsets.all(12),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : null,
+      ),
+      onChanged: _onPlaceQueryChanged,
+    );
+  }
+
+  Widget _buildPlaceSuggestions() {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 220),
+        // Material transparente: o ink do ListTile precisa de um ancestral
+        // Material — sem ele o DecoratedBox pintado esconde o toque.
+        child: Material(
+          type: MaterialType.transparency,
+          child: ListView.builder(
+            padding: EdgeInsets.zero,
+            primary: false,
+            shrinkWrap: true,
+            itemCount: _placeSuggestions.length,
+            itemBuilder: (context, index) {
+              final place = _placeSuggestions[index];
+              final subtitle = _placeSubtitle(place);
+              return ListTile(
+                dense: true,
+                leading: const Icon(Icons.location_on_outlined, size: 20),
+                title: Text(
+                  place.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: subtitle.isEmpty
+                    ? null
+                    : Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                onTap: () => _selectPlace(place),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 }
