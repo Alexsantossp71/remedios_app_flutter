@@ -788,7 +788,8 @@ class _DoseRoundAction extends StatelessWidget {
       style: IconButton.styleFrom(
         backgroundColor: color,
         foregroundColor: Colors.white,
-        fixedSize: const Size(44, 44),
+        // 48px: alvo de toque recomendado — "Tomei/Pular" é a ação crítica.
+        fixedSize: const Size(48, 48),
         shape: const CircleBorder(),
       ),
     );
