@@ -11,6 +11,7 @@ import '../widgets/consultation_form_dialog.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/section_header.dart';
+import 'doctors_screen.dart';
 
 class ConsultationsScreen extends StatelessWidget {
   const ConsultationsScreen({super.key});
@@ -22,10 +23,11 @@ class ConsultationsScreen extends StatelessWidget {
   }) async {
     final result = await showDialog<Consultation>(
       context: context,
-      builder: (_) => ConsultationFormDialog(
-        initialConsultation: consultation,
-        initialDoctorId: initialDoctorId,
-      ),
+      builder:
+          (_) => ConsultationFormDialog(
+            initialConsultation: consultation,
+            initialDoctorId: initialDoctorId,
+          ),
     );
     if (result == null || !context.mounted) return;
 
@@ -39,25 +41,28 @@ class ConsultationsScreen extends StatelessWidget {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Excluir consulta?'),
-        content: Text(
-          'A consulta de ${_formatDateTime(consultation.date)} será removida permanentemente.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Excluir consulta?'),
+            content: Text(
+              'A consulta de ${_formatDateTime(consultation.date)} será removida permanentemente.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton.tonal(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Excluir'),
+              ),
+            ],
           ),
-          FilledButton.tonal(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Excluir'),
-          ),
-        ],
-      ),
     );
     if (confirmed == true && context.mounted) {
-      await context.read<ConsultationProvider>().removeConsultation(consultation.id);
+      await context.read<ConsultationProvider>().removeConsultation(
+        consultation.id,
+      );
     }
   }
 
@@ -89,17 +94,31 @@ class ConsultationsScreen extends StatelessWidget {
     // Próximos 5 dias (inclui hoje até 5 dias adiante)
     final now = DateTime.now();
     final todayStart = DateTime(now.year, now.month, now.day);
-    final limit5Days = todayStart.add(const Duration(days: 6)); // cobre 5 dias completos adiante
+    final limit5Days = todayStart.add(
+      const Duration(days: 6),
+    ); // cobre 5 dias completos adiante
 
-    final highlighted = allUpcoming
-        .where((c) => c.date.isAfter(todayStart.subtract(const Duration(seconds: 1))) && c.date.isBefore(limit5Days))
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final highlighted =
+        allUpcoming
+            .where(
+              (c) =>
+                  c.date.isAfter(
+                    todayStart.subtract(const Duration(seconds: 1)),
+                  ) &&
+                  c.date.isBefore(limit5Days),
+            )
+            .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
 
-    final otherUpcoming = allUpcoming
-        .where((c) => c.date.isAfter(limit5Days) || c.date.isAtSameMomentAs(limit5Days))
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final otherUpcoming =
+        allUpcoming
+            .where(
+              (c) =>
+                  c.date.isAfter(limit5Days) ||
+                  c.date.isAtSameMomentAs(limit5Days),
+            )
+            .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
 
     final hasConsultations = allUpcoming.isNotEmpty || past.isNotEmpty;
 
@@ -116,18 +135,15 @@ class ConsultationsScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Consultas',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 5),
                     Text(
                       'Agendamentos e histórico de atendimentos médicos.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     if (hasConsultations) ...[
                       const SizedBox(height: 22),
@@ -154,14 +170,17 @@ class ConsultationsScreen extends StatelessWidget {
                   title: 'Nenhuma consulta agendada',
                   description:
                       'Agende sua primeira consulta médica e acompanhe o histórico de atendimentos.',
-                  actionLabel: doctorProvider.doctors.isEmpty
-                      ? 'Cadastrar médico'
-                      : 'Agendar consulta',
+                  actionLabel:
+                      doctorProvider.doctors.isEmpty
+                          ? 'Cadastrar médico'
+                          : 'Agendar consulta',
                   onAction: () {
                     if (doctorProvider.doctors.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Vá na aba "Médicos" para cadastrar um médico primeiro.'),
+                      // Sem médico no catálogo, a consulta fica órfã —
+                      // levar direto ao catálogo para começar por lá.
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const DoctorsScreen(),
                         ),
                       );
                     } else {
@@ -194,10 +213,12 @@ class ConsultationsScreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Atenção: Consultas nos Próximos 5 Dias (${highlighted.length})',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: semantic.warning,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: semantic.warning,
+                            ),
                           ),
                         ),
                       ],
@@ -211,33 +232,38 @@ class ConsultationsScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final consultation = highlighted[index];
-                      final doctor = doctorProvider.doctors
-                          .where((d) => d.id == consultation.doctorId)
-                          .firstOrNull;
+                      final doctor =
+                          doctorProvider.doctors
+                              .where((d) => d.id == consultation.doctorId)
+                              .firstOrNull;
                       return _ConsultationTile(
                         consultation: consultation,
                         doctor: doctor,
                         isHighlighted: true,
-                        onEdit: () => _openConsultationForm(
-                          context,
-                          consultation: consultation,
-                        ),
+                        onEdit:
+                            () => _openConsultationForm(
+                              context,
+                              consultation: consultation,
+                            ),
                         onDelete: () => _confirmDelete(context, consultation),
-                        onComplete: () => _changeStatus(
-                          context,
-                          consultation,
-                          ConsultationStatus.completed,
-                        ),
-                        onCancel: () => _changeStatus(
-                          context,
-                          consultation,
-                          ConsultationStatus.cancelled,
-                        ),
-                        onReopen: () => _changeStatus(
-                          context,
-                          consultation,
-                          ConsultationStatus.scheduled,
-                        ),
+                        onComplete:
+                            () => _changeStatus(
+                              context,
+                              consultation,
+                              ConsultationStatus.completed,
+                            ),
+                        onCancel:
+                            () => _changeStatus(
+                              context,
+                              consultation,
+                              ConsultationStatus.cancelled,
+                            ),
+                        onReopen:
+                            () => _changeStatus(
+                              context,
+                              consultation,
+                              ConsultationStatus.scheduled,
+                            ),
                       );
                     },
                   ),
@@ -249,7 +275,9 @@ class ConsultationsScreen extends StatelessWidget {
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                   sliver: SliverToBoxAdapter(
-                    child: SectionHeader(title: 'Próximas Consultas (${otherUpcoming.length})'),
+                    child: SectionHeader(
+                      title: 'Próximas Consultas (${otherUpcoming.length})',
+                    ),
                   ),
                 ),
                 SliverPadding(
@@ -259,33 +287,38 @@ class ConsultationsScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final consultation = otherUpcoming[index];
-                      final doctor = doctorProvider.doctors
-                          .where((d) => d.id == consultation.doctorId)
-                          .firstOrNull;
+                      final doctor =
+                          doctorProvider.doctors
+                              .where((d) => d.id == consultation.doctorId)
+                              .firstOrNull;
                       return _ConsultationTile(
                         consultation: consultation,
                         doctor: doctor,
                         isHighlighted: false,
-                        onEdit: () => _openConsultationForm(
-                          context,
-                          consultation: consultation,
-                        ),
+                        onEdit:
+                            () => _openConsultationForm(
+                              context,
+                              consultation: consultation,
+                            ),
                         onDelete: () => _confirmDelete(context, consultation),
-                        onComplete: () => _changeStatus(
-                          context,
-                          consultation,
-                          ConsultationStatus.completed,
-                        ),
-                        onCancel: () => _changeStatus(
-                          context,
-                          consultation,
-                          ConsultationStatus.cancelled,
-                        ),
-                        onReopen: () => _changeStatus(
-                          context,
-                          consultation,
-                          ConsultationStatus.scheduled,
-                        ),
+                        onComplete:
+                            () => _changeStatus(
+                              context,
+                              consultation,
+                              ConsultationStatus.completed,
+                            ),
+                        onCancel:
+                            () => _changeStatus(
+                              context,
+                              consultation,
+                              ConsultationStatus.cancelled,
+                            ),
+                        onReopen:
+                            () => _changeStatus(
+                              context,
+                              consultation,
+                              ConsultationStatus.scheduled,
+                            ),
                       );
                     },
                   ),
@@ -307,33 +340,38 @@ class ConsultationsScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final consultation = past[index];
-                      final doctor = doctorProvider.doctors
-                          .where((d) => d.id == consultation.doctorId)
-                          .firstOrNull;
+                      final doctor =
+                          doctorProvider.doctors
+                              .where((d) => d.id == consultation.doctorId)
+                              .firstOrNull;
                       return _ConsultationTile(
                         consultation: consultation,
                         doctor: doctor,
                         isHighlighted: false,
-                        onEdit: () => _openConsultationForm(
-                          context,
-                          consultation: consultation,
-                        ),
+                        onEdit:
+                            () => _openConsultationForm(
+                              context,
+                              consultation: consultation,
+                            ),
                         onDelete: () => _confirmDelete(context, consultation),
-                        onComplete: () => _changeStatus(
-                          context,
-                          consultation,
-                          ConsultationStatus.completed,
-                        ),
-                        onCancel: () => _changeStatus(
-                          context,
-                          consultation,
-                          ConsultationStatus.cancelled,
-                        ),
-                        onReopen: () => _changeStatus(
-                          context,
-                          consultation,
-                          ConsultationStatus.scheduled,
-                        ),
+                        onComplete:
+                            () => _changeStatus(
+                              context,
+                              consultation,
+                              ConsultationStatus.completed,
+                            ),
+                        onCancel:
+                            () => _changeStatus(
+                              context,
+                              consultation,
+                              ConsultationStatus.cancelled,
+                            ),
+                        onReopen:
+                            () => _changeStatus(
+                              context,
+                              consultation,
+                              ConsultationStatus.scheduled,
+                            ),
                       );
                     },
                   ),
@@ -343,13 +381,14 @@ class ConsultationsScreen extends StatelessWidget {
           ],
         ),
       ),
-      floatingActionButton: hasConsultations
-          ? FloatingActionButton.extended(
-              onPressed: () => _openConsultationForm(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Agendar'),
-            )
-          : null,
+      floatingActionButton:
+          hasConsultations
+              ? FloatingActionButton.extended(
+                onPressed: () => _openConsultationForm(context),
+                icon: const Icon(Icons.add),
+                label: const Text('Agendar'),
+              )
+              : null,
     );
   }
 }
@@ -403,8 +442,9 @@ class _ConsultationsSummary extends StatelessWidget {
                 Text(
                   '$pastCount ${pastCount == 1 ? 'consulta no histórico' : 'consultas no histórico'}',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer
-                        .withValues(alpha: .8),
+                    color: theme.colorScheme.onPrimaryContainer.withValues(
+                      alpha: .8,
+                    ),
                   ),
                 ),
               ],
@@ -454,7 +494,8 @@ class _ConsultationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final semantic = AppSemanticColors.of(context);
-    final isUpcoming = consultation.status == ConsultationStatus.scheduled &&
+    final isUpcoming =
+        consultation.status == ConsultationStatus.scheduled &&
         consultation.date.isAfter(DateTime.now());
 
     Color statusColor;
@@ -502,13 +543,15 @@ class _ConsultationTile extends StatelessWidget {
       elevation: isHighlighted ? 2 : 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: isHighlighted
-            ? BorderSide(color: semantic.warning.withValues(alpha: .55), width: 1.5)
-            : BorderSide.none,
+        side:
+            isHighlighted
+                ? BorderSide(
+                  color: semantic.warning.withValues(alpha: .55),
+                  width: 1.5,
+                )
+                : BorderSide.none,
       ),
-      color: isHighlighted
-          ? semantic.warning.withValues(alpha: 0.08)
-          : null,
+      color: isHighlighted ? semantic.warning.withValues(alpha: 0.08) : null,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
         child: Column(
@@ -615,53 +658,70 @@ class _ConsultationTile extends StatelessWidget {
                     ];
 
                     if (consultation.status != ConsultationStatus.completed) {
-                      items.add(PopupMenuItem(
-                        value: 'complete',
-                        child: ListTile(
-                          leading: Icon(Icons.check_circle_outline,
-                              color: semantic.success),
-                          title: const Text('Marcar como realizada'),
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
+                      items.add(
+                        PopupMenuItem(
+                          value: 'complete',
+                          child: ListTile(
+                            leading: Icon(
+                              Icons.check_circle_outline,
+                              color: semantic.success,
+                            ),
+                            title: const Text('Marcar como realizada'),
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
-                      ));
+                      );
                     }
 
                     if (consultation.status != ConsultationStatus.cancelled) {
-                      items.add(PopupMenuItem(
-                        value: 'cancel',
-                        child: ListTile(
-                          leading:
-                              Icon(Icons.cancel_outlined, color: semantic.danger),
-                          title: const Text('Cancelar'),
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
+                      items.add(
+                        PopupMenuItem(
+                          value: 'cancel',
+                          child: ListTile(
+                            leading: Icon(
+                              Icons.cancel_outlined,
+                              color: semantic.danger,
+                            ),
+                            title: const Text('Cancelar'),
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
                         ),
-                      ));
+                      );
                     }
 
                     if (consultation.status != ConsultationStatus.scheduled) {
-                      items.add(PopupMenuItem(
-                        value: 'reopen',
+                      items.add(
+                        PopupMenuItem(
+                          value: 'reopen',
+                          child: ListTile(
+                            leading: Icon(
+                              Icons.schedule_outlined,
+                              color: theme.colorScheme.primary,
+                            ),
+                            title: const Text('Reagendar'),
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      );
+                    }
+
+                    items.add(
+                      PopupMenuItem(
+                        value: 'delete',
                         child: ListTile(
-                          leading: Icon(Icons.schedule_outlined,
-                              color: theme.colorScheme.primary),
-                          title: const Text('Reagendar'),
+                          leading: Icon(
+                            Icons.delete_outline,
+                            color: semantic.danger,
+                          ),
+                          title: const Text('Excluir'),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
-                      ));
-                    }
-
-                    items.add(PopupMenuItem(
-                      value: 'delete',
-                      child: ListTile(
-                        leading: Icon(Icons.delete_outline, color: semantic.danger),
-                        title: const Text('Excluir'),
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
                       ),
-                    ));
+                    );
 
                     return items;
                   },
@@ -707,8 +767,9 @@ class _ConsultationTile extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.3),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.3,
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(

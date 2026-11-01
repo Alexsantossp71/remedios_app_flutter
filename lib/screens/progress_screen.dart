@@ -26,105 +26,119 @@ class _ProgressScreenState extends State<ProgressScreen> {
         final todayAdherence = provider.adherenceForDay(DateTime.now());
         final activeCount = provider.activeTreatments.length;
 
-        return SafeArea(
-          child: CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Progresso',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        'Acompanhe sua constância e cuide da sua saúde.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                      ),
-                      const SizedBox(height: 22),
-                      _StatsRow(
-                        todayAdherence: todayAdherence,
-                        activeCount: activeCount,
-                      ),
-                      const SizedBox(height: 28),
-                      const SectionHeader(title: 'Histórico de doses'),
-                      const SizedBox(height: 10),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-                          child: TableCalendar<void>(
-                            locale: 'pt_BR',
-                            firstDay: DateTime.utc(2020, 1, 1),
-                            lastDay: DateTime.utc(2100, 12, 31),
-                            focusedDay: _focusedDay,
-                            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-                            onDaySelected: (selectedDay, focusedDay) {
-                              setState(() {
-                                _selectedDay = selectedDay;
-                                _focusedDay = focusedDay;
-                              });
-                            },
-                            onPageChanged: (focusedDay) => _focusedDay = focusedDay,
-                            calendarFormat: CalendarFormat.month,
-                            headerStyle: const HeaderStyle(
-                              formatButtonVisible: false,
-                              titleCentered: true,
-                            ),
-                            calendarStyle: CalendarStyle(
-                              todayDecoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: .22),
-                                shape: BoxShape.circle,
-                              ),
-                              todayTextStyle: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              selectedDecoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            calendarBuilders: CalendarBuilders(
-                              markerBuilder: (context, day, events) {
-                                final semantic = AppSemanticColors.of(context);
-                                final adherence = provider.adherenceForDay(day);
-                                if (adherence.total == 0) return null;
-                                final color = adherence.taken == adherence.total
-                                    ? semantic.success
-                                    : adherence.completed == 0
-                                        ? semantic.warning
-                                        : Theme.of(context).colorScheme.primary;
-                                return Positioned(
-                                  bottom: 3,
-                                  child: Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: BoxDecoration(
-                                      color: color,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                );
+        return Scaffold(
+          appBar: AppBar(title: const Text('Progresso')),
+          body: SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Acompanhe sua constância e cuide da sua saúde.',
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        _StatsRow(
+                          todayAdherence: todayAdherence,
+                          activeCount: activeCount,
+                        ),
+                        const SizedBox(height: 28),
+                        const SectionHeader(title: 'Histórico de doses'),
+                        const SizedBox(height: 10),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+                            child: TableCalendar<void>(
+                              locale: 'pt_BR',
+                              firstDay: DateTime.utc(2020, 1, 1),
+                              lastDay: DateTime.utc(2100, 12, 31),
+                              focusedDay: _focusedDay,
+                              selectedDayPredicate:
+                                  (day) => isSameDay(_selectedDay, day),
+                              onDaySelected: (selectedDay, focusedDay) {
+                                setState(() {
+                                  _selectedDay = selectedDay;
+                                  _focusedDay = focusedDay;
+                                });
                               },
+                              onPageChanged:
+                                  (focusedDay) => _focusedDay = focusedDay,
+                              calendarFormat: CalendarFormat.month,
+                              headerStyle: const HeaderStyle(
+                                formatButtonVisible: false,
+                                titleCentered: true,
+                              ),
+                              calendarStyle: CalendarStyle(
+                                todayDecoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: .22),
+                                  shape: BoxShape.circle,
+                                ),
+                                todayTextStyle: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                                selectedDecoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              calendarBuilders: CalendarBuilders(
+                                markerBuilder: (context, day, events) {
+                                  final semantic = AppSemanticColors.of(
+                                    context,
+                                  );
+                                  final adherence = provider.adherenceForDay(
+                                    day,
+                                  );
+                                  if (adherence.total == 0) return null;
+                                  final color =
+                                      adherence.taken == adherence.total
+                                          ? semantic.success
+                                          : adherence.completed == 0
+                                          ? semantic.warning
+                                          : Theme.of(
+                                            context,
+                                          ).colorScheme.primary;
+                                  return Positioned(
+                                    bottom: 3,
+                                    child: Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: color,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      _SelectedDayCard(adherence: selectedAdherence, day: _selectedDay),
-                      const SizedBox(height: 28),
-                    ],
+                        const SizedBox(height: 24),
+                        _SelectedDayCard(
+                          adherence: selectedAdherence,
+                          day: _selectedDay,
+                        ),
+                        const SizedBox(height: 28),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -145,9 +159,10 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: _StatCard(
             icon: Icons.check_circle_outline,
-            value: todayAdherence.total == 0
-                ? '—'
-                : '${(todayAdherence.adherenceRate * 100).round()}%',
+            value:
+                todayAdherence.total == 0
+                    ? '—'
+                    : '${(todayAdherence.adherenceRate * 100).round()}%',
             label: 'hoje',
             color: AppSemanticColors.of(context).success,
           ),
@@ -191,9 +206,9 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 2),
             Text(
@@ -201,8 +216,8 @@ class _StatCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -220,9 +235,10 @@ class _SelectedDayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = DateFormat("d 'de' MMMM", 'pt_BR').format(day);
-    final message = adherence.total == 0
-        ? 'Nenhuma dose programada para este dia.'
-        : '${adherence.taken} de ${adherence.total} doses tomadas';
+    final message =
+        adherence.total == 0
+            ? 'Nenhuma dose programada para este dia.'
+            : '${adherence.taken} de ${adherence.total} doses tomadas';
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -245,16 +261,16 @@ class _SelectedDayCard extends StatelessWidget {
                 Text(
                   title[0].toUpperCase() + title.substring(1),
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSecondaryContainer,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   message,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSecondaryContainer,
-                      ),
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  ),
                 ),
               ],
             ),
