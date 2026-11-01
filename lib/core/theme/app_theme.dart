@@ -207,6 +207,11 @@ class AppTheme {
         labelTextStyle: WidgetStatePropertyAll(
           TextStyle(
             fontFamily: 'Nunito',
+            // Fonte de rótulo menor e em linha única: com 6 destinos em
+            // telas de ~412px, o tamanho padrão quebrava "Tratamentos"
+            // em duas linhas.
+            fontSize: 11.5,
+            height: 1.15,
             fontWeight: FontWeight.w700,
             color: colorScheme.onSurface,
           ),
