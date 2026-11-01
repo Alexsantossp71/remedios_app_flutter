@@ -25,7 +25,6 @@ class CpfInputFormatter extends TextInputFormatter {
   }
 }
 
-
 class CepInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -34,9 +33,10 @@ class CepInputFormatter extends TextInputFormatter {
   ) {
     final digits = digitsOnly(newValue.text);
     final clipped = digits.length > 8 ? digits.substring(0, 8) : digits;
-    final formatted = clipped.length > 5
-        ? '${clipped.substring(0, 5)}-${clipped.substring(5)}'
-        : clipped;
+    final formatted =
+        clipped.length > 5
+            ? '${clipped.substring(0, 5)}-${clipped.substring(5)}'
+            : clipped;
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
@@ -89,9 +89,10 @@ class UfInputFormatter extends TextInputFormatter {
     TextEditingValue oldValue,
     TextEditingValue newValue,
   ) {
-    final letters = newValue.text
-        .toUpperCase()
-        .replaceAll(RegExp(r'[^A-Z]'), '');
+    final letters = newValue.text.toUpperCase().replaceAll(
+      RegExp(r'[^A-Z]'),
+      '',
+    );
     final clipped = letters.length > 2 ? letters.substring(0, 2) : letters;
     return TextEditingValue(
       text: clipped,

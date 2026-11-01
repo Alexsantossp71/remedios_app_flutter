@@ -36,6 +36,19 @@ http.Client _osmClient() => MockClient(
       },
     );
 
+/// V4 em passos: "Onde atende" é o passo 3 — preenche o nome e avança dois.
+Future<void> goToStep3(WidgetTester tester) async {
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Nome do médico'),
+    'Dra. Teste',
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Continuar'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Continuar'));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets(
       'busca de endereço preenche rua, número, bairro, cidade, UF e CEP',
@@ -50,6 +63,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await goToStep3(tester);
 
     // Mostra os campos estruturados antes da escolha (a busca preenche).
     // O diálogo é rolável: garante o botão na tela antes de tocar.
@@ -91,6 +105,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await goToStep3(tester);
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Buscar endereço'),
@@ -116,6 +131,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await goToStep3(tester);
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Buscar endereço'),

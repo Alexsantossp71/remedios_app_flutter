@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/design/app_tokens.dart';
 import '../models/health_plan.dart';
 import '../services/card_reader_service.dart';
+import 'stepped_form_sheet.dart';
 
-/// Cadastro de plano de saúde no MESMO padrão do formulário de tratamentos:
-/// diálogo com seções rotuladas, atalhos de preenchimento (chips de
-/// operadoras conhecidas e rascunho da foto da carteirinha) e o usuário
-/// conferindo tudo antes de salvar. Só o nome do plano é obrigatório.
+/// Cadastro de plano de saúde em PASSOS (padrão V4 "jornada"): Qual plano →
+/// Carteirinha → Cobertura. Atalhos de preenchimento (chips de operadoras e
+/// rascunho da foto da carteirinha) preservados; só o nome é obrigatório.
 class HealthPlanFormDialog extends StatefulWidget {
   const HealthPlanFormDialog({
     super.key,
@@ -30,7 +31,6 @@ class HealthPlanFormDialog extends StatefulWidget {
 }
 
 class _HealthPlanFormDialogState extends State<HealthPlanFormDialog> {
-  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _providerController;
   late final TextEditingController _cardNumberController;
@@ -169,7 +169,8 @@ class _HealthPlanFormDialogState extends State<HealthPlanFormDialog> {
       value.trim().isEmpty ? null : value.trim();
 
   void _save() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    // Os passos validam por trecho; nome é o único obrigatório.
+    if (_validateName(_nameController.text) != null) return;
 
     final now = DateTime.now().toUtc().toIso8601String();
     final name = _nameController.text.trim();
@@ -199,205 +200,178 @@ class _HealthPlanFormDialogState extends State<HealthPlanFormDialog> {
     return InputDecoration(labelText: label, hintText: hint);
   }
 
-  /// Cabeçalho de seção — mesmo padrão do rótulo "Horários" do formulário
-  /// de tratamentos e das seções do cadastro de médico.
-  Widget _sectionLabel(String text) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        text,
-        style: Theme.of(
-          context,
-        ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return AlertDialog(
-      title: Text(_isEditing ? 'Editar plano' : 'Novo plano de saúde'),
-      content: SizedBox(
-        width: 520,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Só o nome do plano é obrigatório. O restante pode ser '
-                  'completado depois.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                if (_draftMessage != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    _draftMessage!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w700,
+    return SteppedFormShell(
+      title: _isEditing ? 'Editar plano' : 'Novo plano de saúde',
+      intro:
+          'Só o nome do plano é obrigatório. O restante pode ser completado '
+          'depois.',
+      saveLabel: _isEditing ? 'Salvar' : 'Cadastrar',
+      progressMessage: _draftMessage,
+      steps: [
+        // ── Passo 1: qual plano ────────────────────────────────────────────
+        FormStep(
+          title: 'Qual plano',
+          validate: () => _validateName(_nameController.text),
+          children: [
+            TextFormField(
+              controller: _nameController,
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+              autofocus: !_isEditing,
+              decoration: _decoration(
+                'Nome do plano',
+                hint: 'Ex.: Unimed Nacional',
+              ),
+              validator: _validateName,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: 4,
+                children: [
+                  // "Outros" não é operadora — é a ausência dela.
+                  for (final provider in kCommonProviders.where(
+                    (p) => p != 'Outros',
+                  ))
+                    FilterChip(
+                      label: Text(provider),
+                      selected: _hasProvider(provider),
+                      onSelected: (_) => _toggleProvider(provider),
                     ),
-                  ),
                 ],
-                const SizedBox(height: 14),
-                _sectionLabel('Qual plano'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _nameController,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  autofocus: !_isEditing,
-                  decoration: _decoration(
-                    'Nome do plano',
-                    hint: 'Ex.: Unimed Nacional',
-                  ),
-                  validator: _validateName,
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      // "Outros" não é operadora — é a ausência dela.
-                      for (final provider in kCommonProviders.where(
-                        (p) => p != 'Outros',
-                      ))
-                        FilterChip(
-                          label: Text(provider),
-                          selected: _hasProvider(provider),
-                          onSelected: (_) => _toggleProvider(provider),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _providerController,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.next,
-                  decoration: _decoration(
-                    'Operadora',
-                    hint: 'Ex.: Unimed, Bradesco Saúde',
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 16),
-                _sectionLabel('Carteirinha'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _cardNumberController,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.next,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    _CardNumberFormatter(),
-                  ],
-                  decoration: _decoration(
-                    'Número do cartão',
-                    hint: '0000 0000 0000 0000',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _providerController,
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+              decoration: _decoration(
+                'Operadora',
+                hint: 'Ex.: Unimed, Bradesco Saúde',
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ],
+        ),
+        // ── Passo 2: carteirinha ───────────────────────────────────────────
+        FormStep(
+          title: 'Carteirinha',
+          children: [
+            TextFormField(
+              controller: _cardNumberController,
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                _CardNumberFormatter(),
+              ],
+              decoration: _decoration(
+                'Número do cartão',
+                hint: '0000 0000 0000 0000',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _groupNumberController,
+                    keyboardType: TextInputType.number,
+                    decoration: _decoration('Nº do grupo', hint: '001234'),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _groupNumberController,
-                        keyboardType: TextInputType.number,
-                        decoration: _decoration('Nº do grupo', hint: '001234'),
-                      ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: TextFormField(
+                    controller: _beneficiaryCodeController,
+                    keyboardType: TextInputType.number,
+                    decoration: _decoration(
+                      'Cód. beneficiário',
+                      hint: '000123456',
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _beneficiaryCodeController,
-                        keyboardType: TextInputType.number,
-                        decoration: _decoration(
-                          'Cód. beneficiário',
-                          hint: '000123456',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _validityController,
-                  keyboardType: TextInputType.datetime,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    _ValidityFormatter(),
-                  ],
-                  decoration: _decoration('Validade', hint: 'MM/AAAA'),
-                ),
-                const SizedBox(height: 16),
-                _sectionLabel('Cobertura'),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedCoverageType,
-                  isExpanded: true,
-                  hint: const Text('Selecione'),
-                  decoration: _decoration('Tipo de cobertura'),
-                  items: [
-                    for (final type in kCoverageTypes)
-                      DropdownMenuItem(value: type, child: Text(type)),
-                  ],
-                  onChanged:
-                      (value) => setState(() => _selectedCoverageType = value),
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      for (final specialty in kMedicalSpecialties)
-                        FilterChip(
-                          label: Text(specialty),
-                          selected: _selectedSpecialties.contains(specialty),
-                          onSelected:
-                              (selected) => setState(() {
-                                selected
-                                    ? _selectedSpecialties.add(specialty)
-                                    : _selectedSpecialties.remove(specialty);
-                              }),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _notesController,
-                  maxLines: 2,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: _decoration(
-                    'Observações (opcional)',
-                    hint: 'Ex.: plano empresarial, restrições',
                   ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _validityController,
+              keyboardType: TextInputType.datetime,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                _ValidityFormatter(),
+              ],
+              decoration: _decoration('Validade', hint: 'MM/AAAA'),
+            ),
+          ],
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: _save,
-          child: Text(_isEditing ? 'Salvar' : 'Cadastrar'),
+        // ── Passo 3: cobertura ─────────────────────────────────────────────
+        FormStep(
+          title: 'Cobertura',
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _selectedCoverageType,
+              isExpanded: true,
+              hint: const Text('Selecione'),
+              decoration: _decoration('Tipo de cobertura'),
+              items: [
+                for (final type in kCoverageTypes)
+                  DropdownMenuItem(value: type, child: Text(type)),
+              ],
+              onChanged:
+                  (value) => setState(() => _selectedCoverageType = value),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Especialidades cobertas',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: 4,
+                children: [
+                  for (final specialty in kMedicalSpecialties)
+                    FilterChip(
+                      label: Text(specialty),
+                      selected: _selectedSpecialties.contains(specialty),
+                      onSelected:
+                          (selected) => setState(() {
+                            selected
+                                ? _selectedSpecialties.add(specialty)
+                                : _selectedSpecialties.remove(specialty);
+                          }),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _notesController,
+              maxLines: 2,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: _decoration(
+                'Observações (opcional)',
+                hint: 'Ex.: plano empresarial, restrições',
+              ),
+            ),
+          ],
         ),
       ],
+      onSave: _save,
     );
   }
 }

@@ -47,8 +47,9 @@ Future<AddPlanChoice?> showAddHealthPlanSheet(BuildContext context) {
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
               child: Text(
                 'Adicionar plano de saúde',
-                style: theme.textTheme.titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800),
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             option(

@@ -45,8 +45,11 @@ class PrivacyNoticeCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.privacy_tip_outlined,
-                  size: 20, color: colorScheme.primary),
+              Icon(
+                Icons.privacy_tip_outlined,
+                size: 20,
+                color: colorScheme.primary,
+              ),
               const SizedBox(width: 8),
               Text(
                 'Aviso de privacidade',
@@ -148,19 +151,20 @@ class ConsentCheckbox extends StatelessWidget {
             height: 1.4,
           ),
         ),
-        subtitle: locked
-            ? Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Consentimento registrado em '
-                  '${DateFormat('dd/MM/yyyy HH:mm').format(grantedAt!.toLocal())}. '
-                  'Para revogar, use “Apagar meus dados”.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onPrimaryContainer,
+        subtitle:
+            locked
+                ? Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Consentimento registrado em '
+                    '${DateFormat('dd/MM/yyyy HH:mm').format(grantedAt!.toLocal())}. '
+                    'Para revogar, use “Apagar meus dados”.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onPrimaryContainer,
+                    ),
                   ),
-                ),
-              )
-            : null,
+                )
+                : null,
       ),
     );
   }

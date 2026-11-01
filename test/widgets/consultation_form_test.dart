@@ -50,6 +50,14 @@ Future<void> pumpDialog(
   await tester.pumpAndSettle();
 }
 
+/// V4 em passos: avança N passos do formulário (0-based; 1 = vai ao passo 2).
+Future<void> goToStep(WidgetTester tester, int steps) async {
+  for (var i = 0; i < steps; i++) {
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+  }
+}
+
 String _dateLabel(DateTime date) {
   final day = date.day.toString().padLeft(2, '0');
   final month = date.month.toString().padLeft(2, '0');
@@ -80,6 +88,7 @@ void main() {
     tester,
   ) async {
     await pumpDialog(tester, doctorProvider: doctorProvider);
+    await goToStep(tester, 1); // passo 2: Quando
 
     // Padrão do formulário novo: amanhã.
     final tomorrow = DateTime.now().add(const Duration(days: 1));
@@ -104,6 +113,7 @@ void main() {
     tester,
   ) async {
     await pumpDialog(tester, doctorProvider: doctorProvider);
+    await goToStep(tester, 2); // passo 3: Motivo e retorno
 
     await tester.ensureVisible(find.widgetWithText(FilterChip, 'Retorno'));
     await tester.pumpAndSettle();
@@ -122,6 +132,7 @@ void main() {
     await pumpDialog(tester, doctorProvider: doctorProvider);
 
     // Dropdown já vem no primeiro médico; motivo opcional.
+    await goToStep(tester, 2);
     await tester.tap(find.text('Agendar'));
     await tester.pumpAndSettle();
 
@@ -136,6 +147,7 @@ void main() {
     tester,
   ) async {
     await pumpDialog(tester, doctorProvider: doctorProvider);
+    await goToStep(tester, 2); // passo 3: Motivo e retorno
 
     await tester.ensureVisible(find.text('Previsão de retorno'));
     await tester.pumpAndSettle();
@@ -172,6 +184,9 @@ void main() {
     );
 
     expect(find.text('Editar consulta'), findsOneWidget);
+
+    // Situação e status moram no passo 3.
+    await goToStep(tester, 2);
     expect(find.text('Situação'), findsOneWidget);
     expect(find.text('Realizada'), findsOneWidget);
 

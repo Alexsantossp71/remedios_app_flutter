@@ -11,23 +11,25 @@ Future<ImageSource?> showImageSourceSheet(
   return showModalBottomSheet<ImageSource>(
     context: context,
     showDragHandle: true,
-    builder: (sheetContext) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.photo_camera_outlined),
-            title: Text(cameraLabel),
-            onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+    builder:
+        (sheetContext) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: Text(cameraLabel),
+                onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: Text(galleryLabel),
+                onTap:
+                    () => Navigator.of(sheetContext).pop(ImageSource.gallery),
+              ),
+              const SizedBox(height: 8),
+            ],
           ),
-          ListTile(
-            leading: const Icon(Icons.photo_library_outlined),
-            title: Text(galleryLabel),
-            onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    ),
+        ),
   );
 }

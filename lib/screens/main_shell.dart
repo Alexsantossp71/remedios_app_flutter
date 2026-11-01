@@ -11,6 +11,7 @@ import '../providers/therapy_provider.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/consultation_form_dialog.dart';
 import '../widgets/doctor_form_dialog.dart';
+import '../widgets/stepped_form_sheet.dart';
 import '../widgets/treatment_form_dialog.dart';
 import 'consultations_screen.dart';
 import 'profile_screen.dart';
@@ -57,7 +58,7 @@ class _MainShellState extends State<MainShell> {
   // ── Cadastros pelo menu radial ──────────────────────────────────────────
 
   Future<void> _createTreatment() async {
-    final result = await showDialog<Treatment>(
+    final result = await showSteppedFormSheet<Treatment>(
       context: context,
       builder: (_) => const TreatmentFormDialog(),
     );
@@ -73,7 +74,7 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> _createConsultation() async {
-    final result = await showDialog<Consultation>(
+    final result = await showSteppedFormSheet<Consultation>(
       context: context,
       builder: (_) => const ConsultationFormDialog(),
     );
@@ -96,7 +97,7 @@ class _MainShellState extends State<MainShell> {
             .map((doctor) => doctor.specialty)
             .where((specialty) => specialty.trim().isNotEmpty)
             .toList();
-    final result = await showDialog<Doctor>(
+    final result = await showSteppedFormSheet<Doctor>(
       context: context,
       builder: (_) => DoctorFormDialog(knownSpecialties: knownSpecialties),
     );

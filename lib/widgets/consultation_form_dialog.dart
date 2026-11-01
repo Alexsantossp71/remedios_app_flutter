@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/design/app_tokens.dart';
 import '../models/consultation.dart';
 import '../models/doctor.dart';
 import '../providers/doctor_provider.dart';
+import 'stepped_form_sheet.dart';
 
-/// Agendamento de consulta no MESMO padrão do formulário de tratamentos:
-/// diálogo com seções rotuladas, atalhos de preenchimento (chips de datas
-/// próximas e motivos comuns) e o usuário conferindo tudo antes de salvar.
-/// Só o médico é obrigatório.
+/// Agendamento de consulta em PASSOS (padrão V4 "jornada"): Quem atende →
+/// Quando → Motivo e retorno. Atalhos de datas próximas e motivos comuns
+/// preservados; só o médico é obrigatório.
 class ConsultationFormDialog extends StatefulWidget {
   const ConsultationFormDialog({
     super.key,
@@ -26,7 +27,6 @@ class ConsultationFormDialog extends StatefulWidget {
 }
 
 class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
-  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _titleController;
   late final TextEditingController _notesController;
 
@@ -148,13 +148,8 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
   // ── Salvamento ────────────────────────────────────────────────────────────
 
   void _save() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    if (_selectedDoctorId == null || _selectedDoctorId!.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione um médico para a consulta.')),
-      );
-      return;
-    }
+    // O passo 1 já barrou sem médico; re-checar é barato.
+    if (_selectedDoctorId == null || _selectedDoctorId!.isEmpty) return;
 
     final consultationDateTime = DateTime(
       _selectedDate.year,
@@ -192,258 +187,245 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
     );
   }
 
-  /// Cabeçalho de seção — mesmo padrão do rótulo "Horários" do formulário
-  /// de tratamentos e das seções do cadastro de médico.
-  Widget _sectionLabel(String text) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        text,
-        style: Theme.of(
-          context,
-        ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final doctorProvider = context.watch<DoctorProvider>();
     final doctors = doctorProvider.doctors;
 
-    return AlertDialog(
-      title: Text(_isEditing ? 'Editar consulta' : 'Agendar consulta'),
-      content: SizedBox(
-        width: 520,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Escolha o médico e o horário — só o médico é obrigatório.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+    return SteppedFormShell(
+      title: _isEditing ? 'Editar consulta' : 'Agendar consulta',
+      intro: 'Escolha o médico e o horário — só o médico é obrigatório.',
+      saveLabel: _isEditing ? 'Salvar' : 'Agendar',
+      steps: [
+        // ── Passo 1: quem atende ───────────────────────────────────────────
+        FormStep(
+          title: 'Quem atende',
+          validate:
+              () =>
+                  (_selectedDoctorId == null || _selectedDoctorId!.isEmpty)
+                      ? 'Selecione um médico para a consulta.'
+                      : null,
+          children: [
+            if (doctors.isEmpty) ...[
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer.withValues(
+                    alpha: 0.5,
                   ),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                const SizedBox(height: 14),
-                if (doctors.isEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer.withValues(
-                        alpha: 0.5,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.warning_amber_rounded,
-                          color: theme.colorScheme.error,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Nenhum médico cadastrado. Cadastre um médico antes de agendar.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onErrorContainer,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                _sectionLabel('Quem atende'),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _selectedDoctorId,
-                  isExpanded: true,
-                  decoration: _decoration('Médico', hint: 'Selecione'),
-                  items:
-                      doctors.map((Doctor doctor) {
-                        final subtitle = [
-                          doctor.specialty,
-                          if (doctor.crm.isNotEmpty) 'CRM ${doctor.crm}',
-                        ].where((s) => s.isNotEmpty).join(' · ');
-
-                        return DropdownMenuItem<String>(
-                          value: doctor.id,
-                          child: Text(
-                            subtitle.isEmpty
-                                ? doctor.name
-                                : '${doctor.name} ($subtitle)',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                  onChanged: (value) {
-                    setState(() => _selectedDoctorId = value);
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Selecione um médico';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                _sectionLabel('Quando'),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      for (final (label, date) in _quickDates())
-                        FilterChip(
-                          label: Text(label),
-                          selected: _isSameDay(_selectedDate, date),
-                          onSelected: (_) => _setQuickDate(date),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
+                child: Row(
                   children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickDate,
-                        icon: const Icon(Icons.event_outlined),
-                        label: Text(
-                          'Data\n${_formatDate(_selectedDate)}',
-                          textAlign: TextAlign.left,
-                        ),
-                      ),
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: theme.colorScheme.error,
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: AppSpacing.sm + 2),
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickTime,
-                        icon: const Icon(Icons.schedule_outlined),
-                        label: Text(
-                          'Horário\n${_selectedTime.format(context)}',
-                          textAlign: TextAlign.left,
+                      child: Text(
+                        'Nenhum médico cadastrado. Cadastre um médico antes de agendar.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                _sectionLabel('Motivo'),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _titleController,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.next,
-                  decoration: _decoration(
-                    'Motivo da consulta',
-                    hint: 'Ex.: retorno, rotina, exames',
-                  ),
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      for (final suggestion in const [
-                        'Consulta de rotina',
-                        'Retorno',
-                        'Exames',
-                        'Primeira consulta',
-                      ])
-                        FilterChip(
-                          label: Text(suggestion),
-                          selected: _hasTitle(suggestion),
-                          onSelected: (_) => _toggleTitle(suggestion),
-                        ),
-                    ],
-                  ),
-                ),
-                if (_isEditing) ...[
-                  const SizedBox(height: 16),
-                  _sectionLabel('Situação'),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    initialValue: _status,
-                    decoration: _decoration('Status da consulta'),
-                    items:
-                        ConsultationStatus.values.map((status) {
-                          return DropdownMenuItem(
-                            value: status,
-                            child: Text(ConsultationStatus.label(status)),
-                          );
-                        }).toList(),
-                    onChanged: (value) {
-                      if (value != null) setState(() => _status = value);
-                    },
-                  ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            DropdownButtonFormField<String>(
+              initialValue: _selectedDoctorId,
+              isExpanded: true,
+              decoration: _decoration('Médico', hint: 'Selecione'),
+              items:
+                  doctors.map((Doctor doctor) {
+                    final subtitle = [
+                      doctor.specialty,
+                      if (doctor.crm.isNotEmpty) 'CRM ${doctor.crm}',
+                    ].where((s) => s.isNotEmpty).join(' · ');
+
+                    return DropdownMenuItem<String>(
+                      value: doctor.id,
+                      child: Text(
+                        subtitle.isEmpty
+                            ? doctor.name
+                            : '${doctor.name} ($subtitle)',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+              onChanged: (value) {
+                setState(() => _selectedDoctorId = value);
+              },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Selecione um médico';
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
+        // ── Passo 2: quando ────────────────────────────────────────────────
+        FormStep(
+          title: 'Quando',
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: 4,
+                children: [
+                  for (final (label, date) in _quickDates())
+                    FilterChip(
+                      label: Text(label),
+                      selected: _isSameDay(_selectedDate, date),
+                      onSelected: (_) => _setQuickDate(date),
+                    ),
                 ],
-                const SizedBox(height: 16),
-                _sectionLabel('Retorno'),
-                const SizedBox(height: 4),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Previsão de retorno'),
-                  subtitle: const Text('Definir data para consulta de retorno'),
-                  value: _hasReturn,
-                  onChanged: (val) {
-                    setState(() {
-                      _hasReturn = val;
-                      if (_hasReturn && _returnDate == null) {
-                        _returnDate = _selectedDate.add(
-                          const Duration(days: 30),
-                        );
-                      }
-                    });
-                  },
-                ),
-                if (_hasReturn) ...[
-                  const SizedBox(height: 4),
-                  OutlinedButton.icon(
-                    onPressed: _pickReturnDate,
-                    icon: const Icon(Icons.event_repeat_outlined),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm + 2),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickDate,
+                    icon: const Icon(Icons.event_outlined),
                     label: Text(
-                      'Data de retorno\n${_formatDate(_returnDate!)}',
+                      'Data\n${_formatDate(_selectedDate)}',
                       textAlign: TextAlign.left,
                     ),
                   ),
-                ],
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _notesController,
-                  maxLines: 3,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: _decoration(
-                    'Observações (opcional)',
-                    hint: 'Ex.: levar exames de sangue, jejum de 8h',
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickTime,
+                    icon: const Icon(Icons.schedule_outlined),
+                    label: Text(
+                      'Horário\n${_selectedTime.format(context)}',
+                      textAlign: TextAlign.left,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: doctors.isEmpty ? null : _save,
-          child: Text(_isEditing ? 'Salvar' : 'Agendar'),
+        // ── Passo 3: motivo e retorno ──────────────────────────────────────
+        FormStep(
+          title: 'Motivo e retorno',
+          children: [
+            TextFormField(
+              controller: _titleController,
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.next,
+              decoration: _decoration(
+                'Motivo da consulta',
+                hint: 'Ex.: retorno, rotina, exames',
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: 4,
+                children: [
+                  for (final suggestion in const [
+                    'Consulta de rotina',
+                    'Retorno',
+                    'Exames',
+                    'Primeira consulta',
+                  ])
+                    FilterChip(
+                      label: Text(suggestion),
+                      selected: _hasTitle(suggestion),
+                      onSelected: (_) => _toggleTitle(suggestion),
+                    ),
+                ],
+              ),
+            ),
+            if (_isEditing) ...[
+              const SizedBox(height: AppSpacing.md),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Situação',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              DropdownButtonFormField<String>(
+                initialValue: _status,
+                decoration: _decoration('Status da consulta'),
+                items:
+                    ConsultationStatus.values.map((status) {
+                      return DropdownMenuItem(
+                        value: status,
+                        child: Text(ConsultationStatus.label(status)),
+                      );
+                    }).toList(),
+                onChanged: (value) {
+                  if (value != null) setState(() => _status = value);
+                },
+              ),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Previsão de retorno'),
+              subtitle: const Text('Definir data para consulta de retorno'),
+              value: _hasReturn,
+              onChanged: (val) {
+                setState(() {
+                  _hasReturn = val;
+                  if (_hasReturn && _returnDate == null) {
+                    _returnDate = _selectedDate.add(const Duration(days: 30));
+                  }
+                });
+              },
+            ),
+            AnimatedSize(
+              duration: AppDurations.medium,
+              curve: AppCurves.emphasized,
+              alignment: Alignment.topCenter,
+              child:
+                  _hasReturn
+                      ? Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.xs),
+                        child: OutlinedButton.icon(
+                          onPressed: _pickReturnDate,
+                          icon: const Icon(Icons.event_repeat_outlined),
+                          label: Text(
+                            'Data de retorno\n${_formatDate(_returnDate!)}',
+                            textAlign: TextAlign.left,
+                          ),
+                        ),
+                      )
+                      : const SizedBox(width: double.infinity),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _notesController,
+              maxLines: 3,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: _decoration(
+                'Observações (opcional)',
+                hint: 'Ex.: levar exames de sangue, jejum de 8h',
+              ),
+            ),
+          ],
         ),
       ],
+      onSave: _save,
     );
   }
 

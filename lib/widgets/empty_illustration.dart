@@ -8,7 +8,13 @@ import '../core/theme/app_theme.dart';
 /// tema, preenchimentos suaves no contêiner e um toque de verde-saúde.
 /// Desenhadas com [CustomPainter] (zero dependências, escalam sem perda e
 /// herdam as cores do tema claro/escuro automaticamente).
-enum EmptyIllustrationKind { freeDay, pillBottle, calendarHeart, shieldPlus, stethoscope }
+enum EmptyIllustrationKind {
+  freeDay,
+  pillBottle,
+  calendarHeart,
+  shieldPlus,
+  stethoscope,
+}
 
 class EmptyIllustration extends StatelessWidget {
   const EmptyIllustration({
@@ -58,20 +64,28 @@ class _EmptyIllustrationPainter extends CustomPainter {
 
   static const _strokeWidth = 2.6;
 
-  Paint get _strokePaint => Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = _strokeWidth
-    ..strokeCap = StrokeCap.round
-    ..strokeJoin = StrokeJoin.round
-    ..color = stroke;
+  Paint get _strokePaint =>
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _strokeWidth
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..color = stroke;
 
-  Paint get _fillPaint => Paint()..style = PaintingStyle.fill..color = fill;
+  Paint get _fillPaint =>
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = fill;
 
-  Paint get _surfacePaint => Paint()
-    ..style = PaintingStyle.fill
-    ..color = surface;
+  Paint get _surfacePaint =>
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = surface;
 
-  Paint get _accentPaint => Paint()..style = PaintingStyle.fill..color = accent;
+  Paint get _accentPaint =>
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = accent;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -108,18 +122,25 @@ class _EmptyIllustrationPainter extends CustomPainter {
     canvas.drawCircle(clock, 24, _surfacePaint);
     canvas.drawCircle(clock, 24, _strokePaint);
     canvas.drawLine(
-        clock, clock + const Offset(0, -13), _strokePaint..strokeWidth = 3);
-    canvas.drawLine(clock, clock + const Offset(9, 2),
-        _strokePaint..strokeWidth = 3);
+      clock,
+      clock + const Offset(0, -13),
+      _strokePaint..strokeWidth = 3,
+    );
+    canvas.drawLine(
+      clock,
+      clock + const Offset(9, 2),
+      _strokePaint..strokeWidth = 3,
+    );
 
     // Faísca: pequena estrela de quatro pontas no alto à direita.
     final spark = Offset(size.width * 0.86, size.height * 0.18);
-    final star = Path()
-      ..moveTo(spark.dx, spark.dy - 7)
-      ..quadraticBezierTo(spark.dx, spark.dy, spark.dx + 7, spark.dy)
-      ..quadraticBezierTo(spark.dx, spark.dy, spark.dx, spark.dy + 7)
-      ..quadraticBezierTo(spark.dx, spark.dy, spark.dx - 7, spark.dy)
-      ..quadraticBezierTo(spark.dx, spark.dy, spark.dx, spark.dy - 7);
+    final star =
+        Path()
+          ..moveTo(spark.dx, spark.dy - 7)
+          ..quadraticBezierTo(spark.dx, spark.dy, spark.dx + 7, spark.dy)
+          ..quadraticBezierTo(spark.dx, spark.dy, spark.dx, spark.dy + 7)
+          ..quadraticBezierTo(spark.dx, spark.dy, spark.dx - 7, spark.dy)
+          ..quadraticBezierTo(spark.dx, spark.dy, spark.dx, spark.dy - 7);
     canvas.drawPath(star, _accentPaint);
   }
 
@@ -174,20 +195,13 @@ class _EmptyIllustrationPainter extends CustomPainter {
     canvas.translate(size.width * 0.76, size.height * 0.80);
     canvas.rotate(-0.6);
     final capsule = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-        center: Offset.zero,
-        width: 34,
-        height: 15,
-      ),
+      Rect.fromCenter(center: Offset.zero, width: 34, height: 15),
       const Radius.circular(7.5),
     );
     canvas.drawRRect(capsule, _surfacePaint);
     canvas.save();
     canvas.clipRRect(capsule);
-    canvas.drawRect(
-      Rect.fromLTWH(-17, -8, 17, 16),
-      _accentPaint,
-    );
+    canvas.drawRect(Rect.fromLTWH(-17, -8, 17, 16), _accentPaint);
     canvas.restore();
     canvas.drawRRect(capsule, _strokePaint);
     canvas.restore();
@@ -197,7 +211,10 @@ class _EmptyIllustrationPainter extends CustomPainter {
     canvas.drawCircle(tablet, 9, _surfacePaint);
     canvas.drawCircle(tablet, 9, _strokePaint);
     canvas.drawLine(
-        tablet + const Offset(-6, 0), tablet + const Offset(6, 0), _strokePaint);
+      tablet + const Offset(-6, 0),
+      tablet + const Offset(6, 0),
+      _strokePaint,
+    );
   }
 
   /// Calendário com coração: nenhuma consulta agendada.
@@ -222,7 +239,10 @@ class _EmptyIllustrationPainter extends CustomPainter {
     canvas.drawRRect(frame, _strokePaint);
 
     // Argolas.
-    for (final x in [rect.left + rect.width * 0.28, rect.left + rect.width * 0.72]) {
+    for (final x in [
+      rect.left + rect.width * 0.28,
+      rect.left + rect.width * 0.72,
+    ]) {
       canvas.drawLine(
         Offset(x, rect.top - 8),
         Offset(x, rect.top + 8),
@@ -231,19 +251,38 @@ class _EmptyIllustrationPainter extends CustomPainter {
     }
 
     // Coração dentro do calendário.
-    final center = Offset(rect.left + rect.width / 2, rect.top + rect.height * 0.62);
+    final center = Offset(
+      rect.left + rect.width / 2,
+      rect.top + rect.height * 0.62,
+    );
     final r = 13.0;
-    final heart = Path()
-      ..moveTo(center.dx, center.dy + r * 0.85)
-      ..cubicTo(center.dx - r * 1.3, center.dy - r * 0.2, center.dx - r * 0.6,
-          center.dy - r * 1.1, center.dx, center.dy - r * 0.35)
-      ..cubicTo(center.dx + r * 0.6, center.dy - r * 1.1, center.dx + r * 1.3,
-          center.dy - r * 0.2, center.dx, center.dy + r * 0.85);
+    final heart =
+        Path()
+          ..moveTo(center.dx, center.dy + r * 0.85)
+          ..cubicTo(
+            center.dx - r * 1.3,
+            center.dy - r * 0.2,
+            center.dx - r * 0.6,
+            center.dy - r * 1.1,
+            center.dx,
+            center.dy - r * 0.35,
+          )
+          ..cubicTo(
+            center.dx + r * 0.6,
+            center.dy - r * 1.1,
+            center.dx + r * 1.3,
+            center.dy - r * 0.2,
+            center.dx,
+            center.dy + r * 0.85,
+          );
     canvas.drawPath(heart, _accentPaint);
 
     // Pontinhos de agenda no cabeçalho.
     canvas.drawCircle(
-        Offset(rect.left + rect.width * 0.15, rect.top + 10), 2, _surfacePaint);
+      Offset(rect.left + rect.width * 0.15, rect.top + 10),
+      2,
+      _surfacePaint,
+    );
   }
 
   /// Escudo com cruz: nenhum plano de saúde cadastrado.
@@ -253,27 +292,37 @@ class _EmptyIllustrationPainter extends CustomPainter {
     final halfWidth = size.width * 0.26;
     final bottom = size.height * 0.92;
 
-    final shield = Path()
-      ..moveTo(cx, top)
-      ..lineTo(cx + halfWidth, top + 14)
-      ..lineTo(cx + halfWidth, size.height * 0.52)
-      ..quadraticBezierTo(cx + halfWidth, size.height * 0.80, cx, bottom)
-      ..quadraticBezierTo(cx - halfWidth, size.height * 0.80, cx - halfWidth,
-          size.height * 0.52)
-      ..lineTo(cx - halfWidth, top + 14)
-      ..close();
+    final shield =
+        Path()
+          ..moveTo(cx, top)
+          ..lineTo(cx + halfWidth, top + 14)
+          ..lineTo(cx + halfWidth, size.height * 0.52)
+          ..quadraticBezierTo(cx + halfWidth, size.height * 0.80, cx, bottom)
+          ..quadraticBezierTo(
+            cx - halfWidth,
+            size.height * 0.80,
+            cx - halfWidth,
+            size.height * 0.52,
+          )
+          ..lineTo(cx - halfWidth, top + 14)
+          ..close();
 
     canvas.drawPath(shield, _fillPaint);
     canvas.drawPath(shield, _strokePaint);
 
     // Cruz de saúde no centro, em destaque.
-    final cross = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
-      ..strokeCap = StrokeCap.round
-      ..color = accent;
+    final cross =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4
+          ..strokeCap = StrokeCap.round
+          ..color = accent;
     canvas.drawLine(Offset(cx, top + 34), Offset(cx, top + 62), cross);
-    canvas.drawLine(Offset(cx - 14, top + 48), Offset(cx + 14, top + 48), cross);
+    canvas.drawLine(
+      Offset(cx - 14, top + 48),
+      Offset(cx + 14, top + 48),
+      cross,
+    );
   }
 
   /// Estetoscópio com prontuário: seu catálogo de médicos começa aqui.
@@ -290,10 +339,11 @@ class _EmptyIllustrationPainter extends CustomPainter {
     );
     canvas.drawRRect(card, _surfacePaint);
     canvas.drawRRect(card, _strokePaint);
-    final line = Paint()
-      ..color = stroke.withValues(alpha: .4)
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
+    final line =
+        Paint()
+          ..color = stroke.withValues(alpha: .4)
+          ..strokeWidth = 2
+          ..strokeCap = StrokeCap.round;
     canvas.drawLine(
       Offset(card.left + 12, card.top + 18),
       Offset(card.right - 12, card.top + 18),
@@ -302,22 +352,29 @@ class _EmptyIllustrationPainter extends CustomPainter {
     canvas.drawLine(
       Offset(card.left + 12, card.top + 30),
       Offset(card.right - 22, card.top + 30),
-    line,
+      line,
     );
 
     // Tubo em U do estetoscópio.
-    final tube = Path()
-      ..moveTo(size.width * 0.20, size.height * 0.10)
-      ..cubicTo(
-        size.width * 0.16, size.height * 0.46,
-        size.width * 0.34, size.height * 0.52,
-        size.width * 0.44, size.height * 0.62,
-      )
-      ..cubicTo(
-        size.width * 0.56, size.height * 0.74,
-        size.width * 0.62, size.height * 0.78,
-        size.width * 0.60, size.height * 0.88,
-      );
+    final tube =
+        Path()
+          ..moveTo(size.width * 0.20, size.height * 0.10)
+          ..cubicTo(
+            size.width * 0.16,
+            size.height * 0.46,
+            size.width * 0.34,
+            size.height * 0.52,
+            size.width * 0.44,
+            size.height * 0.62,
+          )
+          ..cubicTo(
+            size.width * 0.56,
+            size.height * 0.74,
+            size.width * 0.62,
+            size.height * 0.78,
+            size.width * 0.60,
+            size.height * 0.88,
+          );
     canvas.drawPath(tube, _strokePaint);
 
     // Arautos metálicos (olivas) no topo.

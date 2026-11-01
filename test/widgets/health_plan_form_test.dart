@@ -41,6 +41,14 @@ Future<void> pumpDialog(
   await tester.pumpAndSettle();
 }
 
+/// V4 em passos: avança N passos (0-based; 1 = vai ao passo 2).
+Future<void> goToStep(WidgetTester tester, int steps) async {
+  for (var i = 0; i < steps; i++) {
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+  }
+}
+
 void main() {
   setUp(() {
     _popped = null;
@@ -68,8 +76,8 @@ void main() {
   ) async {
     await pumpDialog(tester);
 
-    // Sem nome, o cadastro não fecha.
-    await tester.tap(find.text('Cadastrar'));
+    // Sem nome, o passo 1 não avança.
+    await tester.tap(find.text('Continuar'));
     await tester.pump();
     expect(_popped, isNull);
     expect(find.text('Informe o nome do plano'), findsOneWidget);
@@ -78,6 +86,10 @@ void main() {
       find.widgetWithText(TextFormField, 'Nome do plano'),
       'Plano Top',
     );
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Cadastrar'));
     await tester.pumpAndSettle();
 
@@ -107,8 +119,14 @@ void main() {
       find.widgetWithText(TextFormField, 'Unimed Nacional'),
       findsOneWidget,
     );
+
+    // Carteirinha lida fica no passo 2.
+    await goToStep(tester, 1);
     expect(find.widgetWithText(TextFormField, '1234567890123'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, '12/2029'), findsOneWidget);
+
+    // Cobertura e notas ficam no passo 3.
+    await goToStep(tester, 1);
     expect(
       find.widgetWithText(TextFormField, 'Plano da empresa'),
       findsOneWidget,
@@ -133,12 +151,18 @@ void main() {
     expect(find.text('Editar plano'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, 'Plano Antigo'), findsOneWidget);
     expect(find.widgetWithText(TextFormField, 'Amil'), findsOneWidget);
+
+    // Carteirinha no passo 2.
+    await goToStep(tester, 1);
     expect(find.widgetWithText(TextFormField, '9999'), findsOneWidget);
 
+    await tester.tap(find.text('Voltar'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Nome do plano'),
       'Plano Renovado',
     );
+    await goToStep(tester, 2);
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 
@@ -161,6 +185,8 @@ void main() {
       find.widgetWithText(TextFormField, 'Nome do plano'),
       'Plano Completo',
     );
+    // Especialidades ficam no passo 3 (cobertura).
+    await goToStep(tester, 2);
     await tester.tap(find.widgetWithText(FilterChip, 'Cardiologia'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilterChip, 'Oftalmologia'));

@@ -29,18 +29,27 @@ void main() {
     await tester.pumpWidget(buildSubject(draft));
     await tester.pumpAndSettle();
 
+    // O título continua "NOVO tratamento": o rascunho não é um tratamento salvo.
+    expect(find.text('Novo tratamento'), findsOneWidget);
+    // O nome lido da receita está no passo 1, pronto para conferência.
     expect(find.widgetWithText(TextField, 'DIPIRONA'), findsOneWidget);
+
+    // Horários vivem no passo 2 da jornada V4.
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+
     expect(find.widgetWithText(Chip, '08:00'), findsOneWidget);
     expect(find.widgetWithText(Chip, '16:00'), findsOneWidget);
     expect(find.widgetWithText(Chip, '00:00'), findsOneWidget);
-    // O título continua "NOVO tratamento": o rascunho não é um tratamento salvo.
-    expect(find.text('Novo tratamento'), findsOneWidget);
   });
 
   testWidgets('rascunho sem horários mantém o 08:00 padrão', (tester) async {
     const draft = TreatmentDraft(name: 'LOSARTANA');
 
     await tester.pumpWidget(buildSubject(draft));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(Chip, '08:00'), findsOneWidget);
@@ -103,6 +112,11 @@ void main() {
         tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Seg'));
     expect(segundaChip.selected, isFalse);
 
+    // Passo 2 (horários) → passo 3 → Salvar.
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 
