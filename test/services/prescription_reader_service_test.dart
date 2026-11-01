@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 import 'package:remedios_app_flutter/models/treatment.dart';
 import 'package:remedios_app_flutter/services/prescription_reader_service.dart';
@@ -163,6 +168,97 @@ Aqui está o resultado:
       );
       final draft = med.toTreatmentDraft(today: DateTime(2026, 10, 31));
       expect(draft.frequency, TreatmentFrequency.everyOtherDay);
+    });
+  });
+
+  group('médico identificado na receita (cadastro de médico)', () {
+    test('parseContent traz o medico quando o servidor o devolve', () {
+      const content = '''
+{
+  "medicamentos": [],
+  "medico": { "nome": "SANDRA LINA ALPENDRE", "crm": "33333", "uf": "SP" },
+  "rawText": "DRA. SANDRA LINA ALPENDRE CRM/SP 33333"
+}
+''';
+      final result = PrescriptionReaderService.parseContent(
+        content,
+        requireMedications: false,
+      );
+      expect(result.medicamentos, isEmpty);
+      expect(result.medico, isNotNull);
+      expect(result.medico!.nome, 'SANDRA LINA ALPENDRE');
+      expect(result.medico!.crm, '33333');
+      expect(result.medico!.uf, 'SP');
+    });
+
+    test('sem medico no JSON, o resultado traz medico nulo', () {
+      const content = '{"medicamentos": [], "rawText": "foto ilegível"}';
+      final result = PrescriptionReaderService.parseContent(
+        content,
+        requireMedications: false,
+      );
+      expect(result.medico, isNull);
+    });
+
+    test('medico normaliza CRM para dígitos e UF para caixa alta', () {
+      final medico = PrescriptionDoctor.fromJson({
+        'nome': ' Dr. João ',
+        'crm': ' 123.456 ',
+        'uf': 'sp',
+      });
+      expect(medico.crm, '123456');
+      expect(medico.uf, 'SP');
+      expect(medico.hasName, isTrue);
+      expect(medico.hasCrm, isTrue);
+    });
+
+    test('readDoctorFromImage devolve o médico da receita', () async {
+      final service = PrescriptionReaderService(
+        client: MockClient((_) async => http.Response(
+              jsonEncode({
+                'content': jsonEncode({
+                  'medicamentos': [],
+                  'medico': {
+                    'nome': 'DRA. HELENA COSTA',
+                    'crm': '987654',
+                    'uf': 'SP',
+                  },
+                  'rawText': 'DRA. HELENA COSTA CRM/SP 987654',
+                }),
+                'model': 'tesseract-ocr',
+              }),
+              200,
+            )),
+      );
+
+      final medico = await service.readDoctorFromImage(
+        imageBytes: Uint8List.fromList([1, 2, 3]),
+      );
+      expect(medico.nome, 'DRA. HELENA COSTA');
+      expect(medico.crm, '987654');
+      expect(medico.uf, 'SP');
+    });
+
+    test('readDoctorFromImage reclama quando não há médico legível', () async {
+      final service = PrescriptionReaderService(
+        client: MockClient((_) async => http.Response(
+              jsonEncode({
+                'content': jsonEncode({
+                  'medicamentos': [],
+                  'rawText': 'nada de médico aqui',
+                }),
+                'model': 'tesseract-ocr',
+              }),
+              200,
+            )),
+      );
+
+      expect(
+        () => service.readDoctorFromImage(
+          imageBytes: Uint8List.fromList([1]),
+        ),
+        throwsA(isA<PrescriptionReaderException>()),
+      );
     });
   });
 }

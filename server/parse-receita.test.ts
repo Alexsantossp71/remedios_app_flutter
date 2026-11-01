@@ -406,3 +406,69 @@ test('posologia comum não marca frequência semanal', () => {
     assert.deepEqual(med.diasDaSemana, [], med.nome);
   }
 });
+
+// ─── Identificação do médico emissor (cadastro de médico por receita) ────────
+
+test('receita clássica identifica o médico da linha de assinatura', () => {
+  const receita = parseReceitaText(RECEITA_CLASSICA);
+  assert.ok(receita.medico, 'medico deveria ser extraído');
+  assert.equal(receita.medico!.nome, 'João da Silva');
+  assert.equal(receita.medico!.crm, '123456');
+  assert.equal(receita.medico!.uf, '');
+});
+
+test('CRM com UF e rótulo de formulário identifica nome e registro', () => {
+  const receita = parseReceitaText(`
+IDENTIFICACAO DO EMITENTE
+MEDICO RESPONSÁVEL: DRA. SANDRA LINA ALPENDRE CRM/SP 33333
+DIPIRONA 500MG
+8/8 horas
+  `);
+  assert.ok(receita.medico);
+  assert.equal(receita.medico!.nome, 'SANDRA LINA ALPENDRE');
+  assert.equal(receita.medico!.crm, '33333');
+  assert.equal(receita.medico!.uf, 'SP');
+});
+
+test('CRM com pontos e dígito verificador é lido limpo', () => {
+  const receita = parseReceitaText(`
+Dr. Marcos Vinícius Pereira CRM-SP 123.456-7
+AMOXICILINA 500MG
+8/8 horas por 7 dias
+  `);
+  assert.ok(receita.medico);
+  assert.equal(receita.medico!.nome, 'Marcos Vinícius Pereira');
+  assert.equal(receita.medico!.crm, '123456');
+  assert.equal(receita.medico!.uf, 'SP');
+});
+
+test('nome e CRM em linhas separadas se completam', () => {
+  const receita = parseReceitaText(`
+Dra. Helena Costa
+CRM/SP 987654
+DIPIRONA 500MG
+8/8 horas
+  `);
+  assert.ok(receita.medico);
+  assert.equal(receita.medico!.nome, 'Helena Costa');
+  assert.equal(receita.medico!.crm, '987654');
+  assert.equal(receita.medico!.uf, 'SP');
+});
+
+test('linha do paciente nunca vira médico, mesmo com "Dr." por perto', () => {
+  const receita = parseReceitaText(`
+Paciente: Dr. Nome do Paciente
+Data: 31/10/2026
+DIPIRONA 500MG
+8/8 horas
+  `);
+  assert.equal(receita.medico, null);
+});
+
+test('receita sem evidência de médico devolve null', () => {
+  const receita = parseReceitaText(`
+DIPIRONA 500MG
+Tomar 1 comprimido de 8/8 horas por 5 dias
+  `);
+  assert.equal(receita.medico, null);
+});

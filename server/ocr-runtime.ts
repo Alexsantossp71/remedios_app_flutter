@@ -18,6 +18,8 @@ export interface NodeRequestLike {
   method?: string;
   headers?: Record<string, string | string[] | undefined>;
   body?: unknown;
+  /** Query string desserializada (GET) — Vercel Node functions entrega `req.query`. */
+  query?: Record<string, string | string[] | undefined>;
 }
 
 export interface NodeResponseLike {
