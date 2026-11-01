@@ -13,6 +13,7 @@ import '../providers/user_profile_provider.dart';
 import '../services/prescription_reader_service.dart';
 import '../widgets/doctor_form_dialog.dart';
 import '../widgets/stepped_form_sheet.dart';
+import '../widgets/app_snack_bar.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/media_source_sheet.dart';
@@ -191,7 +192,16 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                     .toList(),
           ),
     );
-    if (result != null) await provider.saveDoctor(result);
+    if (result != null) {
+      await provider.saveDoctor(result);
+      unawaited(HapticFeedback.mediumImpact());
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        doctor == null ? 'Médico salvo no seu catálogo.' : 'Médico atualizado.',
+        type: AppSnackType.success,
+      );
+    }
   }
 
   Future<void> _deleteDoctor(DoctorProvider provider, Doctor doctor) async {

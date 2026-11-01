@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -8,7 +10,10 @@ import '../providers/consultation_provider.dart';
 import '../providers/doctor_provider.dart';
 import '../core/theme/app_theme.dart';
 import '../widgets/consultation_form_dialog.dart';
+import '../core/design/app_tokens.dart';
+import '../widgets/app_snack_bar.dart';
 import '../widgets/empty_illustration.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stepped_form_sheet.dart';
@@ -34,6 +39,13 @@ class ConsultationsScreen extends StatelessWidget {
 
     final provider = context.read<ConsultationProvider>();
     await provider.saveConsultation(result);
+    unawaited(HapticFeedback.mediumImpact());
+    if (!context.mounted) return;
+    showAppSnackBar(
+      context,
+      consultation == null ? 'Consulta agendada.' : 'Consulta atualizada.',
+      type: AppSnackType.success,
+    );
   }
 
   Future<void> _confirmDelete(
@@ -160,7 +172,11 @@ class ConsultationsScreen extends StatelessWidget {
             ),
             if (consultationProvider.isLoading)
               const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+                hasScrollBody: false,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  child: Center(child: SkeletonList()),
+                ),
               )
             else if (!hasConsultations)
               SliverFillRemaining(

@@ -28,10 +28,24 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell>
+    with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
 
   static const _breakpoint = 900.0;
+
+  /// Crossfade calmo entre abas (fim do corte seco do IndexedStack).
+  late final AnimationController _tabFade = AnimationController(
+    vsync: this,
+    duration: AppDurations.medium,
+    value: 1,
+  );
+
+  void _switchTab(int index) {
+    if (index == _selectedIndex) return;
+    setState(() => _selectedIndex = index);
+    _tabFade.forward(from: 0);
+  }
 
   static const _destinations = [
     (icon: Icons.today_outlined, selectedIcon: Icons.today, label: 'Hoje'),
@@ -200,7 +214,7 @@ class _MainShellState extends State<MainShell> {
               selectedIcon: _destinations[i].selectedIcon,
               label: _destinations[i].label,
               selected: _selectedIndex == i,
-              onTap: () => setState(() => _selectedIndex = i),
+              onTap: () => _switchTab(i),
             ),
         ],
       ),

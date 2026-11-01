@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +12,10 @@ import '../providers/therapy_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../screens/prescription_review_screen.dart';
 import '../services/prescription_reader_service.dart';
+import '../core/design/app_tokens.dart';
+import '../widgets/app_snack_bar.dart';
 import '../widgets/empty_illustration.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/info_chip.dart';
 import '../widgets/media_source_sheet.dart';
@@ -40,6 +44,13 @@ class TreatmentsScreen extends StatelessWidget {
     } else {
       await provider.updateTreatment(result);
     }
+    unawaited(HapticFeedback.mediumImpact());
+    if (!context.mounted) return;
+    showAppSnackBar(
+      context,
+      treatment == null ? 'Tratamento salvo. Bom começo!' : 'Tratamento atualizado.',
+      type: AppSnackType.success,
+    );
   }
 
   /// Foto da receita: ler, conferir e salvar um tratamento por medicamento.
@@ -258,7 +269,11 @@ class TreatmentsScreen extends StatelessWidget {
             ),
             if (provider.isLoading)
               const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+                hasScrollBody: false,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                  child: Center(child: SkeletonList()),
+                ),
               )
             else if (treatments.isEmpty)
               SliverFillRemaining(

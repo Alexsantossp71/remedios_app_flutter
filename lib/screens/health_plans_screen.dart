@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/health_plan.dart';
 import '../providers/health_plan_provider.dart';
 import '../providers/user_profile_provider.dart';
+import '../core/design/app_tokens.dart';
 import '../core/theme/app_theme.dart';
 import '../services/card_reader_service.dart';
 import '../widgets/add_health_plan_sheet.dart';
@@ -15,6 +16,7 @@ import '../widgets/health_plan_form_dialog.dart';
 import '../widgets/info_chip.dart';
 import '../widgets/privacy_notice.dart';
 import '../widgets/reading_dialog.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stepped_form_sheet.dart';
 import 'health_plan_review_screen.dart';
@@ -47,7 +49,12 @@ class HealthPlansScreen extends StatelessWidget {
           body: SafeArea(
             child:
                 provider.isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                        ),
+                        child: Center(child: SkeletonList()),
+                      )
                     : _buildList(context, provider),
           ),
         );
