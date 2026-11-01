@@ -29,16 +29,29 @@ Widget buildSubject({CrmLookupService? crmLookup}) {
   );
 }
 
+/// V4 em passos: CRM/UF ficam no passo 2 — preenche o nome e avança.
+Future<void> goToStep2(WidgetTester tester) async {
+  await tester.enterText(
+    find.widgetWithText(TextFormField, 'Nome do médico'),
+    'Dra. Teste',
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Continuar'));
+  await tester.pumpAndSettle();
+}
+
 Future<void> selectCrmUf(WidgetTester tester, String uf) async {
   await tester.tap(find.byKey(const ValueKey('crmStateUf')));
   await tester.pumpAndSettle();
+  // No shell em passos há vários Scrollables (PageView, passos); o menu do
+  // dropdown é um ListView na overlay — o último da árvore.
   await tester.dragUntilVisible(
     find.text(uf),
-    find.byType(Scrollable).last,
+    find.byType(ListView).last,
     const Offset(0, -200),
   );
   await tester.pumpAndSettle();
-  await tester.tap(find.text(uf));
+  await tester.tap(find.text(uf).last);
   await tester.pumpAndSettle();
 }
 
@@ -49,6 +62,7 @@ void main() {
       buildSubject(crmLookup: CrmLookupService(client: _spClient())),
     );
     await tester.pumpAndSettle();
+    await goToStep2(tester);
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'CRM'),
@@ -59,6 +73,19 @@ void main() {
     await tester.tap(find.byTooltip('Buscar dados pelo CRM no conselho'));
     await tester.pumpAndSettle();
 
+    // Como o nome já está preenchido (necessário para avançar o passo 1),
+    // o lookup pergunta antes de substituir.
+    if (find.text('Substituir').evaluate().isNotEmpty) {
+      await tester.tap(find.text('Substituir'));
+      await tester.pumpAndSettle();
+    }
+
+    expect(find.textContaining('CRM ativo:'), findsOneWidget);
+
+    // Nome e especialidade moram no passo 1: volta para conferir o
+    // preenchimento vindo do conselho.
+    await tester.tap(find.text('Voltar'));
+    await tester.pumpAndSettle();
     expect(
       find.widgetWithText(TextFormField, 'Sandra Lina dos Reis Alpendre'),
       findsOneWidget,
@@ -67,7 +94,6 @@ void main() {
       find.widgetWithText(TextFormField, 'ENDOCRINOLOGIA E METABOLOGIA'),
       findsOneWidget,
     );
-    expect(find.textContaining('CRM ativo:'), findsOneWidget);
   });
 
   testWidgets('lookup without UF shows a warning and does not call the API',
@@ -81,6 +107,7 @@ void main() {
     );
     await tester.pumpWidget(buildSubject(crmLookup: service));
     await tester.pumpAndSettle();
+    await goToStep2(tester);
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'CRM'),
@@ -99,6 +126,7 @@ void main() {
       buildSubject(crmLookup: CrmLookupService(client: _spClient())),
     );
     await tester.pumpAndSettle();
+    await goToStep2(tester);
 
     await tester.enterText(
       find.widgetWithText(TextFormField, 'CRM'),

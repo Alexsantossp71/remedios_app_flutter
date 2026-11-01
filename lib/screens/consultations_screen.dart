@@ -11,6 +11,7 @@ import '../widgets/consultation_form_dialog.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/section_header.dart';
+import '../widgets/stepped_form_sheet.dart';
 import 'doctors_screen.dart';
 
 class ConsultationsScreen extends StatelessWidget {
@@ -21,7 +22,7 @@ class ConsultationsScreen extends StatelessWidget {
     Consultation? consultation,
     String? initialDoctorId,
   }) async {
-    final result = await showDialog<Consultation>(
+    final result = await showSteppedFormSheet<Consultation>(
       context: context,
       builder:
           (_) => ConsultationFormDialog(

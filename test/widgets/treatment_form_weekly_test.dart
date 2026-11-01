@@ -80,10 +80,11 @@ void main() {
     await fillBasics(tester);
     await selectWeeklyFrequency(tester);
 
-    await tester.tap(find.text('Salvar'));
+    // V4 em passos: a validação acontece ao tentar AVANÇAR o passo 1.
+    await tester.tap(find.text('Continuar'));
     await tester.pump();
 
-    // "1x por semana" não diz qual dia: sem escolha, sem salvar.
+    // "1x por semana" não diz qual dia: sem escolha, sem avançar.
     expect(find.text('Escolha pelo menos um dia da semana.'), findsOneWidget);
   });
 
@@ -98,7 +99,10 @@ void main() {
     await tester.tap(find.text('Sáb'));
     await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Salvar'));
+    // Passo 2 (horários com 08:00 padrão) → passo 3 → Salvar.
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
@@ -124,6 +128,11 @@ void main() {
     await tester.tap(find.text('Todos os dias').last);
     await tester.pumpAndSettle();
 
+    // Passo 2 → passo 3 → Salvar.
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 

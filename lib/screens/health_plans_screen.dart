@@ -16,6 +16,7 @@ import '../widgets/info_chip.dart';
 import '../widgets/privacy_notice.dart';
 import '../widgets/reading_dialog.dart';
 import '../widgets/section_header.dart';
+import '../widgets/stepped_form_sheet.dart';
 import 'health_plan_review_screen.dart';
 
 /// Screen for managing health plans and medical insurance.
@@ -138,7 +139,7 @@ class HealthPlansScreen extends StatelessWidget {
     HealthPlanProvider provider, [
     HealthPlan? existing,
   ]) async {
-    final plan = await showDialog<HealthPlan>(
+    final plan = await showSteppedFormSheet<HealthPlan>(
       context: context,
       builder: (_) => HealthPlanFormDialog(healthPlan: existing),
     );
@@ -315,7 +316,7 @@ class HealthPlansScreen extends StatelessWidget {
     Navigator.of(context).pop();
     await Future<void>.delayed(const Duration(milliseconds: 250));
     if (!context.mounted) return;
-    final plan = await showDialog<HealthPlan>(
+    final plan = await showSteppedFormSheet<HealthPlan>(
       context: context,
       builder: (_) => HealthPlanFormDialog(draft: scan.data),
     );
@@ -353,7 +354,7 @@ class HealthPlansScreen extends StatelessWidget {
     HealthPlanProvider provider,
     HealthPlan plan,
   ) async {
-    final updated = await showDialog<HealthPlan>(
+    final updated = await showSteppedFormSheet<HealthPlan>(
       context: context,
       builder: (context) => HealthPlanFormDialog(healthPlan: plan),
     );
@@ -537,8 +538,7 @@ class _HealthPlanCard extends StatelessWidget {
                               Text(
                                 'Excluir',
                                 style: TextStyle(
-                                  color:
-                                      AppSemanticColors.of(context).danger,
+                                  color: AppSemanticColors.of(context).danger,
                                 ),
                               ),
                             ],

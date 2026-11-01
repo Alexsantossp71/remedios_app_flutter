@@ -97,6 +97,13 @@ void main() {
       find.widgetWithText(TextFormField, 'Especialidade'),
       'Dermatologia',
     );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Telefone'),
+      '(21) 99999-0000',
+    );
+    // V4 em passos: avança para o passo de registro (CRM).
+    await tester.tap(find.text('Continuar'));
+    await _pumpFor(tester);
     await tester.enterText(find.widgetWithText(TextFormField, 'CRM'), '54321');
     await tester.ensureVisible(find.byKey(const ValueKey('crmStateUf')));
     // O teclado sobrepoe o campo e o toque no dropdown não abriria o menu.
@@ -112,10 +119,9 @@ void main() {
     }
     await tester.tap(find.text('CE').last);
     await _pumpFor(tester);
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Telefone'),
-      '(21) 99999-0000',
-    );
+    // Passo de endereço: avança do registro para 'Onde atende'.
+    await tester.tap(find.text('Continuar'));
+    await _pumpFor(tester);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Clínica ou consultório'),
       'Clínica Central',

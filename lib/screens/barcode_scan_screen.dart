@@ -52,33 +52,34 @@ class _BarcodeScanScreenState extends State<BarcodeScanScreen> {
           MobileScanner(
             controller: _controller,
             onDetect: _handleDetect,
-            errorBuilder: (context, error) => Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.no_photography_outlined,
-                      color: Colors.white70,
-                      size: 40,
+            errorBuilder:
+                (context, error) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.no_photography_outlined,
+                          color: Colors.white70,
+                          size: 40,
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Não consegui abrir a câmera.\n'
+                          'Verifique a permissão e tente de novo.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                        const SizedBox(height: 16),
+                        OutlinedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Voltar'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Não consegui abrir a câmera.\n'
-                      'Verifique a permissão e tente de novo.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    const SizedBox(height: 16),
-                    OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Voltar'),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
           ),
           IgnorePointer(
             child: Container(

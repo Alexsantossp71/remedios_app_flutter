@@ -15,11 +15,8 @@ void showAppSnackBar(
   AppSnackType type = AppSnackType.neutral,
   SnackBarAction? action,
 }) {
-  final messenger = ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar();
-  messenger.showSnackBar(
-    _buildSnackBar(context, message, type, action),
-  );
+  final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+  messenger.showSnackBar(_buildSnackBar(context, message, type, action));
 }
 
 SnackBar _buildSnackBar(
@@ -48,10 +45,7 @@ SnackBar _buildSnackBar(
   return SnackBar(
     behavior: SnackBarBehavior.floating,
     backgroundColor: background,
-    content: Text(
-      message,
-      style: TextStyle(color: foreground),
-    ),
+    content: Text(message, style: TextStyle(color: foreground)),
     action: action,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
   );

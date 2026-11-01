@@ -10,9 +10,22 @@ void main() {
     );
   }
 
+  /// V4 em passos: os horários vivem no passo 2. Preenche o nome (obriga-
+  /// tório) e avança com "Continuar".
+  Future<void> openStep2(WidgetTester tester) async {
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Buscar medicamento'),
+      'Remédio ZZ',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('renders interval and routine preset chips', (tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
+    await openStep2(tester);
 
     expect(find.widgetWithText(ActionChip, 'A cada 8h'), findsOneWidget);
     expect(find.widgetWithText(ActionChip, 'A cada 12h'), findsOneWidget);
@@ -26,6 +39,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
+    await openStep2(tester);
 
     // New treatment starts with 08:00 only.
     expect(find.widgetWithText(Chip, '12:00'), findsNothing);
@@ -40,6 +54,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
+    await openStep2(tester);
 
     await tester.tap(find.widgetWithText(ActionChip, 'Almoço 12:00'));
     await tester.pump();
@@ -54,6 +69,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
+    await openStep2(tester);
 
     // 08:00 is pre-added for a new treatment: the toggle removes it instead
     // of duplicating.
@@ -66,6 +82,7 @@ void main() {
   testWidgets('added times stay sorted in the dose-time list', (tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
+    await openStep2(tester);
 
     await tester.tap(find.widgetWithText(ActionChip, 'Janta 19:00'));
     await tester.pump();
@@ -82,6 +99,7 @@ void main() {
   testWidgets('shows a preview of the upcoming doses', (tester) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
+    await openStep2(tester);
 
     // Novo tratamento já vem com 08:00: a prévia existe e usa o rótulo.
     expect(find.textContaining('Próximas doses:'), findsOneWidget);

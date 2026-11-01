@@ -18,6 +18,7 @@ import '../widgets/media_source_sheet.dart';
 import '../widgets/privacy_notice.dart';
 import '../widgets/reading_dialog.dart';
 import '../widgets/section_header.dart';
+import '../widgets/stepped_form_sheet.dart';
 import '../widgets/treatment_form_dialog.dart';
 
 class TreatmentsScreen extends StatelessWidget {
@@ -27,7 +28,7 @@ class TreatmentsScreen extends StatelessWidget {
     BuildContext context, {
     Treatment? treatment,
   }) async {
-    final result = await showDialog<Treatment>(
+    final result = await showSteppedFormSheet<Treatment>(
       context: context,
       builder: (_) => TreatmentFormDialog(initialTreatment: treatment),
     );
@@ -73,9 +74,7 @@ class TreatmentsScreen extends StatelessWidget {
     // Diálogo sem await: só é dispensado quando a leitura termina, e awaitar
     // aqui travaria a tela sem nunca enviar a imagem (padrão da leitura de
     // cartão).
-    unawaited(
-      showReadingDialog(context),
-    );
+    unawaited(showReadingDialog(context));
 
     PrescriptionReadResult? result;
     String? error;
@@ -87,12 +86,16 @@ class TreatmentsScreen extends StatelessWidget {
     } on PrescriptionReaderException catch (e) {
       error = e.message;
     } catch (_) {
-      error = 'Não foi possível ler a receita. Tente outra foto ou cadastre '
+      error =
+          'Não foi possível ler a receita. Tente outra foto ou cadastre '
           'manualmente.';
     }
 
     if (!context.mounted) return;
-    Navigator.of(context, rootNavigator: true).pop(); // fecha o diálogo de leitura
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).pop(); // fecha o diálogo de leitura
 
     if (result == null) {
       _showSnack(context, error!);
@@ -109,7 +112,7 @@ class TreatmentsScreen extends StatelessWidget {
     final provider = context.read<TherapyProvider>();
     for (final draft in drafts) {
       if (!context.mounted) return;
-      final saved = await showDialog<Treatment>(
+      final saved = await showSteppedFormSheet<Treatment>(
         context: context,
         builder: (_) => TreatmentFormDialog(draft: draft),
       );
@@ -126,33 +129,34 @@ class TreatmentsScreen extends StatelessWidget {
     final accepted = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Autorização necessária'),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Para ler a foto da receita, a imagem é enviada ao nosso '
-                'servidor e descartada após a leitura por OCR. Essa opção '
-                'usa a internet; o cadastro manual não envia nada.',
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Autorização necessária'),
+            content: const SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Para ler a foto da receita, a imagem é enviada ao nosso '
+                    'servidor e descartada após a leitura por OCR. Essa opção '
+                    'usa a internet; o cadastro manual não envia nada.',
+                  ),
+                  SizedBox(height: 12),
+                  PrivacyNoticeCard(),
+                ],
               ),
-              SizedBox(height: 12),
-              PrivacyNoticeCard(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Aceito e autorizo'),
+              ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Aceito e autorizo'),
-          ),
-        ],
-      ),
     );
 
     if (accepted != true || !context.mounted) return false;
@@ -169,9 +173,9 @@ class TreatmentsScreen extends StatelessWidget {
   }
 
   void _showSnack(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   static String _mimeTypeOf(XFile file) {
@@ -187,22 +191,23 @@ class TreatmentsScreen extends StatelessWidget {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Arquivar tratamento?'),
-        content: Text(
-          '${treatment.name} deixará de gerar novas doses, mas o histórico será preservado.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Arquivar tratamento?'),
+            content: Text(
+              '${treatment.name} deixará de gerar novas doses, mas o histórico será preservado.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton.tonal(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Arquivar'),
+              ),
+            ],
           ),
-          FilledButton.tonal(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Arquivar'),
-          ),
-        ],
-      ),
     );
     if (confirmed == true && context.mounted) {
       await context.read<TherapyProvider>().archiveTreatment(treatment.id);
@@ -228,18 +233,15 @@ class TreatmentsScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Tratamentos',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 5),
                     Text(
                       'Medicamentos, horários e estoque em um só lugar.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     if (treatments.isNotEmpty) ...[
                       const SizedBox(height: 22),
@@ -283,10 +285,9 @@ class TreatmentsScreen extends StatelessWidget {
                     final treatment = treatments[index];
                     return TreatmentCard(
                       treatment: treatment,
-                      onEdit: () => _openTreatmentForm(
-                        context,
-                        treatment: treatment,
-                      ),
+                      onEdit:
+                          () =>
+                              _openTreatmentForm(context, treatment: treatment),
                       onArchive: () => _confirmArchive(context, treatment),
                     );
                   },
@@ -295,27 +296,28 @@ class TreatmentsScreen extends StatelessWidget {
           ],
         ),
       ),
-      floatingActionButton: treatments.isEmpty
-          ? null
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                FloatingActionButton.extended(
-                  heroTag: 'prescription-scan-fab',
-                  onPressed: () => _startPrescriptionFlow(context),
-                  icon: const Icon(Icons.photo_camera_outlined),
-                  label: const Text('Foto da receita'),
-                ),
-                const SizedBox(height: 12),
-                FloatingActionButton.extended(
-                  heroTag: 'add-treatment-fab',
-                  onPressed: () => _openTreatmentForm(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Adicionar'),
-                ),
-              ],
-            ),
+      floatingActionButton:
+          treatments.isEmpty
+              ? null
+              : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  FloatingActionButton.extended(
+                    heroTag: 'prescription-scan-fab',
+                    onPressed: () => _startPrescriptionFlow(context),
+                    icon: const Icon(Icons.photo_camera_outlined),
+                    label: const Text('Foto da receita'),
+                  ),
+                  const SizedBox(height: 12),
+                  FloatingActionButton.extended(
+                    heroTag: 'add-treatment-fab',
+                    onPressed: () => _openTreatmentForm(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Adicionar'),
+                  ),
+                ],
+              ),
     );
   }
 }
@@ -451,32 +453,34 @@ class TreatmentCard extends StatelessWidget {
                             if (value == 'edit') onEdit();
                             if (value == 'archive') onArchive();
                           },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(
-                              value: 'edit',
-                              child: ListTile(
-                                leading: Icon(Icons.edit_outlined),
-                                title: Text('Editar'),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'archive',
-                              child: ListTile(
-                                leading: Icon(Icons.archive_outlined),
-                                title: Text('Arquivar'),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ],
+                          itemBuilder:
+                              (_) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: ListTile(
+                                    leading: Icon(Icons.edit_outlined),
+                                    title: Text('Editar'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'archive',
+                                  child: ListTile(
+                                    leading: Icon(Icons.archive_outlined),
+                                    title: Text('Arquivar'),
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
                           child: const Icon(Icons.more_horiz),
                         ),
                       ],
                     ),
                     Text(
-                      [treatment.dosage, treatment.presentation]
-                          .where((part) => part.trim().isNotEmpty)
-                          .join(' · '),
+                      [
+                        treatment.dosage,
+                        treatment.presentation,
+                      ].where((part) => part.trim().isNotEmpty).join(' · '),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -486,19 +490,17 @@ class TreatmentCard extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        InfoChip(
-                          icon: Icons.schedule,
-                          label: formattedTimes,
-                        ),
+                        InfoChip(icon: Icons.schedule, label: formattedTimes),
                         InfoChip(
                           icon: Icons.repeat,
                           label: _frequencyLabel(treatment),
                         ),
                         if (treatment.stock != null)
                           InfoChip(
-                            icon: treatment.needsRefill
-                                ? Icons.warning_amber_rounded
-                                : Icons.inventory_2_outlined,
+                            icon:
+                                treatment.needsRefill
+                                    ? Icons.warning_amber_rounded
+                                    : Icons.inventory_2_outlined,
                             label: '${treatment.stock} un.',
                             isWarning: treatment.needsRefill,
                           ),
@@ -537,7 +539,13 @@ class TreatmentCard extends StatelessWidget {
 
   /// Rótulos curtos dos dias — mesma ordem de DateTime.weekday (1=seg … 7=dom).
   static const List<String> _weekdayLabels = [
-    'seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom',
+    'seg',
+    'ter',
+    'qua',
+    'qui',
+    'sex',
+    'sáb',
+    'dom',
   ];
 
   static String _frequencyLabel(Treatment treatment) {
@@ -557,4 +565,3 @@ class TreatmentCard extends StatelessWidget {
     }
   }
 }
-

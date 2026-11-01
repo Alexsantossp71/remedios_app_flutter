@@ -2,12 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
+import '../core/design/app_tokens.dart';
 import '../data/medicine_data.dart';
 import '../models/medicine.dart';
 import '../models/treatment.dart';
 import '../models/treatment_draft.dart';
 import '../screens/barcode_scan_screen.dart';
 import '../services/dose_schedule_presets.dart';
+import 'stepped_form_sheet.dart';
 
 class TreatmentFormDialog extends StatefulWidget {
   const TreatmentFormDialog({super.key, this.initialTreatment, this.draft});
@@ -23,7 +25,6 @@ class TreatmentFormDialog extends StatefulWidget {
 }
 
 class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
-  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _dosageController = TextEditingController();
   final _presentationController = TextEditingController();
@@ -44,7 +45,13 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
 
   /// Rótulos curtos dos dias para os chips — mesma ordem de DateTime.weekday.
   static const List<String> _weekdayLabels = [
-    'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom',
+    'Seg',
+    'Ter',
+    'Qua',
+    'Qui',
+    'Sex',
+    'Sáb',
+    'Dom',
   ];
 
   bool get _isEditing => widget.initialTreatment != null;
@@ -137,25 +144,32 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
 
   void _addDoseTime(DoseTime time) {
     if (_doseTimes.any(
-        (item) => item.minutesSinceMidnight == time.minutesSinceMidnight)) {
+      (item) => item.minutesSinceMidnight == time.minutesSinceMidnight,
+    )) {
       return;
     }
     setState(() {
       _doseTimes.add(time);
-      _doseTimes.sort((first, second) =>
-          first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight));
+      _doseTimes.sort(
+        (first, second) =>
+            first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight),
+      );
     });
   }
 
-  bool _hasDoseTime(DoseTime time) =>
-      _doseTimes.any((item) => item.minutesSinceMidnight == time.minutesSinceMidnight);
+  bool _hasDoseTime(DoseTime time) => _doseTimes.any(
+    (item) => item.minutesSinceMidnight == time.minutesSinceMidnight,
+  );
 
   /// Um toque nos presets de rotina marca, outro desmarca — sem passar pelo
   /// time picker para o caso comum (café/almoço/janta/dormir).
   void _toggleDoseTime(DoseTime time) {
     if (_hasDoseTime(time)) {
-      setState(() => _doseTimes.removeWhere(
-          (item) => item.minutesSinceMidnight == time.minutesSinceMidnight));
+      setState(
+        () => _doseTimes.removeWhere(
+          (item) => item.minutesSinceMidnight == time.minutesSinceMidnight,
+        ),
+      );
       return;
     }
     _addDoseTime(time);
@@ -164,10 +178,13 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   /// "A cada Xh" é âncora na primeira dose (convenção médica), não no
   /// relógio: pergunta a 1ª toma e gera o dia inteiro de uma vez.
   Future<void> _applyInterval(int intervalHours) async {
-    final anchor = _doseTimes.isNotEmpty
-        ? TimeOfDay(
-            hour: _doseTimes.first.hour, minute: _doseTimes.first.minute)
-        : const TimeOfDay(hour: 8, minute: 0);
+    final anchor =
+        _doseTimes.isNotEmpty
+            ? TimeOfDay(
+              hour: _doseTimes.first.hour,
+              minute: _doseTimes.first.minute,
+            )
+            : const TimeOfDay(hour: 8, minute: 0);
     final picked = await showTimePicker(
       context: context,
       initialTime: anchor,
@@ -184,8 +201,10 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
             intervalHours: intervalHours,
           ),
         );
-      _doseTimes.sort((first, second) =>
-          first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight));
+      _doseTimes.sort(
+        (first, second) =>
+            first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight),
+      );
     });
   }
 
@@ -236,13 +255,14 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       hintText: 'Nome comercial ou princípio ativo',
       prefixIcon: const Icon(Icons.search),
       // Scanner de barras só existe onde existe câmera (APK).
-      suffixIcon: kIsWeb
-          ? null
-          : IconButton(
-              tooltip: 'Escanear código de barras',
-              icon: const Icon(Icons.qr_code_scanner),
-              onPressed: _scanBarcode,
-            ),
+      suffixIcon:
+          kIsWeb
+              ? null
+              : IconButton(
+                tooltip: 'Escanear código de barras',
+                icon: const Icon(Icons.qr_code_scanner),
+                onPressed: _scanBarcode,
+              ),
     );
   }
 
@@ -327,20 +347,13 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
           : null;
 
   void _save() {
-    if (!(_formKey.currentState?.validate() ?? false) || _doseTimes.isEmpty) {
-      if (_doseTimes.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Adicione pelo menos um horário.')),
-        );
-      }
-      return;
-    }
-    // Semanal sem dia não tem quando agendar: a escolha é do usuário, não
-    // nossa — "1x por semana" não diz qual dia.
-    if (_frequency == TreatmentFrequency.weekly && _weekdays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Escolha pelo menos um dia da semana.')),
-      );
+    // Os passos já validam cada trecho; aqui re-checa o essencial antes de
+    // devolver o tratamento ao chamador.
+    if (_validateMedicineName(_nameController.text) != null) return;
+    if (_doseTimes.isEmpty) return;
+    if (_frequency == TreatmentFrequency.weekly && _weekdays.isEmpty) return;
+    if (_validNumber(_stockController.text) != null ||
+        _validNumber(_thresholdController.text) != null) {
       return;
     }
 
@@ -358,9 +371,10 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       endDate: _endDate,
       frequency: _frequency,
       doseTimes: List.unmodifiable(_doseTimes),
-      weekdays: _frequency == TreatmentFrequency.weekly
-          ? List.unmodifiable(_weekdays.toList()..sort())
-          : const [],
+      weekdays:
+          _frequency == TreatmentFrequency.weekly
+              ? List.unmodifiable(_weekdays.toList()..sort())
+              : const [],
       stock: parseOptionalInt(_stockController.text),
       refillThreshold: parseOptionalInt(_thresholdController.text),
       isArchived: existing?.isArchived ?? false,
@@ -370,220 +384,234 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(_isEditing ? 'Editar tratamento' : 'Novo tratamento'),
-      content: SizedBox(
-        width: 520,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+    return SteppedFormShell(
+      title: _isEditing ? 'Editar tratamento' : 'Novo tratamento',
+      intro: 'Três passos rápidos: o remédio, os horários e por quanto tempo.',
+      saveLabel: 'Salvar',
+      steps: [
+        // ── Passo 1: o medicamento ─────────────────────────────────────────
+        FormStep(
+          title: 'Medicamento',
+          validate:
+              () =>
+                  _validateMedicineName(_nameController.text) ??
+                  (_frequency == TreatmentFrequency.weekly && _weekdays.isEmpty
+                      ? 'Escolha pelo menos um dia da semana.'
+                      : null),
+          children: [
+            _buildMedicineSearch(),
+            const SizedBox(height: AppSpacing.md),
+            Row(
               children: [
-                _buildMedicineSearch(),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _dosageController,
-                        decoration: const InputDecoration(labelText: 'Dosagem'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _presentationController,
-                        decoration:
-                            const InputDecoration(labelText: 'Apresentação'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<TreatmentFrequency>(
-                  initialValue: _frequency,
-                  decoration: const InputDecoration(labelText: 'Frequência'),
-                  items: const [
-                    DropdownMenuItem(
-                      value: TreatmentFrequency.daily,
-                      child: Text('Todos os dias'),
-                    ),
-                    DropdownMenuItem(
-                      value: TreatmentFrequency.weekdays,
-                      child: Text('Dias úteis'),
-                    ),
-                    DropdownMenuItem(
-                      value: TreatmentFrequency.everyOtherDay,
-                      child: Text('Dia sim, dia não'),
-                    ),
-                    DropdownMenuItem(
-                      value: TreatmentFrequency.weekly,
-                      child: Text('Semanal'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) setState(() => _frequency = value);
-                  },
-                ),
-                // Semanal: "1x por semana" não diz qual dia — os chips são
-                // onde o usuário escolhe (a receita pode ter deixado marcado).
-                if (_frequency == TreatmentFrequency.weekly) ...[
-                  const SizedBox(height: 10),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: [
-                        for (var day = 1; day <= 7; day++)
-                          FilterChip(
-                            label: Text(_weekdayLabels[day - 1]),
-                            selected: _weekdays.contains(day),
-                            onSelected: (selected) => setState(
-                              () => selected
-                                  ? _weekdays.add(day)
-                                  : _weekdays.remove(day),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Horários',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                Expanded(
+                  child: TextFormField(
+                    controller: _dosageController,
+                    decoration: const InputDecoration(labelText: 'Dosagem'),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      for (final intervalHours in const [8, 12, 24])
-                        ActionChip(
-                          label: Text('A cada ${intervalHours}h'),
-                          onPressed: () => _applyInterval(intervalHours),
-                        ),
-                      for (final preset in DoseSchedulePresets.routinePresets)
-                        _PresetChip(
-                          label: preset.label,
-                          active: _hasDoseTime(preset.time),
-                          onPressed: () => _toggleDoseTime(preset.time),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      ..._doseTimes.map(
-                        (time) => Chip(
-                          label: Text(
-                            '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
-                          ),
-                          onDeleted: () =>
-                              setState(() => _doseTimes.remove(time)),
-                        ),
-                      ),
-                      ActionChip(
-                        avatar: const Icon(Icons.add, size: 18),
-                        label: const Text('Adicionar'),
-                        onPressed: _addTime,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _buildUpcomingPreview(),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickStartDate,
-                        icon: const Icon(Icons.event_outlined),
-                        label: Text(
-                          'Início\n${_startDate.day.toString().padLeft(2, '0')}/${_startDate.month.toString().padLeft(2, '0')}',
-                          textAlign: TextAlign.left,
-                        ),
-                      ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: TextFormField(
+                    controller: _presentationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Apresentação',
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickEndDate,
-                        icon: const Icon(Icons.event_available_outlined),
-                        label: Text(
-                          _endDate == null
-                              ? 'Sem término'
-                              : 'Fim\n${_endDate!.day.toString().padLeft(2, '0')}/${_endDate!.month.toString().padLeft(2, '0')}',
-                          textAlign: TextAlign.left,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _stockController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Estoque',
-                          suffixText: 'un.',
-                        ),
-                        validator: (value) => _validNumber(value),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _thresholdController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Avisar com',
-                          suffixText: 'un.',
-                        ),
-                        validator: (value) => _validNumber(value),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _instructionsController,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Observações (opcional)',
-                    hintText: 'Ex.: após o almoço',
                   ),
                 ),
               ],
             ),
-          ),
+            const SizedBox(height: AppSpacing.md),
+            DropdownButtonFormField<TreatmentFrequency>(
+              initialValue: _frequency,
+              decoration: const InputDecoration(labelText: 'Frequência'),
+              items: const [
+                DropdownMenuItem(
+                  value: TreatmentFrequency.daily,
+                  child: Text('Todos os dias'),
+                ),
+                DropdownMenuItem(
+                  value: TreatmentFrequency.weekdays,
+                  child: Text('Dias úteis'),
+                ),
+                DropdownMenuItem(
+                  value: TreatmentFrequency.everyOtherDay,
+                  child: Text('Dia sim, dia não'),
+                ),
+                DropdownMenuItem(
+                  value: TreatmentFrequency.weekly,
+                  child: Text('Semanal'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() => _frequency = value);
+              },
+            ),
+            // Semanal: "1x por semana" não diz qual dia — os chips são
+            // onde o usuário escolhe (a receita pode ter deixado marcado).
+            AnimatedSize(
+              duration: AppDurations.medium,
+              curve: AppCurves.emphasized,
+              alignment: Alignment.topCenter,
+              child:
+                  _frequency == TreatmentFrequency.weekly
+                      ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.sm),
+                          child: Wrap(
+                            spacing: AppSpacing.sm,
+                            runSpacing: 4,
+                            children: [
+                              for (var day = 1; day <= 7; day++)
+                                FilterChip(
+                                  label: Text(_weekdayLabels[day - 1]),
+                                  selected: _weekdays.contains(day),
+                                  onSelected:
+                                      (selected) => setState(
+                                        () =>
+                                            selected
+                                                ? _weekdays.add(day)
+                                                : _weekdays.remove(day),
+                                      ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      )
+                      : const SizedBox(width: double.infinity),
+            ),
+          ],
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
+        // ── Passo 2: horários ──────────────────────────────────────────────
+        FormStep(
+          title: 'Horários',
+          validate:
+              () =>
+                  _doseTimes.isEmpty ? 'Adicione pelo menos um horário.' : null,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: 4,
+                children: [
+                  for (final intervalHours in const [8, 12, 24])
+                    ActionChip(
+                      label: Text('A cada ${intervalHours}h'),
+                      onPressed: () => _applyInterval(intervalHours),
+                    ),
+                  for (final preset in DoseSchedulePresets.routinePresets)
+                    _PresetChip(
+                      label: preset.label,
+                      active: _hasDoseTime(preset.time),
+                      onPressed: () => _toggleDoseTime(preset.time),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: 4,
+                children: [
+                  ..._doseTimes.map(
+                    (time) => Chip(
+                      label: Text(
+                        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                      ),
+                      onDeleted: () => setState(() => _doseTimes.remove(time)),
+                    ),
+                  ),
+                  ActionChip(
+                    avatar: const Icon(Icons.add, size: 18),
+                    label: const Text('Adicionar'),
+                    onPressed: _addTime,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            _buildUpcomingPreview(),
+          ],
         ),
-        FilledButton(onPressed: _save, child: const Text('Salvar')),
+        // ── Passo 3: duração, estoque e notas ──────────────────────────────
+        FormStep(
+          title: 'Duração, estoque e notas',
+          validate:
+              () =>
+                  _validNumber(_stockController.text) ??
+                  _validNumber(_thresholdController.text),
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickStartDate,
+                    icon: const Icon(Icons.event_outlined),
+                    label: Text(
+                      'Início\n${_startDate.day.toString().padLeft(2, '0')}/${_startDate.month.toString().padLeft(2, '0')}',
+                      textAlign: TextAlign.left,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickEndDate,
+                    icon: const Icon(Icons.event_available_outlined),
+                    label: Text(
+                      _endDate == null
+                          ? 'Sem término'
+                          : 'Fim\n${_endDate!.day.toString().padLeft(2, '0')}/${_endDate!.month.toString().padLeft(2, '0')}',
+                      textAlign: TextAlign.left,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _stockController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Estoque',
+                      suffixText: 'un.',
+                    ),
+                    validator: (value) => _validNumber(value),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: TextFormField(
+                    controller: _thresholdController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Avisar com',
+                      suffixText: 'un.',
+                    ),
+                    validator: (value) => _validNumber(value),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _instructionsController,
+              maxLines: 2,
+              decoration: const InputDecoration(
+                labelText: 'Observações (opcional)',
+                hintText: 'Ex.: após o almoço',
+              ),
+            ),
+          ],
+        ),
       ],
+      onSave: _save,
     );
   }
 
@@ -605,9 +633,10 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       endDate: _endDate,
       frequency: _frequency,
       doseTimes: List.unmodifiable(_doseTimes),
-      weekdays: _frequency == TreatmentFrequency.weekly
-          ? List.unmodifiable(_weekdays.toList())
-          : const [],
+      weekdays:
+          _frequency == TreatmentFrequency.weekly
+              ? List.unmodifiable(_weekdays.toList())
+              : const [],
       stock: null,
       refillThreshold: null,
     );
@@ -664,9 +693,12 @@ class _PresetChip extends StatelessWidget {
         color: active ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
       ),
       backgroundColor: active ? colorScheme.primary : null,
-      side: active
-          ? BorderSide.none
-          : BorderSide(color: colorScheme.outlineVariant.withValues(alpha: .5)),
+      side:
+          active
+              ? BorderSide.none
+              : BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: .5),
+              ),
       onPressed: onPressed,
     );
   }

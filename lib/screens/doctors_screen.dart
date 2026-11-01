@@ -12,6 +12,7 @@ import '../providers/doctor_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../services/prescription_reader_service.dart';
 import '../widgets/doctor_form_dialog.dart';
+import '../widgets/stepped_form_sheet.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/media_source_sheet.dart';
@@ -99,7 +100,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
     final provider = context.read<DoctorProvider>();
     // Variável final: a promoção de nulos sobrevive à captura do builder.
     final medicoDraft = medico;
-    final saved = await showDialog<Doctor>(
+    final saved = await showSteppedFormSheet<Doctor>(
       context: context,
       builder:
           (dialogContext) => DoctorFormDialog(
@@ -178,7 +179,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   }
 
   Future<void> _editDoctor(DoctorProvider provider, [Doctor? doctor]) async {
-    final result = await showDialog<Doctor>(
+    final result = await showSteppedFormSheet<Doctor>(
       context: context,
       builder:
           (context) => DoctorFormDialog(
