@@ -1,7 +1,11 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../core/design/app_tokens.dart';
 import '../core/theme/app_theme.dart';
 import '../models/consultation.dart';
 import '../models/doctor.dart';
@@ -26,6 +30,21 @@ class _TodayScreenState extends State<TodayScreen> {
 
   static DateTime _dateOnly(DateTime date) =>
       DateTime(date.year, date.month, date.day);
+
+  /// Dias consecutivos (incluindo hoje) com TODAS as doses tomadas.
+  /// Para no primeiro dia com doses pendentes/puladas ou sem programa.
+  static int _fullDaysStreak(TherapyProvider provider) {
+    var streak = 0;
+    final today = _dateOnly(DateTime.now());
+    for (var offset = 0; offset < 60; offset++) {
+      final day = today.subtract(Duration(days: offset));
+      final adherence = provider.adherenceForDay(day);
+      if (adherence.total == 0) break;
+      if (adherence.taken < adherence.total) break;
+      streak++;
+    }
+    return streak;
+  }
 
   Future<void> _selectDay() async {
     final selected = await showDatePicker(
@@ -59,6 +78,7 @@ class _TodayScreenState extends State<TodayScreen> {
     final adherence = therapyProvider.adherenceForDay(_selectedDay);
 
     final hasNothing = events.isEmpty && consultations.isEmpty;
+    final streak = isToday ? _fullDaysStreak(therapyProvider) : 0;
 
     return SafeArea(
       child: CustomScrollView(
@@ -71,6 +91,8 @@ class _TodayScreenState extends State<TodayScreen> {
                 isToday: isToday,
                 adherence: adherence,
                 showProgressCard: !hasNothing,
+                streak: streak,
+                events: events,
                 onSelectDay: _selectDay,
               ),
             ),
@@ -148,13 +170,29 @@ class _TodayScreenState extends State<TodayScreen> {
                     );
                     if (treatment == null) return const SizedBox.shrink();
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: DoseCard(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: _DoseTimelineRow(
                         event: event,
-                        treatment: treatment,
-                        onStatusChanged:
-                            (status) =>
-                                therapyProvider.setDoseStatus(event, status),
+                        isFirst: index == 0,
+                        isLast: index == events.length - 1,
+                        child: DoseCard(
+                          event: event,
+                          treatment: treatment,
+                          onStatusChanged: (status) async {
+                            await therapyProvider.setDoseStatus(event, status);
+                            // Zerou o dia de hoje? Confete calmo de cápsulas.
+                            final adherence = therapyProvider.adherenceForDay(
+                              _selectedDay,
+                            );
+                            if (!context.mounted) return;
+                            if (isToday &&
+                                status == DoseStatus.taken &&
+                                adherence.total > 0 &&
+                                adherence.taken == adherence.total) {
+                              showCapsuleConfetti(context);
+                            }
+                          },
+                        ),
                       ),
                     );
                   },
@@ -174,6 +212,8 @@ class _TodayHeader extends StatelessWidget {
     required this.isToday,
     required this.adherence,
     required this.showProgressCard,
+    required this.streak,
+    required this.events,
     required this.onSelectDay,
   });
 
@@ -185,6 +225,12 @@ class _TodayHeader extends StatelessWidget {
   /// livre" fala por si — esconder também o cartão de progresso evita duas
   /// mensagens de "nada aqui" competindo na mesma tela.
   final bool showProgressCard;
+
+  /// Dias consecutivos 100% tomados (>= 2 mostra a chama).
+  final int streak;
+
+  /// Doses do dia, para o badge "próxima dose".
+  final List<DoseEvent> events;
   final VoidCallback onSelectDay;
 
   /// Saudação viva: acompanha a hora do dia em vez de aparecer
@@ -230,6 +276,10 @@ class _TodayHeader extends StatelessWidget {
                 ],
               ),
             ),
+            if (streak >= 2) ...[
+              _StreakPill(days: streak),
+              const SizedBox(width: AppSpacing.sm),
+            ],
             IconButton.filledTonal(
               onPressed: onSelectDay,
               tooltip: 'Escolher data',
@@ -250,54 +300,63 @@ class _TodayHeader extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(24),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .18),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.favorite_rounded,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        adherence.total == 0
-                            ? 'Nenhuma dose programada'
-                            : '${adherence.taken} de ${adherence.total} doses tomadas',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                        ),
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .18),
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        adherence.total == 0
-                            ? 'Tudo tranquilo por aqui.'
-                            : 'Cada dose é um passo importante.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withValues(alpha: .85),
-                        ),
+                      child: const Icon(
+                        Icons.favorite_rounded,
+                        color: Colors.white,
                       ),
-                    ],
-                  ),
-                ),
-                if (adherence.total > 0)
-                  Text(
-                    '${(adherence.adherenceRate * 100).round()}%',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
                     ),
-                  ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            adherence.total == 0
+                                ? 'Nenhuma dose programada'
+                                : '${adherence.taken} de ${adherence.total} doses tomadas',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            adherence.total == 0
+                                ? 'Tudo tranquilo por aqui.'
+                                : 'Cada dose é um passo importante.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: .85),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (adherence.total > 0)
+                      Text(
+                        '${(adherence.adherenceRate * 100).round()}%',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                  ],
+                ),
+                if (isToday) ...[
+                  const SizedBox(height: 14),
+                  _NextDoseBadge(events: events),
+                ],
               ],
             ),
           ),
@@ -718,4 +777,354 @@ class _DoseRoundAction extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Linha da trilha do dia: um ponto ligado por fios verticais à esquerda de
+/// cada card — a "timeline" V4. Doses resolvidas pintam o ponto com a cor
+/// do desfecho (verde/vermelho); pendente respira no azul de ação.
+class _DoseTimelineRow extends StatelessWidget {
+  const _DoseTimelineRow({
+    required this.event,
+    required this.isFirst,
+    required this.isLast,
+    required this.child,
+  });
+
+  final DoseEvent event;
+  final bool isFirst;
+  final bool isLast;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final semantic = AppSemanticColors.of(context);
+    final isTaken = event.status == DoseStatus.taken;
+    final isSkipped = event.status == DoseStatus.skipped;
+    final dotColor =
+        isTaken
+            ? semantic.success
+            : isSkipped
+            ? semantic.danger
+            : theme.colorScheme.primary;
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 18,
+            child: Column(
+              children: [
+                Expanded(
+                  child: Container(
+                    width: 2.5,
+                    color:
+                        isFirst
+                            ? Colors.transparent
+                            : dotColor.withValues(alpha: .35),
+                  ),
+                ),
+                AnimatedContainer(
+                  duration: AppDurations.medium,
+                  curve: AppCurves.emphasized,
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: dotColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: theme.colorScheme.surface,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Container(
+                    width: 2.5,
+                    color:
+                        isLast
+                            ? Colors.transparent
+                            : dotColor.withValues(alpha: .35),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: child),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pill de constância: chama calma + "N dias em dia".
+class _StreakPill extends StatelessWidget {
+  const _StreakPill({required this.days});
+
+  final int days;
+
+  @override
+  Widget build(BuildContext context) {
+    final semantic = AppSemanticColors.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: semantic.success.withValues(alpha: .12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.local_fire_department_rounded,
+            size: 16,
+            color: semantic.success,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '$days dias em dia',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: semantic.success,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Contagem viva para a próxima dose pendente de hoje — atualiza sozinha
+/// a cada 30 segundos. Some quando não há nada pendente.
+class _NextDoseBadge extends StatefulWidget {
+  const _NextDoseBadge({required this.events});
+
+  final List<DoseEvent> events;
+
+  @override
+  State<_NextDoseBadge> createState() => _NextDoseBadgeState();
+}
+
+class _NextDoseBadgeState extends State<_NextDoseBadge> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  DoseEvent? get _nextPending {
+    final now = DateTime.now();
+    for (final event in widget.events) {
+      if (event.status == DoseStatus.pending &&
+          event.scheduledAt.isAfter(now)) {
+        return event;
+      }
+    }
+    return null;
+  }
+
+  String _countdownFor(DateTime scheduledAt) {
+    final difference = scheduledAt.difference(DateTime.now());
+    if (difference.inHours >= 1) {
+      final minutes = difference.inMinutes % 60;
+      return '${difference.inHours}h${minutes.toString().padLeft(2, '0')}';
+    }
+    return '${difference.inMinutes}min';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final next = _nextPending;
+    if (next == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .16),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.timer_outlined, size: 15, color: Colors.white),
+          const SizedBox(width: 5),
+          Text(
+            'Próxima dose em ${_countdownFor(next.scheduledAt)}',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Confete V4: cápsulas e comprimidos caindo de verdade (CustomPainter),
+/// nas cores verde-saúde do tema — comemora sem virar carnaval.
+void showCapsuleConfetti(BuildContext context) {
+  final overlay = Overlay.of(context, rootOverlay: true);
+  late OverlayEntry entry;
+  entry = OverlayEntry(
+    builder: (_) => _CapsuleConfetti(onDone: () => entry.remove()),
+  );
+  overlay.insert(entry);
+}
+
+class _CapsuleConfetti extends StatefulWidget {
+  const _CapsuleConfetti({required this.onDone});
+
+  final VoidCallback onDone;
+
+  @override
+  State<_CapsuleConfetti> createState() => _CapsuleConfettiState();
+}
+
+class _CapsuleConfettiState extends State<_CapsuleConfetti>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final List<_ConfettiParticle> _particles;
+  static final math.Random _random = math.Random();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: AppDurations.slow * 4,
+    );
+    _controller.forward().whenComplete(widget.onDone);
+    _particles = List.generate(26, (_) => _ConfettiParticle.random(_random));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final semantic = AppSemanticColors.of(context);
+    return IgnorePointer(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder:
+            (context, _) => CustomPaint(
+              painter: _ConfettiPainter(
+                progress: _controller.value,
+                particles: _particles,
+                baseColor: semantic.success,
+              ),
+              size: MediaQuery.sizeOf(context),
+            ),
+      ),
+    );
+  }
+}
+
+class _ConfettiParticle {
+  _ConfettiParticle({
+    required this.startX,
+    required this.delay,
+    required this.fallSpeed,
+    required this.drift,
+    required this.rotation,
+    required this.spin,
+    required this.size,
+    required this.isCapsule,
+    required this.shade,
+  });
+
+  factory _ConfettiParticle.random(math.Random random) {
+    return _ConfettiParticle(
+      startX: random.nextDouble(),
+      delay: random.nextDouble() * .35,
+      fallSpeed: .55 + random.nextDouble() * .45,
+      drift: (random.nextDouble() - .5) * .18,
+      rotation: random.nextDouble() * math.pi * 2,
+      spin: (random.nextDouble() - .5) * 5,
+      size: 7 + random.nextDouble() * 7,
+      isCapsule: random.nextBool(),
+      shade: random.nextDouble(),
+    );
+  }
+
+  final double startX;
+  final double delay;
+  final double fallSpeed;
+  final double drift;
+  final double rotation;
+  final double spin;
+  final double size;
+  final bool isCapsule;
+  final double shade;
+}
+
+class _ConfettiPainter extends CustomPainter {
+  _ConfettiPainter({
+    required this.progress,
+    required this.particles,
+    required this.baseColor,
+  });
+
+  final double progress;
+  final List<_ConfettiParticle> particles;
+  final Color baseColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final particle in particles) {
+      final local = (progress - particle.delay) / (1 - particle.delay);
+      if (local <= 0 || local >= 1) continue;
+      final y = -30 + local * particle.fallSpeed * (size.height + 60);
+      final x =
+          particle.startX * size.width + particle.drift * local * size.width;
+      final angle = particle.rotation + particle.spin * local * math.pi;
+      final opacity = local > .8 ? (1 - local) / .2 : 1.0;
+      final color = Color.lerp(
+        baseColor,
+        baseColor.withValues(alpha: .55),
+        particle.shade,
+      )!.withValues(alpha: opacity);
+
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(angle);
+      final paint = Paint()..color = color;
+      if (particle.isCapsule) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromCenter(
+              center: Offset.zero,
+              width: particle.size * 1.8,
+              height: particle.size * .8,
+            ),
+            Radius.circular(particle.size * .4),
+          ),
+          paint,
+        );
+      } else {
+        canvas.drawCircle(Offset.zero, particle.size * .45, paint);
+      }
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConfettiPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
