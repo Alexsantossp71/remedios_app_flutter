@@ -16,9 +16,7 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<HealthPlanProvider>.value(
-            value: provider,
-          ),
+          ChangeNotifierProvider<HealthPlanProvider>.value(value: provider),
           ChangeNotifierProvider<UserProfileProvider>(
             create: (_) => UserProfileProvider(),
           ),
@@ -39,8 +37,7 @@ void main() {
     await DatabaseService.instance.close();
   });
 
-  testWidgets('tocar em Adicionar plano abre as duas opções',
-      (tester) async {
+  testWidgets('tocar em Adicionar plano abre as duas opções', (tester) async {
     await pumpScreen(tester);
 
     await tester.tap(find.text('Adicionar plano'));
@@ -58,7 +55,7 @@ void main() {
     await tester.tap(find.text('Cadastrar manualmente'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Novo Plano de Saúde'), findsOneWidget);
+    expect(find.text('Novo plano de saúde'), findsOneWidget);
     expect(find.text('Enviar imagem do cartão'), findsNothing);
   });
 }

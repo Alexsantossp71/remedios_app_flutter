@@ -1,19 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
-import '../models/health_plan.dart';
 
-/// Dialog form for creating or editing a HealthPlan.
-/// Provides quick selection for common providers and coverage types.
+import '../models/health_plan.dart';
+import '../services/card_reader_service.dart';
+
+/// Cadastro de plano de saúde no MESMO padrão do formulário de tratamentos:
+/// diálogo com seções rotuladas, atalhos de preenchimento (chips de
+/// operadoras conhecidas e rascunho da foto da carteirinha) e o usuário
+/// conferindo tudo antes de salvar. Só o nome do plano é obrigatório.
 class HealthPlanFormDialog extends StatefulWidget {
   const HealthPlanFormDialog({
     super.key,
     this.healthPlan,
     this.initialProvider,
+    this.draft,
   });
 
   final HealthPlan? healthPlan;
+
   final String? initialProvider;
+
+  /// Rascunho de leitura automática (foto da carteirinha): preenche o
+  /// formulário de um plano NOVO — nunca usado quando [healthPlan] existe.
+  final CardReadResult? draft;
 
   @override
   State<HealthPlanFormDialog> createState() => _HealthPlanFormDialogState();
@@ -32,24 +42,86 @@ class _HealthPlanFormDialogState extends State<HealthPlanFormDialog> {
   String? _selectedCoverageType;
   final Set<String> _selectedSpecialties = {};
 
-  bool get isEditing => widget.healthPlan != null;
+  /// Aviso de origem quando o formulário abre preenchido pela foto.
+  String? _draftMessage;
+
+  bool get _isEditing => widget.healthPlan != null;
 
   @override
   void initState() {
     super.initState();
     final plan = widget.healthPlan;
-    _nameController = TextEditingController(text: plan?.name ?? '');
+    if (plan != null) {
+      _nameController = TextEditingController(text: plan.name);
+      _providerController = TextEditingController(text: plan.provider);
+      _cardNumberController = TextEditingController(
+        text: plan.cardNumber ?? '',
+      );
+      _groupNumberController = TextEditingController(
+        text: plan.groupNumber ?? '',
+      );
+      _beneficiaryCodeController = TextEditingController(
+        text: plan.beneficiaryCode ?? '',
+      );
+      _validityController = TextEditingController(text: plan.validity ?? '');
+      _notesController = TextEditingController(text: plan.notes ?? '');
+      _selectedCoverageType = plan.coverageType;
+      _selectedSpecialties.addAll(plan.specialties);
+      return;
+    }
+
+    _nameController = TextEditingController();
     _providerController = TextEditingController(
-        text: plan?.provider ?? widget.initialProvider ?? '');
-    _cardNumberController = TextEditingController(text: plan?.cardNumber ?? '');
-    _groupNumberController =
-        TextEditingController(text: plan?.groupNumber ?? '');
-    _beneficiaryCodeController =
-        TextEditingController(text: plan?.beneficiaryCode ?? '');
-    _validityController = TextEditingController(text: plan?.validity ?? '');
-    _notesController = TextEditingController(text: plan?.notes ?? '');
-    _selectedCoverageType = plan?.coverageType;
-    _selectedSpecialties.addAll(plan?.specialties ?? []);
+      text: widget.initialProvider ?? '',
+    );
+    _cardNumberController = TextEditingController();
+    _groupNumberController = TextEditingController();
+    _beneficiaryCodeController = TextEditingController();
+    _validityController = TextEditingController();
+    _notesController = TextEditingController();
+
+    // Rascunho da foto da carteirinha: preenche um plano NOVO e avisa que é
+    // confiança por conferência — preencher não é salvar.
+    final draft = widget.draft;
+    if (draft != null) {
+      var touched = false;
+      if (draft.name.trim().isNotEmpty) {
+        _nameController.text = draft.name;
+        touched = true;
+      }
+      if (draft.provider.trim().isNotEmpty) {
+        _providerController.text = draft.provider;
+        touched = true;
+      }
+      if ((draft.cardNumber ?? '').trim().isNotEmpty) {
+        _cardNumberController.text = draft.cardNumber!;
+        touched = true;
+      }
+      if ((draft.groupNumber ?? '').trim().isNotEmpty) {
+        _groupNumberController.text = draft.groupNumber!;
+        touched = true;
+      }
+      if ((draft.beneficiaryCode ?? '').trim().isNotEmpty) {
+        _beneficiaryCodeController.text = draft.beneficiaryCode!;
+        touched = true;
+      }
+      if ((draft.validity ?? '').trim().isNotEmpty) {
+        _validityController.text = draft.validity!;
+        touched = true;
+      }
+      if (kCoverageTypes.contains(draft.coverageType)) {
+        _selectedCoverageType = draft.coverageType;
+        touched = true;
+      }
+      if ((draft.notes ?? '').trim().isNotEmpty) {
+        _notesController.text = draft.notes!;
+        touched = true;
+      }
+      if (touched) {
+        _draftMessage =
+            'Preenchido pela foto do cartão — confira antes de salvar.';
+      }
+    }
   }
 
   @override
@@ -64,31 +136,58 @@ class _HealthPlanFormDialogState extends State<HealthPlanFormDialog> {
     super.dispose();
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+  // ── Operadoras conhecidas ─────────────────────────────────────────────────
+
+  bool _hasProvider(String provider) =>
+      _providerController.text.trim().toLowerCase() == provider.toLowerCase();
+
+  /// Um toque preenche a operadora (e o nome, se estiver vazio), outro
+  /// desmarca — sem digitar para o caso comum (Unimed, Amil, Bradesco...).
+  void _toggleProvider(String provider) {
+    setState(() {
+      if (_hasProvider(provider)) {
+        _providerController.clear();
+        return;
+      }
+      _providerController.text = provider;
+      if (_nameController.text.trim().isEmpty) {
+        _nameController.text = provider;
+      }
+    });
+  }
+
+  // ── Validação e salvamento ────────────────────────────────────────────────
+
+  String? _validateName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Informe o nome do plano';
+    }
+    return null;
+  }
+
+  static String? _optional(String value) =>
+      value.trim().isEmpty ? null : value.trim();
+
+  void _save() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final now = DateTime.now().toUtc().toIso8601String();
+    final name = _nameController.text.trim();
+    // Sem operadora informada, o nome do plano serve de operadora — o
+    // cadastro nunca trava por um campo que o usuário não tem em mãos.
+    final provider = _optional(_providerController.text) ?? name;
+
     final plan = HealthPlan(
       id: widget.healthPlan?.id ?? const Uuid().v4(),
-      name: _nameController.text.trim(),
-      provider: _providerController.text.trim(),
-      cardNumber: _cardNumberController.text.trim().isNotEmpty
-          ? _cardNumberController.text.trim()
-          : null,
-      groupNumber: _groupNumberController.text.trim().isNotEmpty
-          ? _groupNumberController.text.trim()
-          : null,
-      beneficiaryCode: _beneficiaryCodeController.text.trim().isNotEmpty
-          ? _beneficiaryCodeController.text.trim()
-          : null,
-      validity: _validityController.text.trim().isNotEmpty
-          ? _validityController.text.trim()
-          : null,
+      name: name,
+      provider: provider,
+      cardNumber: _optional(_cardNumberController.text),
+      groupNumber: _optional(_groupNumberController.text),
+      beneficiaryCode: _optional(_beneficiaryCodeController.text),
+      validity: _optional(_validityController.text),
       coverageType: _selectedCoverageType,
       specialties: _selectedSpecialties.toList(),
-      notes: _notesController.text.trim().isNotEmpty
-          ? _notesController.text.trim()
-          : null,
+      notes: _optional(_notesController.text),
       createdAt: widget.healthPlan?.createdAt ?? now,
       updatedAt: now,
     );
@@ -96,191 +195,196 @@ class _HealthPlanFormDialogState extends State<HealthPlanFormDialog> {
     Navigator.of(context).pop(plan);
   }
 
+  InputDecoration _decoration(String label, {String? hint}) {
+    return InputDecoration(labelText: label, hintText: hint);
+  }
+
+  /// Cabeçalho de seção — mesmo padrão do rótulo "Horários" do formulário
+  /// de tratamentos e das seções do cadastro de médico.
+  Widget _sectionLabel(String text) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AlertDialog(
-      title: Text(isEditing ? 'Editar Plano' : 'Novo Plano de Saúde'),
-      content: SingleChildScrollView(
+      title: Text(_isEditing ? 'Editar plano' : 'Novo plano de saúde'),
+      content: SizedBox(
+        width: 520,
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Name field (required)
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nome do Plano *',
-                  hintText: 'Ex: Unimed, Bradesco Saúde',
-                  prefixIcon: Icon(Icons.health_and_safety_outlined),
-                ),
-                textCapitalization: TextCapitalization.words,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Informe o nome do plano';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Provider field with quick selection
-              TextFormField(
-                controller: _providerController,
-                decoration: InputDecoration(
-                  labelText: 'Operadora *',
-                  hintText: 'Ex: Unimed, Bradesco',
-                  prefixIcon: const Icon(Icons.business_outlined),
-                  suffixIcon: PopupMenuButton<String>(
-                    icon: const Icon(Icons.arrow_drop_down),
-                    tooltip: 'Selecionar operadora',
-                    onSelected: (value) {
-                      _providerController.text = value;
-                      if (_nameController.text.isEmpty) {
-                        _nameController.text = value;
-                      }
-                    },
-                    itemBuilder: (context) => kCommonProviders
-                        .map((provider) => PopupMenuItem(
-                              value: provider,
-                              child: Text(provider),
-                            ))
-                        .toList(),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Só o nome do plano é obrigatório. O restante pode ser '
+                  'completado depois.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                textCapitalization: TextCapitalization.words,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Informe a operadora';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Card Number (optional)
-              TextFormField(
-                controller: _cardNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Número do Cartão',
-                  hintText: 'Ex: 0000 0000 0000 0000',
-                  prefixIcon: Icon(Icons.credit_card_outlined),
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  _CardNumberFormatter(),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Group Number and Beneficiary Code (side by side)
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _groupNumberController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nº do Grupo',
-                        hintText: 'Ex: 001234',
-                        isDense: true,
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _beneficiaryCodeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Cód. Beneficiário',
-                        hintText: 'Ex: 000123456',
-                        isDense: true,
-                      ),
-                      keyboardType: TextInputType.number,
+                if (_draftMessage != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    _draftMessage!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 16),
-
-              // Validity (MM/YY)
-              TextFormField(
-                controller: _validityController,
-                decoration: const InputDecoration(
-                  labelText: 'Validade',
-                  hintText: 'MM/AAAA',
-                  prefixIcon: Icon(Icons.calendar_today_outlined),
+                const SizedBox(height: 14),
+                _sectionLabel('Qual plano'),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _nameController,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  autofocus: !_isEditing,
+                  decoration: _decoration(
+                    'Nome do plano',
+                    hint: 'Ex.: Unimed Nacional',
+                  ),
+                  validator: _validateName,
                 ),
-                keyboardType: TextInputType.datetime,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  _ValidityFormatter(),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Coverage Type (dropdown)
-              DropdownButtonFormField<String>(
-                initialValue: _selectedCoverageType,
-                decoration: const InputDecoration(
-                  labelText: 'Tipo de Cobertura',
-                  prefixIcon: Icon(Icons.shield_outlined),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      // "Outros" não é operadora — é a ausência dela.
+                      for (final provider in kCommonProviders.where(
+                        (p) => p != 'Outros',
+                      ))
+                        FilterChip(
+                          label: Text(provider),
+                          selected: _hasProvider(provider),
+                          onSelected: (_) => _toggleProvider(provider),
+                        ),
+                    ],
+                  ),
                 ),
-                items: kCoverageTypes
-                    .map((type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  setState(() => _selectedCoverageType = value);
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Specialties (multi-select chips)
-              InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Especialidades Cobertas',
-                  prefixIcon: Icon(Icons.medical_services_outlined),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _providerController,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  decoration: _decoration(
+                    'Operadora',
+                    hint: 'Ex.: Unimed, Bradesco Saúde',
+                  ),
+                  onChanged: (_) => setState(() {}),
                 ),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: kMedicalSpecialties.map((specialty) {
-                    final isSelected = _selectedSpecialties.contains(specialty);
-                    return FilterChip(
-                      label: Text(specialty),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        setState(() {
-                          if (selected) {
-                            _selectedSpecialties.add(specialty);
-                          } else {
-                            _selectedSpecialties.remove(specialty);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
+                const SizedBox(height: 16),
+                _sectionLabel('Carteirinha'),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _cardNumberController,
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    _CardNumberFormatter(),
+                  ],
+                  decoration: _decoration(
+                    'Número do cartão',
+                    hint: '0000 0000 0000 0000',
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // Notes (optional)
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Observações',
-                  hintText: 'Ex: Plano empresarial, restrições...',
-                  prefixIcon: Icon(Icons.notes_outlined),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _groupNumberController,
+                        keyboardType: TextInputType.number,
+                        decoration: _decoration('Nº do grupo', hint: '001234'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _beneficiaryCodeController,
+                        keyboardType: TextInputType.number,
+                        decoration: _decoration(
+                          'Cód. beneficiário',
+                          hint: '000123456',
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                maxLines: 2,
-                textCapitalization: TextCapitalization.sentences,
-              ),
-            ],
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _validityController,
+                  keyboardType: TextInputType.datetime,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    _ValidityFormatter(),
+                  ],
+                  decoration: _decoration('Validade', hint: 'MM/AAAA'),
+                ),
+                const SizedBox(height: 16),
+                _sectionLabel('Cobertura'),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedCoverageType,
+                  isExpanded: true,
+                  hint: const Text('Selecione'),
+                  decoration: _decoration('Tipo de cobertura'),
+                  items: [
+                    for (final type in kCoverageTypes)
+                      DropdownMenuItem(value: type, child: Text(type)),
+                  ],
+                  onChanged:
+                      (value) => setState(() => _selectedCoverageType = value),
+                ),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      for (final specialty in kMedicalSpecialties)
+                        FilterChip(
+                          label: Text(specialty),
+                          selected: _selectedSpecialties.contains(specialty),
+                          onSelected:
+                              (selected) => setState(() {
+                                selected
+                                    ? _selectedSpecialties.add(specialty)
+                                    : _selectedSpecialties.remove(specialty);
+                              }),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _notesController,
+                  maxLines: 2,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: _decoration(
+                    'Observações (opcional)',
+                    hint: 'Ex.: plano empresarial, restrições',
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -290,8 +394,8 @@ class _HealthPlanFormDialogState extends State<HealthPlanFormDialog> {
           child: const Text('Cancelar'),
         ),
         FilledButton(
-          onPressed: _submit,
-          child: Text(isEditing ? 'Salvar' : 'Adicionar'),
+          onPressed: _save,
+          child: Text(_isEditing ? 'Salvar' : 'Cadastrar'),
         ),
       ],
     );

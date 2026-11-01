@@ -32,18 +32,19 @@ class HealthPlansScreen extends StatelessWidget {
       builder: (context, provider, child) {
         return Scaffold(
           appBar: AppBar(title: const Text('Meus Planos de Saúde')),
-          floatingActionButton: provider.isLoading ||
-                  provider.healthPlans.isEmpty
-              ? null
-              : FloatingActionButton.extended(
-                  onPressed: () => _addPlan(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Adicionar plano'),
-                ),
+          floatingActionButton:
+              provider.isLoading || provider.healthPlans.isEmpty
+                  ? null
+                  : FloatingActionButton.extended(
+                    onPressed: () => _addPlan(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Adicionar plano'),
+                  ),
           body: SafeArea(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _buildList(context, provider),
+            child:
+                provider.isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _buildList(context, provider),
           ),
         );
       },
@@ -56,16 +57,16 @@ class HealthPlansScreen extends StatelessWidget {
       children: [
         Text(
           'Meus Planos de Saúde',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 5),
         Text(
           'Gerencie seus convênios e planos médicos.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 24),
 
@@ -89,11 +90,13 @@ class HealthPlansScreen extends StatelessWidget {
         else ...[
           const SectionHeader(title: 'Planos Cadastrados'),
           const SizedBox(height: 10),
-          ...provider.healthPlans.map((plan) => _HealthPlanCard(
-                plan: plan,
-                onEdit: () => _editPlan(context, provider, plan),
-                onDelete: () => _deletePlan(context, provider, plan),
-              )),
+          ...provider.healthPlans.map(
+            (plan) => _HealthPlanCard(
+              plan: plan,
+              onEdit: () => _editPlan(context, provider, plan),
+              onDelete: () => _deletePlan(context, provider, plan),
+            ),
+          ),
         ],
       ],
     );
@@ -116,11 +119,12 @@ class HealthPlansScreen extends StatelessWidget {
 
     final plan = await Navigator.of(context).push<HealthPlan>(
       MaterialPageRoute(
-        builder: (_) => HealthPlanReviewScreen(
-          scan: scan,
-          onRescan: () => _scanCard(context),
-          onManualEntry: () => _leaveReviewForManual(context),
-        ),
+        builder:
+            (_) => HealthPlanReviewScreen(
+              scan: scan,
+              onRescan: () => _scanCard(context),
+              onManualEntry: (scan) => _leaveReviewForManual(context, scan),
+            ),
       ),
     );
 
@@ -205,7 +209,8 @@ class HealthPlansScreen extends StatelessWidget {
     } on CardReaderException catch (e) {
       error = e.message;
     } catch (_) {
-      error = 'Não foi possível ler o cartão. Tente outra foto ou cadastre '
+      error =
+          'Não foi possível ler o cartão. Tente outra foto ou cadastre '
           'manualmente.';
     }
 
@@ -239,33 +244,34 @@ class HealthPlansScreen extends StatelessWidget {
     final accepted = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Autorização necessária'),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Para ler a foto do cartão, a imagem é enviada a um '
-                'serviço de IA e descartada após a leitura. Essa opção '
-                'usa a internet; o cadastro manual não envia nada.',
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Autorização necessária'),
+            content: const SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Para ler a foto do cartão, a imagem é enviada a um '
+                    'serviço de IA e descartada após a leitura. Essa opção '
+                    'usa a internet; o cadastro manual não envia nada.',
+                  ),
+                  SizedBox(height: 12),
+                  PrivacyNoticeCard(),
+                ],
               ),
-              SizedBox(height: 12),
-              PrivacyNoticeCard(),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Aceito e autorizo'),
+              ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Aceito e autorizo'),
-          ),
-        ],
-      ),
     );
 
     if (accepted != true || !context.mounted) return false;
@@ -277,35 +283,48 @@ class HealthPlansScreen extends StatelessWidget {
     return showModalBottomSheet<ImageSource>(
       context: context,
       showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Tirar foto do cartão'),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(ImageSource.camera),
+      builder:
+          (sheetContext) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined),
+                  title: const Text('Tirar foto do cartão'),
+                  onTap:
+                      () => Navigator.of(sheetContext).pop(ImageSource.camera),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Escolher imagem da galeria'),
+                  onTap:
+                      () => Navigator.of(sheetContext).pop(ImageSource.gallery),
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Escolher imagem da galeria'),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
-  /// Sai da tela de conferência e abre o cadastro manual.
-  Future<void> _leaveReviewForManual(BuildContext context) async {
+  /// Volta da revisão da foto para o cadastro manual levando os dados lidos:
+  /// o formulário abre preenchido como rascunho — nada do que a IA leu é
+  /// descartado na troca de caminho.
+  Future<void> _leaveReviewForManual(
+    BuildContext context,
+    CardScanResult scan,
+  ) async {
     Navigator.of(context).pop();
     await Future<void>.delayed(const Duration(milliseconds: 250));
     if (!context.mounted) return;
-    await _openManualForm(context, context.read<HealthPlanProvider>());
+    final plan = await showDialog<HealthPlan>(
+      context: context,
+      builder: (_) => HealthPlanFormDialog(draft: scan.data),
+    );
+    if (plan == null || !context.mounted) return;
+    await context.read<HealthPlanProvider>().saveHealthPlan(plan);
+    if (!context.mounted) return;
+    _showSnack(context, '${plan.name} adicionado com sucesso!');
   }
 
   String _mimeTypeOf(XFile file) {
@@ -361,23 +380,24 @@ class HealthPlansScreen extends StatelessWidget {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir plano?'),
-        content: Text('Deseja realmente excluir "${plan.name}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Excluir plano?'),
+            content: Text('Deseja realmente excluir "${plan.name}"?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+                child: const Text('Excluir'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: const Text('Excluir'),
-          ),
-        ],
-      ),
     );
 
     if (confirmed == true) {
@@ -446,15 +466,15 @@ class _SummaryCard extends StatelessWidget {
                   Text(
                     '$count ${count == 1 ? 'plano cadastrado' : 'planos cadastrados'}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Seus convênios médicos organizados.',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -495,16 +515,15 @@ class _HealthPlanCard extends StatelessWidget {
                     children: [
                       Text(
                         plan.name,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         plan.provider,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -515,35 +534,36 @@ class _HealthPlanCard extends StatelessWidget {
                     if (value == 'edit') onEdit();
                     if (value == 'delete') onDelete();
                   },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_outlined, size: 20),
-                          SizedBox(width: 12),
-                          Text('Editar'),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.delete_outline,
-                            size: 20,
-                            color: Colors.red,
+                  itemBuilder:
+                      (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 20),
+                              SizedBox(width: 12),
+                              Text('Editar'),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Excluir',
-                            style: TextStyle(color: Colors.red),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: Colors.red,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Excluir',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                      ],
                 ),
               ],
             ),
@@ -580,15 +600,16 @@ class _HealthPlanCard extends StatelessWidget {
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: plan.specialties.take(5).map((s) {
-                  return Chip(
-                    label: Text(
-                      s,
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                  );
-                }).toList(),
+                children:
+                    plan.specialties.take(5).map((s) {
+                      return Chip(
+                        label: Text(
+                          s,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      );
+                    }).toList(),
               ),
             ],
           ],
@@ -599,10 +620,7 @@ class _HealthPlanCard extends StatelessWidget {
 }
 
 class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-  });
+  const _InfoChip({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
@@ -621,8 +639,8 @@ class _InfoChip extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
