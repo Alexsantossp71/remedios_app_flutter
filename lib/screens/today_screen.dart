@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +15,7 @@ import '../models/treatment.dart';
 import '../providers/consultation_provider.dart';
 import '../providers/doctor_provider.dart';
 import '../providers/therapy_provider.dart';
+import '../widgets/app_snack_bar.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/section_header.dart';
@@ -179,6 +181,7 @@ class _TodayScreenState extends State<TodayScreen> {
                           event: event,
                           treatment: treatment,
                           onStatusChanged: (status) async {
+                            unawaited(HapticFeedback.lightImpact());
                             await therapyProvider.setDoseStatus(event, status);
                             // Zerou o dia de hoje? Confete calmo de cápsulas.
                             final adherence = therapyProvider.adherenceForDay(
@@ -190,7 +193,20 @@ class _TodayScreenState extends State<TodayScreen> {
                                 adherence.total > 0 &&
                                 adherence.taken == adherence.total) {
                               showCapsuleConfetti(context);
+                              return;
                             }
+                            if (!context.mounted) return;
+                            showAppSnackBar(
+                              context,
+                              status == DoseStatus.taken
+                                  ? 'Dose marcada como tomada.'
+                                  : 'Dose pulada.',
+                              action: SnackBarAction(
+                                label: 'Desfazer',
+                                onPressed: () => therapyProvider
+                                    .setDoseStatus(event, DoseStatus.pending),
+                              ),
+                            );
                           },
                         ),
                       ),
