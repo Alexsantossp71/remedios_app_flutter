@@ -54,7 +54,11 @@ class RemediosApp extends StatelessWidget {
     return MaterialApp(
       title: 'Remédio na Hora',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.v2(),
+      // V3 "Clínico calmo": claro e escuro com o mesmo seed; o modo segue o
+      // sistema do dispositivo (ThemeMode.system).
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
       locale: const Locale('pt', 'BR'),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,

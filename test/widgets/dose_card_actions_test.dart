@@ -29,6 +29,39 @@ DoseEvent _event(DoseStatus status) => DoseEvent(
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
 void main() {
+  testWidgets('dose pendente ganha contorno de destaque; resolvida fica discreta',
+      (tester) async {
+    // Pendente: o card é o estado que pede ação — Card com side definido.
+    await tester.pumpWidget(
+      _wrap(
+        DoseCard(
+          event: _event(DoseStatus.pending),
+          treatment: _treatment(),
+          onStatusChanged: (_) {},
+        ),
+      ),
+    );
+    final pendingCard = tester.widget<Card>(find.byType(Card));
+    final pendingShape = pendingCard.shape as RoundedRectangleBorder;
+    expect(pendingShape.side, isNot(BorderSide.none),
+        reason: 'dose pendente deve ter contorno de destaque');
+
+    // Tomada: sem contorno (o verde do check já comunica o estado).
+    await tester.pumpWidget(
+      _wrap(
+        DoseCard(
+          event: _event(DoseStatus.taken),
+          treatment: _treatment(),
+          onStatusChanged: (_) {},
+        ),
+      ),
+    );
+    final takenCard = tester.widget<Card>(find.byType(Card));
+    final takenShape = takenCard.shape as RoundedRectangleBorder;
+    expect(takenShape.side, BorderSide.none,
+        reason: 'dose tomada não precisa de contorno');
+  });
+
   testWidgets('dose pendente mostra botões Tomei e Pular direto no card',
       (tester) async {
     await tester.pumpWidget(

@@ -7,6 +7,7 @@ import '../models/doctor.dart';
 import '../providers/consultation_provider.dart';
 import '../providers/doctor_provider.dart';
 import '../widgets/consultation_form_dialog.dart';
+import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/section_header.dart';
 
@@ -147,6 +148,7 @@ class ConsultationsScreen extends StatelessWidget {
                 hasScrollBody: false,
                 child: EmptyState(
                   icon: Icons.calendar_month_outlined,
+                  illustration: EmptyIllustrationKind.calendarHeart,
                   title: 'Nenhuma consulta agendada',
                   description:
                       'Agende sua primeira consulta médica e acompanhe o histórico de atendimentos.',

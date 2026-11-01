@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
+import 'empty_illustration.dart';
+
 class EmptyState extends StatelessWidget {
   const EmptyState({
     super.key,
     required this.icon,
     required this.title,
     required this.description,
+    this.illustration,
     this.actionLabel,
     this.onAction,
     this.secondaryActionLabel,
@@ -15,6 +18,10 @@ class EmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
+
+  /// Se presente, uma ilustração de linha substitui o círculo com ícone —
+  /// dá personalidade ao estado vazio sem perder a informação do ícone.
+  final EmptyIllustrationKind? illustration;
   final String? actionLabel;
   final VoidCallback? onAction;
   final String? secondaryActionLabel;
@@ -28,19 +35,26 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                shape: BoxShape.circle,
+            if (illustration != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: EmptyIllustration(kind: illustration!),
+              )
+            else ...[
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 34,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
               ),
-              child: Icon(
-                icon,
-                size: 34,
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
+            ],
             const SizedBox(height: 20),
             Text(
               title,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../core/theme/app_theme.dart';
 import '../models/consultation.dart';
 import '../models/doctor.dart';
 import '../models/dose_event.dart';
@@ -9,6 +10,7 @@ import '../models/treatment.dart';
 import '../providers/consultation_provider.dart';
 import '../providers/doctor_provider.dart';
 import '../providers/therapy_provider.dart';
+import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/section_header.dart';
 
@@ -76,6 +78,7 @@ class _TodayScreenState extends State<TodayScreen> {
               hasScrollBody: false,
               child: EmptyState(
                 icon: Icons.wb_sunny_outlined,
+                illustration: EmptyIllustrationKind.freeDay,
                 title: 'Seu dia está livre',
                 description:
                     'Nenhum medicamento ou consulta programada para este dia.',
@@ -540,13 +543,22 @@ class DoseCard extends StatelessWidget {
     final isTaken = event.status == DoseStatus.taken;
     final isSkipped = event.status == DoseStatus.skipped;
     final isPending = event.status == DoseStatus.pending;
+    final semantic = AppSemanticColors.of(context);
     final statusColor = isTaken
-        ? Colors.green.shade700
+        ? semantic.success
         : isSkipped
             ? theme.colorScheme.onSurfaceVariant
             : theme.colorScheme.primary;
 
     return Card(
+      // Hierarquia: a dose pendente é o estado que pede ação — ganha
+      // contorno no azul de ação; tomada/pulada ficam discretas.
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: isPending
+            ? BorderSide(color: statusColor.withValues(alpha: .45), width: 1.5)
+            : BorderSide.none,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

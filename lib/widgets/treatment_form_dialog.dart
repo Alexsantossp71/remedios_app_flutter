@@ -473,14 +473,9 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
                           onPressed: () => _applyInterval(intervalHours),
                         ),
                       for (final preset in DoseSchedulePresets.routinePresets)
-                        ActionChip(
-                          avatar: Icon(
-                            _hasDoseTime(preset.time)
-                                ? Icons.check
-                                : Icons.add,
-                            size: 18,
-                          ),
-                          label: Text(preset.label),
+                        _PresetChip(
+                          label: preset.label,
+                          active: _hasDoseTime(preset.time),
                           onPressed: () => _toggleDoseTime(preset.time),
                         ),
                     ],
@@ -635,5 +630,44 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
     if (value == null || value.trim().isEmpty) return null;
     if (int.tryParse(value.trim()) == null) return 'Use um número inteiro';
     return null;
+  }
+}
+
+/// Chip de horário predefinido ("Café 08:00"). Ação e estado no mesmo
+/// componente: quando o horário já está na lista, o chip fica PREENCHIDO
+/// com o azul de ação e troca o + por um check — seleção impossível de
+/// não ver (antes só o ícone mudava e o chip parecia sempre desligado).
+class _PresetChip extends StatelessWidget {
+  const _PresetChip({
+    required this.label,
+    required this.active,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return ActionChip(
+      avatar: Icon(
+        active ? Icons.check_rounded : Icons.add,
+        size: 18,
+        color: active ? colorScheme.onPrimary : colorScheme.primary,
+      ),
+      label: Text(label),
+      labelStyle: TextStyle(
+        fontFamily: 'Nunito',
+        fontWeight: FontWeight.w700,
+        color: active ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+      ),
+      backgroundColor: active ? colorScheme.primary : null,
+      side: active
+          ? BorderSide.none
+          : BorderSide(color: colorScheme.outlineVariant.withValues(alpha: .5)),
+      onPressed: onPressed,
+    );
   }
 }
