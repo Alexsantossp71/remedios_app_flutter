@@ -539,6 +539,7 @@ class DoseCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isTaken = event.status == DoseStatus.taken;
     final isSkipped = event.status == DoseStatus.skipped;
+    final isPending = event.status == DoseStatus.pending;
     final statusColor = isTaken
         ? Colors.green.shade700
         : isSkipped
@@ -548,79 +549,92 @@ class DoseCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: .12),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Icon(
-                isTaken
-                    ? Icons.check_circle_rounded
-                    : isSkipped
-                        ? Icons.remove_circle_outline
-                        : Icons.medication_liquid_outlined,
-                color: statusColor,
-                size: 28,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Icon(
+                    isTaken
+                        ? Icons.check_circle_rounded
+                        : isSkipped
+                            ? Icons.remove_circle_outline
+                            : Icons.medication_liquid_outlined,
+                    color: statusColor,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormat.Hm().format(event.scheduledAt),
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        treatment.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          decoration: isSkipped || isTaken
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${treatment.dosage} · ${treatment.presentation}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!isPending) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    isTaken ? Icons.check_circle : Icons.remove_circle_outline,
+                    color: statusColor,
+                  ),
+                ],
+              ],
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            // Ações de fácil acesso: um toque marca a dose, sem abrir menu.
+            if (isPending) ...[
+              const SizedBox(height: 14),
+              Row(
                 children: [
-                  Text(
-                    DateFormat.Hm().format(event.scheduledAt),
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: statusColor,
-                      fontWeight: FontWeight.w800,
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () => onStatusChanged(DoseStatus.taken),
+                      icon: const Icon(Icons.check_rounded),
+                      label: const Text('Tomei'),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    treatment.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      decoration: isSkipped || isTaken
-                          ? TextDecoration.lineThrough
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${treatment.dosage} · ${treatment.presentation}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => onStatusChanged(DoseStatus.skipped),
+                      icon: const Icon(Icons.skip_next_rounded),
+                      label: const Text('Pular'),
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 8),
-            if (event.status == DoseStatus.pending) ...[
-              PopupMenuButton<DoseStatus>(
-                tooltip: 'Atualizar dose',
-                onSelected: onStatusChanged,
-                itemBuilder: (context) => const [
-                  PopupMenuItem(
-                    value: DoseStatus.taken,
-                    child: Text('Tomei'),
-                  ),
-                  PopupMenuItem(
-                    value: DoseStatus.skipped,
-                    child: Text('Pular'),
-                  ),
-                ],
-                child: Icon(Icons.more_vert, color: statusColor),
-              ),
-            ] else
-              Icon(
-                isTaken ? Icons.check_circle : Icons.remove_circle_outline,
-                color: statusColor,
-              ),
+            ],
           ],
         ),
       ),
