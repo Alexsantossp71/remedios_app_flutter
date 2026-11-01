@@ -28,10 +28,20 @@ DoseEvent _event(DoseStatus status) => DoseEvent(
 
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
+/// Cores semânticas do fallback claro de [AppSemanticColors] (usado quando
+/// o MaterialApp simples de teste não registra a extensão).
+const Color _success = Color(0xFF2E9E6B);
+const Color _danger = Color(0xFFD64545);
+
+BorderSide _cardSide(WidgetTester tester) =>
+    (tester.widget<Card>(find.byType(Card)).shape as RoundedRectangleBorder)
+        .side;
+
 void main() {
-  testWidgets('dose pendente ganha contorno de destaque; resolvida fica discreta',
+  testWidgets(
+      'contorno por estado: pendente sutil, tomada borda verde, pulada borda vermelha',
       (tester) async {
-    // Pendente: o card é o estado que pede ação — Card com side definido.
+    // Pendente: contorno de destaque no azul de ação (não é verde/vermelho).
     await tester.pumpWidget(
       _wrap(
         DoseCard(
@@ -41,12 +51,13 @@ void main() {
         ),
       ),
     );
-    final pendingCard = tester.widget<Card>(find.byType(Card));
-    final pendingShape = pendingCard.shape as RoundedRectangleBorder;
-    expect(pendingShape.side, isNot(BorderSide.none),
+    final pendingSide = _cardSide(tester);
+    expect(pendingSide, isNot(BorderSide.none),
         reason: 'dose pendente deve ter contorno de destaque');
+    expect(pendingSide.color, isNot(_success));
+    expect(pendingSide.color, isNot(_danger));
 
-    // Tomada: sem contorno (o verde do check já comunica o estado).
+    // Tomada: o card recebe borda verde.
     await tester.pumpWidget(
       _wrap(
         DoseCard(
@@ -56,13 +67,29 @@ void main() {
         ),
       ),
     );
-    final takenCard = tester.widget<Card>(find.byType(Card));
-    final takenShape = takenCard.shape as RoundedRectangleBorder;
-    expect(takenShape.side, BorderSide.none,
-        reason: 'dose tomada não precisa de contorno');
+    final takenSide = _cardSide(tester);
+    expect(takenSide.color, _success,
+        reason: 'dose tomada deve receber borda verde');
+    expect(takenSide.width, 2);
+
+    // Pulada: o card recebe borda vermelha.
+    await tester.pumpWidget(
+      _wrap(
+        DoseCard(
+          event: _event(DoseStatus.skipped),
+          treatment: _treatment(),
+          onStatusChanged: (_) {},
+        ),
+      ),
+    );
+    final skippedSide = _cardSide(tester);
+    expect(skippedSide.color, _danger,
+        reason: 'dose pulada deve receber borda vermelha');
+    expect(skippedSide.width, 2);
   });
 
-  testWidgets('dose pendente mostra botões Tomei e Pular direto no card',
+  testWidgets(
+      'ações pendentes são botões circulares em coluna: Tomei verde acima de Pular vermelho',
       (tester) async {
     await tester.pumpWidget(
       _wrap(
@@ -74,10 +101,28 @@ void main() {
       ),
     );
 
-    expect(find.text('Tomei'), findsOneWidget);
-    expect(find.text('Pular'), findsOneWidget);
-    // O menu de três pontinhos não existe mais: ação é um toque só.
-    expect(find.byType(PopupMenuButton<DoseStatus>), findsNothing);
+    final tomeiFinder = find.widgetWithIcon(IconButton, Icons.check_rounded);
+    final pularFinder =
+        find.widgetWithIcon(IconButton, Icons.skip_next_rounded);
+    expect(tomeiFinder, findsOneWidget);
+    expect(pularFinder, findsOneWidget);
+
+    final tomei = tester.widget<IconButton>(tomeiFinder);
+    final pular = tester.widget<IconButton>(pularFinder);
+
+    // Verde para Tomei, vermelho para Pular.
+    expect(tomei.style?.backgroundColor?.resolve({}), _success);
+    expect(pular.style?.backgroundColor?.resolve({}), _danger);
+
+    // Botões circulares.
+    expect(tomei.style?.shape?.resolve({}), isA<CircleBorder>());
+    expect(pular.style?.shape?.resolve({}), isA<CircleBorder>());
+
+    // Empilhados na mesma linha do medicamento: Tomei acima de Pular.
+    final tomeiCenter = tester.getCenter(tomeiFinder);
+    final pularCenter = tester.getCenter(pularFinder);
+    expect(tomeiCenter.dy, lessThan(pularCenter.dy),
+        reason: 'Tomei deve ficar acima de Pular (coluna)');
   });
 
   testWidgets('tocar em Tomei marca a dose como tomada', (tester) async {
@@ -92,7 +137,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Tomei'));
+    await tester.tap(find.byTooltip('Tomei'));
     await tester.pump();
 
     expect(received, [DoseStatus.taken]);
@@ -110,13 +155,13 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Pular'));
+    await tester.tap(find.byTooltip('Pular'));
     await tester.pump();
 
     expect(received, [DoseStatus.skipped]);
   });
 
-  testWidgets('dose já tomada mostra o check e não repete as ações',
+  testWidgets('dose já tomada mostra o check, borda verde e não repete as ações',
       (tester) async {
     await tester.pumpWidget(
       _wrap(
@@ -128,12 +173,13 @@ void main() {
       ),
     );
 
-    expect(find.text('Tomei'), findsNothing);
-    expect(find.text('Pular'), findsNothing);
+    expect(find.byTooltip('Tomei'), findsNothing);
+    expect(find.byTooltip('Pular'), findsNothing);
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    expect(_cardSide(tester).color, _success);
   });
 
-  testWidgets('dose pulada mostra o ícone de pulada e não repete as ações',
+  testWidgets('dose pulada mostra o ícone, borda vermelha e não repete as ações',
       (tester) async {
     await tester.pumpWidget(
       _wrap(
@@ -145,9 +191,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Tomei'), findsNothing);
-    expect(find.text('Pular'), findsNothing);
+    expect(find.byTooltip('Tomei'), findsNothing);
+    expect(find.byTooltip('Pular'), findsNothing);
     // Ícone aparece no selo e na borda do card (design de dose resolvida).
     expect(find.byIcon(Icons.remove_circle_outline), findsNWidgets(2));
+    expect(_cardSide(tester).color, _danger);
   });
 }
