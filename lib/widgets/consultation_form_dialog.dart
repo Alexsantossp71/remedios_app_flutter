@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -7,6 +6,10 @@ import '../models/consultation.dart';
 import '../models/doctor.dart';
 import '../providers/doctor_provider.dart';
 
+/// Agendamento de consulta no MESMO padrão do formulário de tratamentos:
+/// diálogo com seções rotuladas, atalhos de preenchimento (chips de datas
+/// próximas e motivos comuns) e o usuário conferindo tudo antes de salvar.
+/// Só o médico é obrigatório.
 class ConsultationFormDialog extends StatefulWidget {
   const ConsultationFormDialog({
     super.key,
@@ -15,6 +18,7 @@ class ConsultationFormDialog extends StatefulWidget {
   });
 
   final Consultation? initialConsultation;
+
   final String? initialDoctorId;
 
   @override
@@ -59,11 +63,26 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // O primeiro médico entra selecionado DE VERDADE: antes o dropdown só
+    // mostrava o primeiro e o salvar exigia um toque no campo para funcionar.
+    // Médico excluído depois de abrir o diálogo também cai aqui.
+    final doctors = context.watch<DoctorProvider>().doctors;
+    final hasSelection = doctors.any((d) => d.id == _selectedDoctorId);
+    if (!hasSelection && doctors.isNotEmpty) {
+      setState(() => _selectedDoctorId = doctors.first.id);
+    }
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _notesController.dispose();
     super.dispose();
   }
+
+  // ── Datas e horários ──────────────────────────────────────────────────────
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -99,6 +118,35 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
     }
   }
 
+  /// Atalhos "Hoje / Amanhã / Em 1 semana" — um toque e a data muda, o
+  /// horário fica como está (o picker continua disponível para o resto).
+  void _setQuickDate(DateTime date) {
+    setState(() => _selectedDate = date);
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  // ── Motivos comuns ────────────────────────────────────────────────────────
+
+  /// Um toque preenche o motivo, outro desmarca — sem digitar para o caso
+  /// comum (rotina, retorno, exames).
+  void _toggleTitle(String suggestion) {
+    setState(() {
+      if (_titleController.text.trim().toLowerCase() ==
+          suggestion.toLowerCase()) {
+        _titleController.clear();
+        return;
+      }
+      _titleController.text = suggestion;
+    });
+  }
+
+  bool _hasTitle(String suggestion) =>
+      _titleController.text.trim().toLowerCase() == suggestion.toLowerCase();
+
+  // ── Salvamento ────────────────────────────────────────────────────────────
+
   void _save() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     if (_selectedDoctorId == null || _selectedDoctorId!.isEmpty) {
@@ -130,13 +178,39 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
     Navigator.of(context).pop(result);
   }
 
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
+
+  InputDecoration _decoration(String label, {String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      alignLabelWithHint: true,
+    );
+  }
+
+  /// Cabeçalho de seção — mesmo padrão do rótulo "Horários" do formulário
+  /// de tratamentos e das seções do cadastro de médico.
+  Widget _sectionLabel(String text) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final doctorProvider = context.watch<DoctorProvider>();
     final doctors = doctorProvider.doctors;
-
-    final dateFormat = DateFormat('dd/MM/yyyy', 'pt_BR');
 
     return AlertDialog(
       title: Text(_isEditing ? 'Editar consulta' : 'Agendar consulta'),
@@ -149,17 +223,28 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'Escolha o médico e o horário — só o médico é obrigatório.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 14),
                 if (doctors.isEmpty) ...[
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.errorContainer.withValues(alpha: 0.5),
+                      color: theme.colorScheme.errorContainer.withValues(
+                        alpha: 0.5,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.warning_amber_rounded,
-                            color: theme.colorScheme.error),
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: theme.colorScheme.error,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -174,31 +259,29 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
                   ),
                   const SizedBox(height: 14),
                 ],
+                _sectionLabel('Quem atende'),
+                const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  initialValue: _selectedDoctorId != null &&
-                          doctors.any((d) => d.id == _selectedDoctorId)
-                      ? _selectedDoctorId
-                      : (doctors.isNotEmpty ? doctors.first.id : null),
-                  decoration: const InputDecoration(
-                    labelText: 'Médico',
-                    prefixIcon: Icon(Icons.medical_services_outlined),
-                  ),
-                  items: doctors.map((Doctor doctor) {
-                    final subtitle = [
-                      doctor.specialty,
-                      if (doctor.crm.isNotEmpty) 'CRM ${doctor.crm}'
-                    ].where((s) => s.isNotEmpty).join(' · ');
+                  initialValue: _selectedDoctorId,
+                  isExpanded: true,
+                  decoration: _decoration('Médico', hint: 'Selecione'),
+                  items:
+                      doctors.map((Doctor doctor) {
+                        final subtitle = [
+                          doctor.specialty,
+                          if (doctor.crm.isNotEmpty) 'CRM ${doctor.crm}',
+                        ].where((s) => s.isNotEmpty).join(' · ');
 
-                    return DropdownMenuItem<String>(
-                      value: doctor.id,
-                      child: Text(
-                        subtitle.isEmpty
-                            ? doctor.name
-                            : '${doctor.name} ($subtitle)',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }).toList(),
+                        return DropdownMenuItem<String>(
+                          value: doctor.id,
+                          child: Text(
+                            subtitle.isEmpty
+                                ? doctor.name
+                                : '${doctor.name} ($subtitle)',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
                   onChanged: (value) {
                     setState(() => _selectedDoctorId = value);
                   },
@@ -209,118 +292,141 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: _titleController,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Motivo / Especialidade',
-                    hintText: 'Ex.: Retorno, Rotina, Exames...',
-                    prefixIcon: Icon(Icons.edit_note_outlined),
+                const SizedBox(height: 16),
+                _sectionLabel('Quando'),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      for (final (label, date) in _quickDates())
+                        FilterChip(
+                          label: Text(label),
+                          selected: _isSameDay(_selectedDate, date),
+                          onSelected: (_) => _setQuickDate(date),
+                        ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
-                      child: InkWell(
-                        onTap: _pickDate,
-                        borderRadius: BorderRadius.circular(16),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Data',
-                            prefixIcon: Icon(Icons.calendar_today_outlined),
-                          ),
-                          child: Text(
-                            dateFormat.format(_selectedDate),
-                            style: theme.textTheme.bodyMedium,
-                          ),
+                      child: OutlinedButton.icon(
+                        onPressed: _pickDate,
+                        icon: const Icon(Icons.event_outlined),
+                        label: Text(
+                          'Data\n${_formatDate(_selectedDate)}',
+                          textAlign: TextAlign.left,
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: InkWell(
-                        onTap: _pickTime,
-                        borderRadius: BorderRadius.circular(16),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                            labelText: 'Horário',
-                            prefixIcon: Icon(Icons.access_time_outlined),
-                          ),
-                          child: Text(
-                            _selectedTime.format(context),
-                            style: theme.textTheme.bodyMedium,
-                          ),
+                      child: OutlinedButton.icon(
+                        onPressed: _pickTime,
+                        icon: const Icon(Icons.schedule_outlined),
+                        label: Text(
+                          'Horário\n${_selectedTime.format(context)}',
+                          textAlign: TextAlign.left,
                         ),
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                _sectionLabel('Motivo'),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _titleController,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.next,
+                  decoration: _decoration(
+                    'Motivo da consulta',
+                    hint: 'Ex.: retorno, rotina, exames',
+                  ),
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      for (final suggestion in const [
+                        'Consulta de rotina',
+                        'Retorno',
+                        'Exames',
+                        'Primeira consulta',
+                      ])
+                        FilterChip(
+                          label: Text(suggestion),
+                          selected: _hasTitle(suggestion),
+                          onSelected: (_) => _toggleTitle(suggestion),
+                        ),
+                    ],
+                  ),
+                ),
                 if (_isEditing) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
+                  _sectionLabel('Situação'),
+                  const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: _status,
-                    decoration: const InputDecoration(
-                      labelText: 'Status da consulta',
-                      prefixIcon: Icon(Icons.flag_outlined),
-                    ),
-                    items: ConsultationStatus.values.map((status) {
-                      return DropdownMenuItem(
-                        value: status,
-                        child: Text(ConsultationStatus.label(status)),
-                      );
-                    }).toList(),
+                    decoration: _decoration('Status da consulta'),
+                    items:
+                        ConsultationStatus.values.map((status) {
+                          return DropdownMenuItem(
+                            value: status,
+                            child: Text(ConsultationStatus.label(status)),
+                          );
+                        }).toList(),
                     onChanged: (value) {
                       if (value != null) setState(() => _status = value);
                     },
                   ),
                 ],
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
+                _sectionLabel('Retorno'),
+                const SizedBox(height: 4),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Previsão de Retorno'),
+                  title: const Text('Previsão de retorno'),
                   subtitle: const Text('Definir data para consulta de retorno'),
                   value: _hasReturn,
                   onChanged: (val) {
                     setState(() {
                       _hasReturn = val;
                       if (_hasReturn && _returnDate == null) {
-                        _returnDate =
-                            _selectedDate.add(const Duration(days: 30));
+                        _returnDate = _selectedDate.add(
+                          const Duration(days: 30),
+                        );
                       }
                     });
                   },
                 ),
                 if (_hasReturn) ...[
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: _pickReturnDate,
-                    borderRadius: BorderRadius.circular(16),
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Data de Retorno',
-                        prefixIcon: Icon(Icons.event_repeat_outlined),
-                      ),
-                      child: Text(
-                        _returnDate != null
-                            ? dateFormat.format(_returnDate!)
-                            : 'Selecionar data',
-                        style: theme.textTheme.bodyMedium,
-                      ),
+                  const SizedBox(height: 4),
+                  OutlinedButton.icon(
+                    onPressed: _pickReturnDate,
+                    icon: const Icon(Icons.event_repeat_outlined),
+                    label: Text(
+                      'Data de retorno\n${_formatDate(_returnDate!)}',
+                      textAlign: TextAlign.left,
                     ),
                   ),
                 ],
-                const SizedBox(height: 14),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: _notesController,
                   maxLines: 3,
                   textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Observações / Recomendações',
-                    hintText: 'Ex.: Levar exames de sangue, jejum de 8h...',
-                    alignLabelWithHint: true,
+                  decoration: _decoration(
+                    'Observações (opcional)',
+                    hint: 'Ex.: levar exames de sangue, jejum de 8h',
                   ),
                 ),
               ],
@@ -333,12 +439,22 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancelar'),
         ),
-        FilledButton.icon(
+        FilledButton(
           onPressed: doctors.isEmpty ? null : _save,
-          icon: const Icon(Icons.save_outlined),
-          label: Text(_isEditing ? 'Salvar' : 'Agendar'),
+          child: Text(_isEditing ? 'Salvar' : 'Agendar'),
         ),
       ],
     );
+  }
+
+  /// Atalhos de data relativos a hoje — recalculados a cada build para o
+  /// formulário nunca oferecer um "amanhã" que já passou.
+  List<(String, DateTime)> _quickDates() {
+    final now = DateTime.now();
+    return [
+      ('Hoje', now),
+      ('Amanhã', now.add(const Duration(days: 1))),
+      ('Em 1 semana', now.add(const Duration(days: 7))),
+    ];
   }
 }

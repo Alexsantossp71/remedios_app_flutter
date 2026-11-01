@@ -30,12 +30,12 @@ class HealthPlanReviewScreen extends StatefulWidget {
   /// Reabre a seleção/leitura de imagem (usado em "Escanear novamente").
   final Future<CardScanResult?> Function() onRescan;
 
-  /// Volta para o cadastro manual preenchido com os dados já lidos.
-  final VoidCallback? onManualEntry;
+  /// Volta para o cadastro manual levando os dados já lidos como rascunho —
+  /// nada do que a IA leu é descartado na troca de caminho.
+  final void Function(CardScanResult scan)? onManualEntry;
 
   @override
-  State<HealthPlanReviewScreen> createState() =>
-      _HealthPlanReviewScreenState();
+  State<HealthPlanReviewScreen> createState() => _HealthPlanReviewScreenState();
 }
 
 class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
@@ -67,15 +67,15 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
     _providerController = TextEditingController(text: data.provider);
     _cardNumberController = TextEditingController(text: data.cardNumber ?? '');
     _groupController = TextEditingController(text: data.groupNumber ?? '');
-    _beneficiaryController =
-        TextEditingController(text: data.beneficiaryCode ?? '');
+    _beneficiaryController = TextEditingController(
+      text: data.beneficiaryCode ?? '',
+    );
     _validityController = TextEditingController(text: data.validity ?? '');
     _notesController = TextEditingController(
       text: data.notes ?? (data.rawText.isEmpty ? '' : data.rawText),
     );
-    _coverageType = kCoverageTypes.contains(data.coverageType)
-        ? data.coverageType
-        : null;
+    _coverageType =
+        kCoverageTypes.contains(data.coverageType) ? data.coverageType : null;
     _specialties = <String>{};
   }
 
@@ -118,9 +118,11 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
   void _confirm() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final name = _nameController.text.trim();
     final plan = HealthPlan.create(
-      name: _nameController.text.trim(),
-      provider: _providerController.text.trim(),
+      name: name,
+      // Sem operadora informada, o nome do plano serve de operadora.
+      provider: _nullIfEmpty(_providerController.text.trim()) ?? name,
       cardNumber: _nullIfEmpty(_digits(_cardNumberController.text)),
       groupNumber: _nullIfEmpty(_digits(_groupController.text)),
       beneficiaryCode: _nullIfEmpty(_digits(_beneficiaryController.text)),
@@ -133,11 +135,9 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
     Navigator.of(context).pop(plan);
   }
 
-  static String _digits(String value) =>
-      value.replaceAll(RegExp(r'\D'), '');
+  static String _digits(String value) => value.replaceAll(RegExp(r'\D'), '');
 
-  static String? _nullIfEmpty(String value) =>
-      value.isEmpty ? null : value;
+  static String? _nullIfEmpty(String value) => value.isEmpty ? null : value;
 
   Widget _field({
     required String label,
@@ -163,12 +163,13 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
           border: const OutlineInputBorder(),
           isDense: true,
         ),
-        validator: required
-            ? (value) =>
-                (value == null || value.trim().isEmpty)
-                    ? 'Informe $label'
-                    : null
-            : null,
+        validator:
+            required
+                ? (value) =>
+                    (value == null || value.trim().isEmpty)
+                        ? 'Informe $label'
+                        : null
+                : null,
       ),
     );
   }
@@ -183,7 +184,7 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
         actions: [
           if (widget.onManualEntry != null)
             TextButton.icon(
-              onPressed: () => widget.onManualEntry!(),
+              onPressed: () => widget.onManualEntry!(widget.scan),
               icon: const Icon(Icons.edit_outlined, size: 18),
               label: const Text('Cadastro manual'),
             ),
@@ -202,11 +203,15 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
                   child: Image.memory(
                     _imageBytes,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.broken_image_outlined, size: 40),
-                    ),
+                    errorBuilder:
+                        (context, error, stackTrace) => Container(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          alignment: Alignment.center,
+                          child: const Icon(
+                            Icons.broken_image_outlined,
+                            size: 40,
+                          ),
+                        ),
                   ),
                 ),
               ),
@@ -221,13 +226,14 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
                   ),
                   TextButton.icon(
                     onPressed: _rescanning ? null : _rescan,
-                    icon: _rescanning
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.refresh, size: 18),
+                    icon:
+                        _rescanning
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.refresh, size: 18),
                     label: const Text('Escanear novamente'),
                   ),
                 ],
@@ -238,11 +244,7 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
                 controller: _nameController,
                 required: true,
               ),
-              _field(
-                label: 'Operadora',
-                controller: _providerController,
-                required: true,
-              ),
+              _field(label: 'Operadora', controller: _providerController),
               _field(
                 label: 'Número da carteirinha',
                 controller: _cardNumberController,
@@ -289,16 +291,16 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
                     for (final type in kCoverageTypes)
                       DropdownMenuItem(value: type, child: Text(type)),
                   ],
-                  onChanged: (value) =>
-                      setState(() => _coverageType = value),
+                  onChanged: (value) => setState(() => _coverageType = value),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Text(
                   'Especialidades',
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               Padding(
@@ -311,13 +313,14 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
                       FilterChip(
                         label: Text(specialty),
                         selected: _specialties.contains(specialty),
-                        onSelected: (selected) => setState(() {
-                          if (selected) {
-                            _specialties.add(specialty);
-                          } else {
-                            _specialties.remove(specialty);
-                          }
-                        }),
+                        onSelected:
+                            (selected) => setState(() {
+                              if (selected) {
+                                _specialties.add(specialty);
+                              } else {
+                                _specialties.remove(specialty);
+                              }
+                            }),
                       ),
                   ],
                 ),
