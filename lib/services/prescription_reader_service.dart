@@ -22,6 +22,8 @@ class PrescriptionMedication {
     this.duracaoDias,
     this.usoContinuo = false,
     this.diasAlternados = false,
+    this.vezesPorSemana,
+    this.diasDaSemana = const [],
     this.observacao = '',
   });
 
@@ -37,6 +39,17 @@ class PrescriptionMedication {
   /// A receita diz "dia sim, dia não" ou "em dias alternados": vira frequência
   /// no rascunho (o formulário abre com ela, o usuário confere).
   final bool diasAlternados;
+
+  /// "1x por semana" e afins na posologia: vira frequência semanal
+  /// ([TreatmentFrequency.weekly]) no rascunho. Nulo = a receita não falou
+  /// em semana ("por 8 semanas" é duração, não frequência).
+  final int? vezesPorSemana;
+
+  /// Dias nomeados na posologia ("aos sábados e domingos"),
+  /// [DateTime.weekday]: 1 = segunda … 7 = domingo. Vazio quando a receita
+  /// não nomeia dia nenhum — o usuário escolhe na conferência.
+  final List<int> diasDaSemana;
+
   final String observacao;
 
   bool get hasName => nome.trim().isNotEmpty;
@@ -67,6 +80,12 @@ class PrescriptionMedication {
       duracaoDias: intOrNull('duracaoDias'),
       usoContinuo: json['usoContinuo'] == true,
       diasAlternados: json['diasAlternados'] == true,
+      vezesPorSemana: intOrNull('vezesPorSemana'),
+      diasDaSemana: (json['diasDaSemana'] as List<dynamic>? ?? const [])
+          .map((day) => day is num ? day.round() : int.tryParse('$day'))
+          .whereType<int>()
+          .where((day) => day >= 1 && day <= 7)
+          .toList(growable: false),
       observacao: text('observacao'),
     );
   }
@@ -101,6 +120,7 @@ class PrescriptionMedication {
       if (usoContinuo) 'Uso contínuo',
       if (observacao.trim().isNotEmpty) observacao.trim(),
     ];
+    final isWeekly = vezesPorSemana != null || diasDaSemana.isNotEmpty;
     return TreatmentDraft(
       name: nome.trim(),
       dosage: dosagem.trim(),
@@ -110,8 +130,12 @@ class PrescriptionMedication {
       endDate: duracaoDias == null
           ? null
           : today.add(Duration(days: duracaoDias!)),
-      frequency:
-          diasAlternados ? TreatmentFrequency.everyOtherDay : null,
+      frequency: isWeekly
+          ? TreatmentFrequency.weekly
+          : diasAlternados
+              ? TreatmentFrequency.everyOtherDay
+              : null,
+      weekdays: isWeekly ? diasDaSemana : const [],
     );
   }
 

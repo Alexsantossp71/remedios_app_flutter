@@ -17,7 +17,7 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._();
 
   static const String _databaseName = 'remedios_app.db';
-  static const int _databaseVersion = 6;
+  static const int _databaseVersion = 7;
 
   Database? _db;
   bool _isInitialized = false;
@@ -122,6 +122,7 @@ class DatabaseService {
         end_date TEXT,
         frequency TEXT NOT NULL,
         dose_times TEXT NOT NULL,
+        weekdays TEXT,
         stock INTEGER,
         refill_threshold INTEGER,
         is_archived INTEGER NOT NULL DEFAULT 0,
@@ -320,6 +321,11 @@ class DatabaseService {
     if (oldVersion < 6) {
       // Version 6: Add consent_at column (LGPD consent timestamp)
       await db.execute('ALTER TABLE user_profile ADD COLUMN consent_at TEXT');
+    }
+    if (oldVersion < 7) {
+      // Version 7: Add weekdays column (frequency weekly — "N vezes por semana",
+      // ex.: metotrexato 1x/sem). NULL = frequência não semanal.
+      await db.execute('ALTER TABLE treatments ADD COLUMN weekdays TEXT');
     }
   }
 

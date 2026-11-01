@@ -42,9 +42,12 @@ class _EditableMed {
         times = original.suggestedDoseTimes.isEmpty
             ? <DoseTime>[const DoseTime(hour: 8, minute: 0)]
             : original.suggestedDoseTimes.toList(),
-        frequency = original.diasAlternados
-            ? TreatmentFrequency.everyOtherDay
-            : null;
+        frequency = original.vezesPorSemana != null ||
+                original.diasDaSemana.isNotEmpty
+            ? TreatmentFrequency.weekly
+            : original.diasAlternados
+                ? TreatmentFrequency.everyOtherDay
+                : null;
 
   final PrescriptionMedication original;
   final TextEditingController name;
@@ -59,7 +62,8 @@ class _EditableMed {
   /// Nula = fora do catálogo ANVISA (ou catálogo não carregado).
   Medicine? catalogHit;
 
-  /// Frequência lida da receita ("dia sim, dia não"); nula = nada dito.
+  /// Frequência lida da receita ("dia sim, dia não", "1x por semana");
+  /// nula = nada dito.
   TreatmentFrequency? frequency;
 
   void dispose() {
@@ -70,6 +74,7 @@ class _EditableMed {
   bool get hasName => name.text.trim().isNotEmpty;
 
   TreatmentDraft toDraft(DateTime today) {
+    final isWeekly = frequency == TreatmentFrequency.weekly;
     return TreatmentDraft(
       name: name.text.trim(),
       dosage: dosage.text.trim(),
@@ -80,6 +85,7 @@ class _EditableMed {
           ? null
           : today.add(Duration(days: original.duracaoDias!)),
       frequency: frequency,
+      weekdays: isWeekly ? original.diasDaSemana : const [],
     );
   }
 }
@@ -418,7 +424,12 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
   Widget _medCard(_EditableMed med, ThemeData theme) {
     final original = med.original;
     final badges = <String>[
-      if (original.intervaloHoras != null)
+      if (original.vezesPorSemana != null ||
+          original.diasDaSemana.isNotEmpty)
+        original.vezesPorSemana != null
+            ? '${original.vezesPorSemana}x por semana'
+            : 'semanal'
+      else if (original.intervaloHoras != null)
         'a cada ${original.intervaloHoras}h'
       else if (original.vezesAoDia != null)
         '${original.vezesAoDia}x ao dia',

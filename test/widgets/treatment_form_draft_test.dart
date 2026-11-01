@@ -62,4 +62,52 @@ void main() {
     // que a leitura inferiu e pode trocar antes de salvar.
     expect(find.text('Dia sim, dia não'), findsOneWidget);
   });
+
+  testWidgets('rascunho semanal abre com os dias da receita marcados',
+      (tester) async {
+    Treatment? saved;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              saved = await showDialog<Treatment>(
+                context: context,
+                builder: (_) => const TreatmentFormDialog(
+                  draft: TreatmentDraft(
+                    name: 'METOTREXATO',
+                    dosage: '15MG',
+                    presentation: 'comprimido',
+                    doseTimes: [DoseTime(hour: 8, minute: 0)],
+                    frequency: TreatmentFrequency.weekly,
+                    weekdays: [DateTime.saturday],
+                  ),
+                ),
+              );
+            },
+            child: const Text('abrir'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('abrir'));
+    await tester.pumpAndSettle();
+
+    // "1x por semana aos sábados": frequência e dia vêm da receita, visíveis.
+    expect(find.text('Semanal'), findsOneWidget);
+    final sabadoChip =
+        tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Sáb'));
+    expect(sabadoChip.selected, isTrue);
+    final segundaChip =
+        tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Seg'));
+    expect(segundaChip.selected, isFalse);
+
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+
+    expect(saved, isNotNull);
+    expect(saved!.frequency, TreatmentFrequency.weekly);
+    expect(saved!.weekdays, [DateTime.saturday]);
+  });
 }

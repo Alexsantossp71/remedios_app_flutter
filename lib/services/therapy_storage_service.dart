@@ -37,6 +37,12 @@ class TherapyStorageService {
           row['frequency'] as String? ?? TreatmentFrequency.daily.name,
         ),
         doseTimes: doseTimes,
+        weekdays: (row['weekdays'] == null)
+            ? const <int>[]
+            : (jsonDecode(row['weekdays'] as String) as List<dynamic>)
+                .map((day) => day as int)
+                .where((day) => day >= 1 && day <= 7)
+                .toList(),
         stock: row['stock'] as int?,
         refillThreshold: row['refill_threshold'] as int?,
         isArchived: (row['is_archived'] as int? ?? 0) == 1,
@@ -84,6 +90,9 @@ class TherapyStorageService {
         'dose_times': jsonEncode(
           treatment.doseTimes.map((t) => t.toJson()).toList(),
         ),
+        'weekdays': treatment.weekdays.isEmpty
+            ? null
+            : jsonEncode(treatment.weekdays),
         'stock': treatment.stock,
         'refill_threshold': treatment.refillThreshold,
         'is_archived': treatment.isArchived ? 1 : 0,
@@ -114,6 +123,9 @@ class TherapyStorageService {
           'dose_times': jsonEncode(
             treatment.doseTimes.map((t) => t.toJson()).toList(),
           ),
+          'weekdays': treatment.weekdays.isEmpty
+              ? null
+              : jsonEncode(treatment.weekdays),
           'stock': treatment.stock,
           'refill_threshold': treatment.refillThreshold,
           'is_archived': treatment.isArchived ? 1 : 0,

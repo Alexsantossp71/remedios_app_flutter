@@ -48,6 +48,18 @@ export interface ReceitaMed {
    * no rascunho (TreatmentFrequency.everyOtherDay), sempre conferível.
    */
   diasAlternados: boolean;
+  /**
+   * "1x por semana" e afins na posologia — vira frequência semanal no
+   * rascunho (TreatmentFrequency.weekly). Nulo = a receita não falou em
+   * semana; "por 8 semanas" é duração, não frequência.
+   */
+  vezesPorSemana: number | null;
+  /**
+   * Dias nomeados na posologia ("aos sábados e domingos"), 1=segunda …
+   * 7=domingo. Vazio quando a receita não nomeia dia nenhum — o usuário
+   * escolhe na conferência, ausência de informação não é inferência.
+   */
+  diasDaSemana: number[];
   /** Posologia crua, para conferência humana na tela de revisão. */
   observacao: string;
 }
@@ -158,6 +170,9 @@ const POSOLOGY_SIGNALS: RegExp[] = [
   /\b\d{1,2}\s+(?:EM|A)\s+\d{1,2}\s*(?:H|HS|HRS|HORAS?)?\b/,
   /\bA\s+CADA\s+\d{1,2}\s*(?:H|HS|HRS|HORAS?)?\b/,
   /\b\d{1,2}\s*(?:X|VEZES?)\s+AO\s+DIA\b/,
+  /\b\d{1,2}\s*(?:X|VEZES?)\s*(?:\/|POR|DE|NA|A\s+CADA|EM)?\s*SEMANAS?\b/,
+  /\b\d{1,2}\s+[A-Z]{3,12}\s+(?:POR|DE|NA|A\s+CADA|EM)\s+SEMANAS?\b/,
+  /\b(?:UMA?\s+VEZ\s+POR\s+SEMANA|SEMANAL(?:MENTE)?)\b/,
   /\b(?:MANHA|TARDE|NOITE|JEJUM|ACORDAR|DORMIR|ALMOCO|JANTAR|JANTA|CAFE)\b/,
   /\b(?:POR|DURANTE)\s+\d{1,3}\s+(?:DIAS?|SEMANAS?|MES(?:ES)?)\b/,
   /\bDIA\s+SIM\b|\bDIAS?\s+ALTERNADOS?\b/,
@@ -314,9 +329,16 @@ function splitHeader(line: string, folded: string): {
   if ((headerFolded.match(/[A-ZÀ-Ú]/g) ?? []).length < 2) return null;
   if (NOISE_PATTERN.test(headerFolded)) return null;
   // Se a linha foi cortada num sinal de posologia, o pedaço de cima só é
-  // medicamento se carregar uma dosagem: "1 comprimido pela manhã" vira
-  // posologia do bloco aberto, não um remédio fantasma.
-  if (cut < folded.length && !DOSAGE_PATTERN.test(headerFolded)) return null;
+  // medicamento com evidência: dosagem ou nome conhecido na ANVISA.
+  // "1 comprimido pela manhã" continua posologia do bloco aberto (não tem
+  // dosagem nem nome); "METOTREXATO 1x por semana" abre medicamento.
+  if (
+    cut < folded.length &&
+    !DOSAGE_PATTERN.test(headerFolded) &&
+    findMedSpan(tokenize(header)) === null
+  ) {
+    return null;
+  }
   // Linha SEM posologia só abre bloco com evidência de medicamento: dosagem,
   // apresentação ou nome conhecido na ANVISA. "My Prescription",
   // "Identificação do emitente" e lixo de OCR não têm nenhuma das três.
@@ -396,6 +418,58 @@ const ALTERNATE_DAY_PATTERNS: RegExp[] = [
 
 function extractAlternateDays(folded: string): boolean {
   return ALTERNATE_DAY_PATTERNS.some((pattern) => pattern.test(folded));
+}
+
+/**
+ * "N vezes por semana" — a frequência semanal (metotrexato 1x/sem). Semana
+ * não é dia: nada disto pode virar vezesAoDia. Sem dígito ("uma vez por
+ * semana", "semanal") conta como 1x.
+ */
+const WEEKLY_COUNT_PATTERNS: RegExp[] = [
+  // "1x por semana", "2 X SEMANA", "1 vez por semana", "1x/semana", "1x na semana".
+  /\b(\d{1,2})\s*(?:X|VEZES?)\s*(?:\/|POR|DE|NA|A\s+CADA|EM)?\s*SEMANAS?\b/,
+  // "1 comprimido por semana", "2 cápsulas na semana" — unidade entre o
+  // número e a semana. Exige o conector para não casar duração ("por 2 semanas"
+  // tem o número colado em "semanas").
+  /\b(\d{1,2})\s+[A-Z]{3,12}\s+(?:POR|DE|NA|A\s+CADA|EM)\s+SEMANAS?\b/,
+  // "uma vez por semana" por extenso — o dígito sumiu ou veio escrito.
+  /\bUMA?\s+VEZ\s+POR\s+SEMANA\b/,
+  // "semanal" / "semanalmente".
+  /\bSEMANAL(?:MENTE)?\b/,
+];
+
+function extractWeeklyCount(folded: string): number | null {
+  for (const pattern of WEEKLY_COUNT_PATTERNS) {
+    const match = pattern.exec(folded);
+    if (!match) continue;
+    if (match[1] === undefined) return 1;
+    const count = Number.parseInt(match[1], 10);
+    if (Number.isFinite(count) && count >= 1 && count <= 7) return count;
+  }
+  return null;
+}
+
+/**
+ * Dias da semana nomeados na posologia — [padrão, dia] com a numeração de
+ * DateTime.weekday (1=segunda … 7=domingo). "sexta-feira" casa em "sexta";
+ * "por 2 semanas" não tem dia nenhum.
+ */
+const WEEKDAY_PATTERNS: Array<[RegExp, number]> = [
+  [/\bSEGUNDAS?\b/, 1],
+  [/\bTERCAS?\b/, 2],
+  [/\bQUARTAS?\b/, 3],
+  [/\bQUINTAS?\b/, 4],
+  [/\bSEXTAS?\b/, 5],
+  [/\bSABADOS?\b/, 6],
+  [/\bDOMINGOS?\b/, 7],
+];
+
+function extractWeekdays(folded: string): number[] {
+  const days = new Set<number>();
+  for (const [pattern, weekday] of WEEKDAY_PATTERNS) {
+    if (pattern.test(folded)) days.add(weekday);
+  }
+  return [...days].sort((first, second) => first - second);
 }
 
 function extractDuration(folded: string): number | null {
@@ -507,6 +581,8 @@ export function parseReceitaText(rawText: string): ReceitaFields {
     const usoContinuo = /\bUSO\s+CONT[I]?NUO\b|\bCONT[I]?NUO\b/.test(posologyFolded);
     const duracaoDias = usoContinuo ? null : extractDuration(posologyFolded);
     const diasAlternados = extractAlternateDays(posologyFolded);
+    const vezesPorSemana = extractWeeklyCount(posologyFolded);
+    const diasDaSemana = extractWeekdays(posologyFolded);
 
     medicamentos.push({
       nome,
@@ -518,6 +594,8 @@ export function parseReceitaText(rawText: string): ReceitaFields {
       duracaoDias,
       usoContinuo,
       diasAlternados,
+      vezesPorSemana,
+      diasDaSemana,
       observacao: block.posologyLines.join('\n').slice(0, 300),
     });
   }
