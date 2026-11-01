@@ -547,108 +547,142 @@ class DoseCard extends StatelessWidget {
     final statusColor = isTaken
         ? semantic.success
         : isSkipped
-            ? theme.colorScheme.onSurfaceVariant
+            ? semantic.danger
             : theme.colorScheme.primary;
 
+    final BorderSide side;
+    if (isPending) {
+      // Hierarquia: a dose pendente é o estado que pede ação — contorno
+      // sutil no azul de ação.
+      side = BorderSide(color: statusColor.withValues(alpha: .45), width: 1.5);
+    } else {
+      // Resolvida comunica o desfecho em cores semânticas: verde para
+      // tomada, vermelho para pulada.
+      side = BorderSide(color: statusColor, width: 2);
+    }
+
     return Card(
-      // Hierarquia: a dose pendente é o estado que pede ação — ganha
-      // contorno no azul de ação; tomada/pulada ficam discretas.
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: isPending
-            ? BorderSide(color: statusColor.withValues(alpha: .45), width: 1.5)
-            : BorderSide.none,
+        side: side,
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: .12),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Icon(
-                    isTaken
-                        ? Icons.check_circle_rounded
-                        : isSkipped
-                            ? Icons.remove_circle_outline
-                            : Icons.medication_liquid_outlined,
-                    color: statusColor,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        DateFormat.Hm().format(event.scheduledAt),
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: statusColor,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        treatment.name,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          decoration: isSkipped || isTaken
-                              ? TextDecoration.lineThrough
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${treatment.dosage} · ${treatment.presentation}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!isPending) ...[
-                  const SizedBox(width: 8),
-                  Icon(
-                    isTaken ? Icons.check_circle : Icons.remove_circle_outline,
-                    color: statusColor,
-                  ),
-                ],
-              ],
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Icon(
+                isTaken
+                    ? Icons.check_circle_rounded
+                    : isSkipped
+                        ? Icons.remove_circle_outline
+                        : Icons.medication_liquid_outlined,
+                color: statusColor,
+                size: 28,
+              ),
             ),
-            // Ações de fácil acesso: um toque marca a dose, sem abrir menu.
-            if (isPending) ...[
-              const SizedBox(height: 14),
-              Row(
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () => onStatusChanged(DoseStatus.taken),
-                      icon: const Icon(Icons.check_rounded),
-                      label: const Text('Tomei'),
+                  Text(
+                    DateFormat.Hm().format(event.scheduledAt),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => onStatusChanged(DoseStatus.skipped),
-                      icon: const Icon(Icons.skip_next_rounded),
-                      label: const Text('Pular'),
+                  const SizedBox(height: 4),
+                  Text(
+                    treatment.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      decoration: isSkipped || isTaken
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${treatment.dosage} · ${treatment.presentation}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
+            ),
+            if (isPending) ...[
+              const SizedBox(width: 10),
+              // Ações no mesmo eixo do medicamento: dois botões circulares
+              // empilhados — um toque marca a dose, sem abrir menu.
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _DoseRoundAction(
+                    icon: Icons.check_rounded,
+                    tooltip: 'Tomei',
+                    color: semantic.success,
+                    onPressed: () => onStatusChanged(DoseStatus.taken),
+                  ),
+                  const SizedBox(height: 6),
+                  _DoseRoundAction(
+                    icon: Icons.skip_next_rounded,
+                    tooltip: 'Pular',
+                    color: semantic.danger,
+                    onPressed: () => onStatusChanged(DoseStatus.skipped),
+                  ),
+                ],
+              ),
+            ] else ...[
+              const SizedBox(width: 8),
+              Icon(
+                isTaken ? Icons.check_circle : Icons.remove_circle_outline,
+                color: statusColor,
+              ),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Botão de ação circular e preenchido da dose (verde "Tomei",
+/// vermelho "Pular").
+class _DoseRoundAction extends StatelessWidget {
+  const _DoseRoundAction({
+    required this.icon,
+    required this.tooltip,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      onPressed: onPressed,
+      tooltip: tooltip,
+      icon: Icon(icon, size: 22),
+      color: Colors.white,
+      style: IconButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        fixedSize: const Size(44, 44),
+        shape: const CircleBorder(),
       ),
     );
   }
