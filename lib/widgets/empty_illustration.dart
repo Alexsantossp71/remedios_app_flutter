@@ -8,7 +8,7 @@ import '../core/theme/app_theme.dart';
 /// tema, preenchimentos suaves no contêiner e um toque de verde-saúde.
 /// Desenhadas com [CustomPainter] (zero dependências, escalam sem perda e
 /// herdam as cores do tema claro/escuro automaticamente).
-enum EmptyIllustrationKind { freeDay, pillBottle, calendarHeart, shieldPlus }
+enum EmptyIllustrationKind { freeDay, pillBottle, calendarHeart, shieldPlus, stethoscope }
 
 class EmptyIllustration extends StatelessWidget {
   const EmptyIllustration({
@@ -84,6 +84,8 @@ class _EmptyIllustrationPainter extends CustomPainter {
         _paintCalendarHeart(canvas, size);
       case EmptyIllustrationKind.shieldPlus:
         _paintShieldPlus(canvas, size);
+      case EmptyIllustrationKind.stethoscope:
+        _paintStethoscope(canvas, size);
     }
   }
 
@@ -272,6 +274,63 @@ class _EmptyIllustrationPainter extends CustomPainter {
       ..color = accent;
     canvas.drawLine(Offset(cx, top + 34), Offset(cx, top + 62), cross);
     canvas.drawLine(Offset(cx - 14, top + 48), Offset(cx + 14, top + 48), cross);
+  }
+
+  /// Estetoscópio com prontuário: seu catálogo de médicos começa aqui.
+  void _paintStethoscope(Canvas canvas, Size size) {
+    // Prontuário/cartão clínico ao fundo.
+    final card = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        size.width * 0.52,
+        size.height * 0.16,
+        size.width * 0.34,
+        size.height * 0.52,
+      ),
+      const Radius.circular(10),
+    );
+    canvas.drawRRect(card, _surfacePaint);
+    canvas.drawRRect(card, _strokePaint);
+    final line = Paint()
+      ..color = stroke.withValues(alpha: .4)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(card.left + 12, card.top + 18),
+      Offset(card.right - 12, card.top + 18),
+      line,
+    );
+    canvas.drawLine(
+      Offset(card.left + 12, card.top + 30),
+      Offset(card.right - 22, card.top + 30),
+    line,
+    );
+
+    // Tubo em U do estetoscópio.
+    final tube = Path()
+      ..moveTo(size.width * 0.20, size.height * 0.10)
+      ..cubicTo(
+        size.width * 0.16, size.height * 0.46,
+        size.width * 0.34, size.height * 0.52,
+        size.width * 0.44, size.height * 0.62,
+      )
+      ..cubicTo(
+        size.width * 0.56, size.height * 0.74,
+        size.width * 0.62, size.height * 0.78,
+        size.width * 0.60, size.height * 0.88,
+      );
+    canvas.drawPath(tube, _strokePaint);
+
+    // Arautos metálicos (olivas) no topo.
+    canvas.drawLine(
+      Offset(size.width * 0.20, size.height * 0.10),
+      Offset(size.width * 0.30, size.height * 0.06),
+      _strokePaint,
+    );
+
+    // Campânula (disco) na ponta.
+    final bell = Offset(size.width * 0.60, size.height * 0.90);
+    canvas.drawCircle(bell, 11, _accentPaint);
+    canvas.drawCircle(bell, 11, _strokePaint);
   }
 
   @override

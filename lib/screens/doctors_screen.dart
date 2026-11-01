@@ -12,7 +12,11 @@ import '../providers/doctor_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../services/prescription_reader_service.dart';
 import '../widgets/doctor_form_dialog.dart';
+import '../widgets/empty_illustration.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/media_source_sheet.dart';
 import '../widgets/privacy_notice.dart';
+import '../widgets/reading_dialog.dart';
 
 class DoctorsScreen extends StatefulWidget {
   const DoctorsScreen({super.key});
@@ -63,10 +67,9 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
     // Diálogo sem await: só é dispensado quando a leitura termina (padrão
     // do fluxo de tratamentos).
     unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const _ReadingDoctorDialog(),
+      showReadingDialog(
+        context,
+        subtitle: 'Procurando o médico que assinou.',
       ),
     );
 
@@ -156,27 +159,10 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   }
 
   Future<ImageSource?> _pickImageSource(BuildContext context) {
-    return showModalBottomSheet<ImageSource>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Tirar foto da receita'),
-              onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Escolher imagem da galeria'),
-              onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+    return showImageSourceSheet(
+      context,
+      cameraLabel: 'Tirar foto da receita',
+      galleryLabel: 'Escolher imagem da galeria',
     );
   }
 
@@ -405,9 +391,18 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                   ],
                   const SizedBox(height: 18),
                   if (provider.doctors.isEmpty)
-                    _EmptyDoctors(
-                      onAdd: () => _editDoctor(provider),
-                      onReceipt: () => _startDoctorReceiptFlow(context),
+                    EmptyState(
+                      icon: Icons.medical_services_outlined,
+                      illustration: EmptyIllustrationKind.stethoscope,
+                      title: 'Seu catálogo começa aqui',
+                      description:
+                          'Salve médicos, especialidades, contatos e endereços.',
+                      actionLabel: 'Cadastrar primeiro médico',
+                      actionIcon: Icons.person_add_alt_1,
+                      onAction: () => _editDoctor(provider),
+                      secondaryActionLabel: 'Foto da receita',
+                      onSecondaryAction: () =>
+                          _startDoctorReceiptFlow(context),
                     )
                   else if (doctors.isEmpty)
                     const _NoSearchResults()
@@ -566,93 +561,6 @@ class _DoctorTile extends StatelessWidget {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyDoctors extends StatelessWidget {
-  const _EmptyDoctors({required this.onAdd, required this.onReceipt});
-
-  final VoidCallback onAdd;
-  final VoidCallback onReceipt;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 52, horizontal: 20),
-      child: Column(
-        children: [
-          Icon(
-            Icons.medical_services_outlined,
-            size: 42,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 14),
-          Text(
-            'Seu catálogo começa aqui',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Salve médicos, especialidades, contatos e endereços.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
-          const SizedBox(height: 18),
-          FilledButton.tonalIcon(
-            onPressed: onReceipt,
-            icon: const Icon(Icons.photo_camera_outlined),
-            label: const Text('Foto da receita'),
-          ),
-          const SizedBox(height: 10),
-          FilledButton.icon(
-            onPressed: onAdd,
-            icon: const Icon(Icons.person_add_alt_1),
-            label: const Text('Cadastrar primeiro médico'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Diálogo de leitura da receita do médico — mesmo desenho do fluxo de
-/// tratamentos.
-class _ReadingDoctorDialog extends StatelessWidget {
-  const _ReadingDoctorDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      child: Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                'Lendo receita…',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Procurando o médico que assinou.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-            ],
-          ),
         ),
       ),
     );

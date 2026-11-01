@@ -13,7 +13,10 @@ import '../screens/prescription_review_screen.dart';
 import '../services/prescription_reader_service.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/info_chip.dart';
+import '../widgets/media_source_sheet.dart';
 import '../widgets/privacy_notice.dart';
+import '../widgets/reading_dialog.dart';
 import '../widgets/section_header.dart';
 import '../widgets/treatment_form_dialog.dart';
 
@@ -71,11 +74,7 @@ class TreatmentsScreen extends StatelessWidget {
     // aqui travaria a tela sem nunca enviar a imagem (padrão da leitura de
     // cartão).
     unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const _ReadingPrescriptionDialog(),
-      ),
+      showReadingDialog(context),
     );
 
     PrescriptionReadResult? result;
@@ -162,27 +161,10 @@ class TreatmentsScreen extends StatelessWidget {
   }
 
   Future<ImageSource?> _pickImageSource(BuildContext context) {
-    return showModalBottomSheet<ImageSource>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_outlined),
-              title: const Text('Tirar foto da receita'),
-              onTap: () => Navigator.of(sheetContext).pop(ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Escolher imagem da galeria'),
-              onTap: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+    return showImageSourceSheet(
+      context,
+      cameraLabel: 'Tirar foto da receita',
+      galleryLabel: 'Escolher imagem da galeria',
     );
   }
 
@@ -504,16 +486,16 @@ class TreatmentCard extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _InfoChip(
+                        InfoChip(
                           icon: Icons.schedule,
                           label: formattedTimes,
                         ),
-                        _InfoChip(
+                        InfoChip(
                           icon: Icons.repeat,
                           label: _frequencyLabel(treatment),
                         ),
                         if (treatment.stock != null)
-                          _InfoChip(
+                          InfoChip(
                             icon: treatment.needsRefill
                                 ? Icons.warning_amber_rounded
                                 : Icons.inventory_2_outlined,
@@ -576,81 +558,3 @@ class TreatmentCard extends StatelessWidget {
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-    this.isWarning = false,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool isWarning;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = isWarning
-        ? Colors.orange.shade800
-        : Theme.of(context).colorScheme.onSurfaceVariant;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: isWarning
-            ? Colors.orange.withValues(alpha: .12)
-            : Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: color),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Tela cheia enquanto o OCR roda: não é dispensável e não revela estado —
-/// só deixa claro que a imagem está sendo lida (padrão da leitura de cartão).
-class _ReadingPrescriptionDialog extends StatelessWidget {
-  const _ReadingPrescriptionDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      child: Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              Text(
-                'Lendo receita…',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Pode levar alguns segundos.',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
