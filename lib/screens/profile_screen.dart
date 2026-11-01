@@ -5,7 +5,9 @@ import 'package:provider/provider.dart';
 import '../models/emergency_contact.dart';
 import '../models/user_profile.dart';
 import '../providers/user_profile_provider.dart';
+import '../screens/doctors_screen.dart';
 import '../screens/health_plans_screen.dart';
+import '../screens/progress_screen.dart';
 import '../widgets/br_input_formatters.dart';
 import '../widgets/privacy_notice.dart';
 import '../widgets/section_header.dart';
@@ -133,9 +135,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await provider.saveProfile(
       UserProfile(
         nome: _nomeController.text.trim(),
-        cpf: _cpfController.text.trim().isNotEmpty
-            ? _cpfController.text.trim()
-            : null,
+        cpf:
+            _cpfController.text.trim().isNotEmpty
+                ? _cpfController.text.trim()
+                : null,
         dataNascimento: _dataNascimento,
         fotoPath: provider.profile?.fotoPath,
         tipoSanguineo: _tipoSanguineo,
@@ -143,12 +146,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         condicoesCronicas: _condicoesCronicas,
         peso: _parseNumber(_pesoController.text),
         altura: _parseNumber(_alturaController.text),
-        telefone: _telefoneController.text.trim().isNotEmpty
-            ? _telefoneController.text.trim()
-            : null,
-        observacoes: _observacoesController.text.trim().isNotEmpty
-            ? _observacoesController.text.trim()
-            : null,
+        telefone:
+            _telefoneController.text.trim().isNotEmpty
+                ? _telefoneController.text.trim()
+                : null,
+        observacoes:
+            _observacoesController.text.trim().isNotEmpty
+                ? _observacoesController.text.trim()
+                : null,
         consentAt: consentAt,
         createdAt: provider.profile?.createdAt ?? now,
         updatedAt: now,
@@ -169,28 +174,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _confirmDeleteAllData() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Apagar meus dados'),
-        content: const Text(
-          'Seu perfil e seus contatos de emergência serão apagados '
-          'permanentemente deste dispositivo. Esta ação não pode ser '
-          'desfeita. Deseja continuar?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Theme.of(context).colorScheme.onError,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Apagar meus dados'),
+            content: const Text(
+              'Seu perfil e seus contatos de emergência serão apagados '
+              'permanentemente deste dispositivo. Esta ação não pode ser '
+              'desfeita. Deseja continuar?',
             ),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Apagar tudo'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Theme.of(context).colorScheme.onError,
+                ),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Apagar tudo'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
 
     if (confirmed == true && mounted) {
@@ -235,7 +241,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _removeContact(EmergencyContact contact) async {
-    await context.read<UserProfileProvider>().removeEmergencyContact(contact.id);
+    await context.read<UserProfileProvider>().removeEmergencyContact(
+      contact.id,
+    );
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -260,16 +268,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Text(
               'Meu Perfil',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 5),
             Text(
               'Seus dados de saúde, sempre à mão.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             if (profile != null) ...[
               const SizedBox(height: 24),
@@ -325,13 +333,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _dataNascimento != null
                               ? _dateFormat.format(_dataNascimento!)
                               : 'Toque para selecionar',
-                          style: _dataNascimento != null
-                              ? null
-                              : TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                ),
+                          style:
+                              _dataNascimento != null
+                                  ? null
+                                  : TextStyle(
+                                    color:
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                  ),
                         ),
                       ),
                     ),
@@ -354,12 +364,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         labelText: 'Tipo sanguíneo',
                         prefixIcon: Icon(Icons.bloodtype_outlined),
                       ),
-                      items: TipoSanguineo.values
-                          .map((tipo) => DropdownMenuItem(
-                                value: tipo,
-                                child: Text(tipo.value),
-                              ))
-                          .toList(),
+                      items:
+                          TipoSanguineo.values
+                              .map(
+                                (tipo) => DropdownMenuItem(
+                                  value: tipo,
+                                  child: Text(tipo.value),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (value) {
                         setState(() => _tipoSanguineo = value);
                       },
@@ -370,8 +383,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.warning_amber_outlined,
                       hint: 'Ex: Dipirona, frutos do mar',
                       values: _alergias,
-                      onChanged: (values) =>
-                          setState(() => _alergias = values),
+                      onChanged: (values) => setState(() => _alergias = values),
                     ),
                     const SizedBox(height: 16),
                     _StringListEditor(
@@ -379,8 +391,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.monitor_heart_outlined,
                       hint: 'Ex: Hipertensão, diabetes',
                       values: _condicoesCronicas,
-                      onChanged: (values) =>
-                          setState(() => _condicoesCronicas = values),
+                      onChanged:
+                          (values) =>
+                              setState(() => _condicoesCronicas = values),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -393,9 +406,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               hintText: 'Ex: 70',
                               prefixIcon: Icon(Icons.monitor_weight_outlined),
                             ),
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
-                                    decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             validator: _validatePeso,
                           ),
                         ),
@@ -408,9 +421,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               hintText: 'Ex: 1.70',
                               prefixIcon: Icon(Icons.height_outlined),
                             ),
-                            keyboardType:
-                                const TextInputType.numberWithOptions(
-                                    decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             validator: _validateAltura,
                           ),
                         ),
@@ -458,55 +471,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     if (contacts.isEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 12),
+                          horizontal: 8,
+                          vertical: 12,
+                        ),
                         child: Text(
                           'Nenhum contato cadastrado. Adicione alguém de '
                           'confiança.',
                           textAlign: TextAlign.center,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       )
-                    else
-                      ...[
-                        for (var i = 0; i < contacts.length; i++) ...[
-                          if (i > 0)
-                            const Divider(height: 1, indent: 64, endIndent: 12),
-                          ListTile(
-                            leading: Icon(
-                              Icons.contact_emergency_outlined,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            title: Text(contacts[i].nome),
-                            subtitle: Text(
-                              [
-                                if (contacts[i].parentesco.isNotEmpty)
-                                  contacts[i].parentesco,
-                                contacts[i].telefone,
-                              ].join(' • '),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit_outlined),
-                                  tooltip: 'Editar',
-                                  onPressed: () => _editContact(contacts[i]),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete_outline),
-                                  tooltip: 'Remover',
-                                  onPressed: () => _removeContact(contacts[i]),
-                                ),
-                              ],
-                            ),
+                    else ...[
+                      for (var i = 0; i < contacts.length; i++) ...[
+                        if (i > 0)
+                          const Divider(height: 1, indent: 64, endIndent: 12),
+                        ListTile(
+                          leading: Icon(
+                            Icons.contact_emergency_outlined,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
-                        ],
+                          title: Text(contacts[i].nome),
+                          subtitle: Text(
+                            [
+                              if (contacts[i].parentesco.isNotEmpty)
+                                contacts[i].parentesco,
+                              contacts[i].telefone,
+                            ].join(' • '),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined),
+                                tooltip: 'Editar',
+                                onPressed: () => _editContact(contacts[i]),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Remover',
+                                onPressed: () => _removeContact(contacts[i]),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
+                    ],
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
@@ -521,31 +535,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 28),
-            const SectionHeader(title: 'Planos de saúde'),
+            const SectionHeader(title: 'Meus cadastros'),
             const SizedBox(height: 10),
             Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  child: Icon(
-                    Icons.health_and_safety,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                ),
-                title: const Text('Planos e convênios'),
-                subtitle: const Text('Gerencie seus planos de saúde'),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const HealthPlansScreen(),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                      child: Icon(
+                        Icons.medical_services_outlined,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
                     ),
-                  );
-                },
+                    title: const Text('Médicos'),
+                    subtitle: const Text('Seu catálogo de médicos e contatos'),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const DoctorsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                      child: Icon(
+                        Icons.health_and_safety,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    title: const Text('Planos e convênios'),
+                    subtitle: const Text('Gerencie seus planos de saúde'),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const HealthPlansScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          Theme.of(context).colorScheme.primaryContainer,
+                      child: Icon(
+                        Icons.insights_outlined,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                    title: const Text('Progresso'),
+                    subtitle: const Text('Constância e histórico de doses'),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const ProgressScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 28),
@@ -562,10 +628,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'A qualquer momento você pode apagá-los por completo '
                       '(LGPD).',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
@@ -588,9 +652,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Text(
                 'Remédio na Hora v3.0',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.outline,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: Theme.of(context).colorScheme.outline,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
@@ -680,8 +744,11 @@ class _EmergencyCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.medical_information_outlined,
-                    color: colorScheme.onErrorContainer, size: 22),
+                Icon(
+                  Icons.medical_information_outlined,
+                  color: colorScheme.onErrorContainer,
+                  size: 22,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Cartão de emergência',
@@ -700,18 +767,20 @@ class _EmergencyCard extends StatelessWidget {
             const SizedBox(height: 6),
             _EmergencyRow(
               label: 'Alergias',
-              value: profile.alergias.isEmpty
-                  ? 'Nenhuma'
-                  : profile.alergias.length <= 2
+              value:
+                  profile.alergias.isEmpty
+                      ? 'Nenhuma'
+                      : profile.alergias.length <= 2
                       ? profile.alergias.join(', ')
                       : '${profile.alergias.take(2).join(', ')} (+${profile.alergias.length - 2})',
             ),
             const SizedBox(height: 6),
             _EmergencyRow(
               label: 'Contato de emergência',
-              value: mainContact != null
-                  ? '${mainContact.nome} — ${mainContact.telefone}'
-                  : 'Nenhum cadastrado',
+              value:
+                  mainContact != null
+                      ? '${mainContact.nome} — ${mainContact.telefone}'
+                      : 'Nenhum cadastrado',
             ),
           ],
         ),
@@ -737,19 +806,18 @@ class _EmergencyRow extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color:
-                      colorScheme.onErrorContainer.withValues(alpha: 0.75),
-                  fontWeight: FontWeight.w600,
-                ),
+              color: colorScheme.onErrorContainer.withValues(alpha: 0.75),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         Expanded(
           child: Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onErrorContainer,
-                  fontWeight: FontWeight.w700,
-                ),
+              color: colorScheme.onErrorContainer,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
@@ -789,8 +857,7 @@ class _StringListEditorState extends State<_StringListEditor> {
   void _add() {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    if (widget.values
-        .any((v) => v.toLowerCase() == text.toLowerCase())) {
+    if (widget.values.any((v) => v.toLowerCase() == text.toLowerCase())) {
       _controller.clear();
       return;
     }
@@ -814,17 +881,21 @@ class _StringListEditorState extends State<_StringListEditor> {
               child: Wrap(
                 spacing: 8,
                 runSpacing: 4,
-                children: widget.values
-                    .map((value) => InputChip(
-                          label: Text(value),
-                          onDeleted: () => widget.onChanged(
-                            widget.values
-                                .where((v) => v != value)
-                                .toList(),
+                children:
+                    widget.values
+                        .map(
+                          (value) => InputChip(
+                            label: Text(value),
+                            onDeleted:
+                                () => widget.onChanged(
+                                  widget.values
+                                      .where((v) => v != value)
+                                      .toList(),
+                                ),
+                            deleteIcon: const Icon(Icons.close, size: 18),
                           ),
-                          deleteIcon: const Icon(Icons.close, size: 18),
-                        ))
-                    .toList(),
+                        )
+                        .toList(),
               ),
             )
           else
@@ -877,10 +948,12 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
   void initState() {
     super.initState();
     _nomeController = TextEditingController(text: widget.contact?.nome ?? '');
-    _parentescoController =
-        TextEditingController(text: widget.contact?.parentesco ?? '');
-    _telefoneController =
-        TextEditingController(text: widget.contact?.telefone ?? '');
+    _parentescoController = TextEditingController(
+      text: widget.contact?.parentesco ?? '',
+    );
+    _telefoneController = TextEditingController(
+      text: widget.contact?.telefone ?? '',
+    );
   }
 
   @override
@@ -893,17 +966,18 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    final contact = _isEditing
-        ? widget.contact!.copyWith(
-            nome: _nomeController.text.trim(),
-            parentesco: _parentescoController.text.trim(),
-            telefone: _telefoneController.text.trim(),
-          )
-        : EmergencyContact.create(
-            nome: _nomeController.text.trim(),
-            parentesco: _parentescoController.text.trim(),
-            telefone: _telefoneController.text.trim(),
-          );
+    final contact =
+        _isEditing
+            ? widget.contact!.copyWith(
+              nome: _nomeController.text.trim(),
+              parentesco: _parentescoController.text.trim(),
+              telefone: _telefoneController.text.trim(),
+            )
+            : EmergencyContact.create(
+              nome: _nomeController.text.trim(),
+              parentesco: _parentescoController.text.trim(),
+              telefone: _telefoneController.text.trim(),
+            );
     Navigator.of(context).pop(contact);
   }
 
@@ -957,8 +1031,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Informe o telefone';
                   }
-                  final digits =
-                      value.replaceAll(RegExp(r'\D'), '');
+                  final digits = value.replaceAll(RegExp(r'\D'), '');
                   if (digits.length < 10 || digits.length > 11) {
                     return 'Telefone deve ter 10 ou 11 dígitos';
                   }

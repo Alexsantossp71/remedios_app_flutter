@@ -9,6 +9,7 @@ import 'package:remedios_app_flutter/providers/doctor_provider.dart';
 import 'package:remedios_app_flutter/providers/health_plan_provider.dart';
 import 'package:remedios_app_flutter/providers/therapy_provider.dart';
 import 'package:remedios_app_flutter/providers/user_profile_provider.dart';
+import 'package:remedios_app_flutter/screens/profile_screen.dart';
 import 'package:remedios_app_flutter/services/database_service.dart';
 
 void main() {
@@ -64,18 +65,18 @@ void main() {
     await _pumpFor(tester);
   }
 
-  testWidgets('App loads with title', (tester) async {
+  testWidgets('App loads with bottom navigation', (tester) async {
     await pumpApp(tester);
 
-    expect(find.text('Remédio na Hora'), findsOneWidget);
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(BottomAppBar), findsOneWidget);
+    expect(find.text('Hoje'), findsOneWidget);
+    expect(find.text('Perfil'), findsOneWidget);
   });
 
   testWidgets('Doctors catalog is reachable from the main navigation',
       (tester) async {
     await pumpApp(tester);
-    await tester.tap(find.text('Médicos'));
-    await _pumpFor(tester);
+    await _openDoctorsViaProfile(tester);
 
     expect(find.text('Seus médicos'), findsOneWidget);
     expect(find.text('Seu catálogo começa aqui'), findsOneWidget);
@@ -84,8 +85,7 @@ void main() {
   testWidgets('Can add a doctor with contact and location details',
       (tester) async {
     await pumpApp(tester);
-    await tester.tap(find.text('Médicos'));
-    await _pumpFor(tester);
+    await _openDoctorsViaProfile(tester);
     await tester.tap(find.text('Cadastrar primeiro médico'));
     await _pumpFor(tester);
 
@@ -160,6 +160,28 @@ void main() {
 Future<void> _pumpFor(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
+}
+
+/// Navegação V4: o catálogo de médicos vive no Perfil > Médicos (rota).
+/// O item está abaixo da dobra — rolar o ListView do Perfil até ele.
+Future<void> _openDoctorsViaProfile(WidgetTester tester) async {
+  await tester.tap(find.text('Perfil'));
+  await _pumpFor(tester);
+
+  final profileScrollable = find
+      .descendant(
+        of: find.byType(ProfileScreen),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  await tester.scrollUntilVisible(
+    find.text('Médicos'),
+    400,
+    scrollable: profileScrollable,
+  );
+  await _pumpFor(tester);
+  await tester.tap(find.text('Médicos'));
+  await _pumpFor(tester);
 }
 
 Future<void> _resetInMemoryDb() async {
