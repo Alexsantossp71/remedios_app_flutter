@@ -209,4 +209,55 @@ void main() {
 
     expect(popped.single.single.frequency, isNull);
   });
+  testWidgets('"1x por semana" lido da receita segue no rascunho com o dia',
+      (tester) async {
+    final popped = <List<TreatmentDraft>>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              final drafts = await Navigator.of(context).push<List<TreatmentDraft>>(
+                MaterialPageRoute<List<TreatmentDraft>>(
+                  builder: (_) => Scaffold(
+                    body: PrescriptionReviewScreen(
+                      result: const PrescriptionReadResult(
+                        medicamentos: [
+                          PrescriptionMedication(
+                            nome: 'METOTREXATO',
+                            horarios: ['08:00'],
+                            vezesPorSemana: 1,
+                            diasDaSemana: [DateTime.saturday],
+                          ),
+                        ],
+                        rawText: 'METOTREXATO',
+                      ),
+                      catalogFuture: Future.value(const []),
+                    ),
+                  ),
+                ),
+              );
+              if (drafts != null) popped.add(drafts);
+            },
+            child: const Text('abrir'),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('abrir'));
+    await tester.pumpAndSettle();
+
+    // O badge mostra a frequência lida, antes mesmo de continuar.
+    expect(find.textContaining('1x por semana'), findsOneWidget);
+
+    await tester.tap(find.text('Continuar com 1 tratamento(s)'));
+    await tester.pumpAndSettle();
+
+    expect(popped, hasLength(1));
+    final draft = popped.single.single;
+    expect(draft.name, 'METOTREXATO');
+    expect(draft.frequency, TreatmentFrequency.weekly);
+    expect(draft.weekdays, [DateTime.saturday]);
+  });
 }

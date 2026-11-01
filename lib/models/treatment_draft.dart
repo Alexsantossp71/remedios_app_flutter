@@ -13,6 +13,7 @@ class TreatmentDraft {
     this.doseTimes = const [],
     this.endDate,
     this.frequency,
+    this.weekdays = const [],
   });
 
   final String name;
@@ -26,4 +27,9 @@ class TreatmentDraft {
   /// [TreatmentFrequency.everyOtherDay]). Nulo = receita não disse nada e o
   /// formulário fica no padrão diário — ausência de informação não é inferência.
   final TreatmentFrequency? frequency;
+
+  /// Dias da semana lidos da receita ("tomar aos sábados"), quando a
+  /// frequência é [TreatmentFrequency.weekly]. Vazio = receita não nomeou
+  /// dia nenhum e o usuário escolhe no formulário.
+  final List<int> weekdays;
 }

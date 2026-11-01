@@ -1,4 +1,4 @@
-enum TreatmentFrequency { daily, weekdays, everyOtherDay }
+enum TreatmentFrequency { daily, weekdays, everyOtherDay, weekly }
 
 class DoseTime {
   final int hour;
@@ -45,6 +45,13 @@ class Treatment {
   final DateTime? endDate;
   final TreatmentFrequency frequency;
   final List<DoseTime> doseTimes;
+
+  /// Dias da semana em que a dose é tomada quando a frequência é
+  /// [TreatmentFrequency.weekly] — [DateTime.weekday]: 1 = segunda …
+  /// 7 = domingo. Vazio nos outros casos (e enquanto o usuário não escolhe
+  /// no formulário: [isScheduledOn] devolve falso, nada é agendado às cegas).
+  final List<int> weekdays;
+
   final int? stock;
   final int? refillThreshold;
   final bool isArchived;
@@ -59,6 +66,7 @@ class Treatment {
     required this.endDate,
     required this.frequency,
     required this.doseTimes,
+    this.weekdays = const [],
     required this.stock,
     required this.refillThreshold,
     this.isArchived = false,
@@ -67,6 +75,10 @@ class Treatment {
        assert(dosage.isNotEmpty, 'dosage must not be empty'),
        assert(presentation.isNotEmpty, 'presentation must not be empty'),
        assert(doseTimes.isNotEmpty, 'DoseTimes cannot be empty'),
+       assert(
+         weekdays.every((day) => day >= 1 && day <= 7),
+         'weekdays must be DateTime.weekday values (1=Mon … 7=Sun)',
+       ),
        assert(stock == null || stock >= 0, 'stock must be non-negative'),
        assert(
          refillThreshold == null || refillThreshold >= 0,
@@ -96,6 +108,9 @@ class Treatment {
       doseTimes: (json['doseTimes'] as List<dynamic>? ?? const [])
           .map((item) => DoseTime.fromJson(item as Map<String, dynamic>))
           .toList(),
+      weekdays: (json['weekdays'] as List<dynamic>? ?? const [])
+          .map((item) => item as int)
+          .toList(),
       stock: json['stock'] as int?,
       refillThreshold: json['refillThreshold'] as int?,
       isArchived: json['isArchived'] as bool? ?? false,
@@ -112,6 +127,7 @@ class Treatment {
     bool clearEndDate = false,
     TreatmentFrequency? frequency,
     List<DoseTime>? doseTimes,
+    List<int>? weekdays,
     int? stock,
     bool clearStock = false,
     int? refillThreshold,
@@ -128,6 +144,7 @@ class Treatment {
       endDate: clearEndDate ? null : endDate ?? this.endDate,
       frequency: frequency ?? this.frequency,
       doseTimes: doseTimes ?? this.doseTimes,
+      weekdays: weekdays ?? this.weekdays,
       stock: clearStock ? null : stock ?? this.stock,
       refillThreshold: clearRefillThreshold
           ? null
@@ -146,6 +163,7 @@ class Treatment {
         'endDate': endDate?.toIso8601String(),
         'frequency': frequency.name,
         'doseTimes': doseTimes.map((time) => time.toJson()).toList(),
+        'weekdays': weekdays,
         'stock': stock,
         'refillThreshold': refillThreshold,
         'isArchived': isArchived,
@@ -170,6 +188,9 @@ class Treatment {
         return normalizedDate.weekday <= DateTime.friday;
       case TreatmentFrequency.everyOtherDay:
         return normalizedDate.difference(normalizedStart).inDays.isEven;
+      case TreatmentFrequency.weekly:
+        // Sem dia escolhido, sem dose: a conferência decide antes de salvar.
+        return weekdays.contains(normalizedDate.weekday);
     }
   }
 

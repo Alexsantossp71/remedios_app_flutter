@@ -318,3 +318,91 @@ TRAMAL 100MG
   `);
   assert.equal(receita.medicamentos[0].observacao, '12/12 HORAS 30 DIAS');
 });
+
+// --- Frequência semanal ("N vezes por semana") ---
+
+test('metotrexato 1x por semana vira frequência semanal com o dia nomeado', () => {
+  const receita = parseReceitaText(`
+Dr. Júlio CRM 000000
+METOTREXATO 15MG
+Tomar 1 comprimido por semana, aos sábados
+  `);
+  assert.equal(receita.medicamentos.length, 1);
+  const [metotrexato] = receita.medicamentos;
+  assert.equal(metotrexato.nome, 'METOTREXATO');
+  assert.equal(metotrexato.vezesPorSemana, 1);
+  assert.deepEqual(metotrexato.diasDaSemana, [6]);
+  // Semana não é dia: nada de vezesAoDia ou intervalo fantasma.
+  assert.equal(metotrexato.vezesAoDia, null);
+  assert.equal(metotrexato.intervaloHoras, null);
+});
+
+test('"uma vez por semana" e "semanalmente" contam como 1x sem dígito', () => {
+  const receita = parseReceitaText(`
+ACIDO FOLICO 5MG
+Tomar uma vez por semana
+DIPIRONA 500MG
+Tomar semanalmente
+  `);
+  const [acidoFolico, dipirona] = receita.medicamentos;
+  assert.equal(acidoFolico.vezesPorSemana, 1);
+  assert.equal(dipirona.vezesPorSemana, 1);
+});
+
+test('"2x/semana" sem dia nomeado deixa a escolha para a conferência', () => {
+  const receita = parseReceitaText(`
+FUROSEMIDA 40MG
+Tomar 2 comprimidos 2x/semana
+  `);
+  const [furosemida] = receita.medicamentos;
+  assert.equal(furosemida.vezesPorSemana, 2);
+  assert.deepEqual(furosemida.diasDaSemana, []);
+});
+
+test('dias nomeados sem contagem marcam a frequência semanal', () => {
+  const receita = parseReceitaText(`
+HIDROXOCOBALAMINA 1000MCG
+Tomar aos sábados e domingos
+  `);
+  const [b12] = receita.medicamentos;
+  assert.equal(b12.vezesPorSemana, null);
+  assert.deepEqual(b12.diasDaSemana, [6, 7]);
+});
+
+test('posologia semanal na mesma linha do nome é dividida', () => {
+  const receita = parseReceitaText(`
+METOTREXATO 15MG 1X POR SEMANA
+  `);
+  const [metotrexato] = receita.medicamentos;
+  assert.equal(metotrexato.nome, 'METOTREXATO');
+  assert.equal(metotrexato.dosagem, '15MG');
+  assert.equal(metotrexato.vezesPorSemana, 1);
+});
+
+test('nome conhecido sem dosagem abre medicamento com posologia semanal', () => {
+  const receita = parseReceitaText(`
+TRAMAL 1X POR SEMANA
+  `);
+  const [tramal] = receita.medicamentos;
+  assert.equal(tramal.nome, 'TRAMAL');
+  assert.equal(tramal.vezesPorSemana, 1);
+});
+
+test('duração em semanas não é frequência semanal', () => {
+  const receita = parseReceitaText(`
+CLONAZEPAM 0,5MG
+Tomar 1 comprimido à noite por 2 semanas
+  `);
+  const [clonazepam] = receita.medicamentos;
+  assert.equal(clonazepam.vezesPorSemana, null);
+  assert.deepEqual(clonazepam.diasDaSemana, []);
+  assert.equal(clonazepam.duracaoDias, 14);
+});
+
+test('posologia comum não marca frequência semanal', () => {
+  const receita = parseReceitaText(RECEITA_CLASSICA);
+  for (const med of receita.medicamentos) {
+    assert.equal(med.vezesPorSemana, null, med.nome);
+    assert.deepEqual(med.diasDaSemana, [], med.nome);
+  }
+});

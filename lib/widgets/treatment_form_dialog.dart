@@ -35,8 +35,17 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   late final Future<List<Medicine>> _medicineCatalogFuture;
   String _medicineQuery = '';
   TreatmentFrequency _frequency = TreatmentFrequency.daily;
+
+  /// Dias escolhidos quando a frequência é semanal (DateTime.weekday:
+  /// 1 = segunda … 7 = domingo). Sem dia, sem dose — a validação exige um.
+  final Set<int> _weekdays = {};
   DateTime _startDate = DateTime.now();
   DateTime? _endDate;
+
+  /// Rótulos curtos dos dias para os chips — mesma ordem de DateTime.weekday.
+  static const List<String> _weekdayLabels = [
+    'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom',
+  ];
 
   bool get _isEditing => widget.initialTreatment != null;
 
@@ -62,6 +71,10 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
         // Frequência lida da receita ("dia sim, dia não" vira
         // "Dia sim, dia não"): pré-selecionada, nunca escondida do usuário.
         if (draft.frequency != null) _frequency = draft.frequency!;
+        // "Aos sábados" na receita vem junto: os dias abrem marcados.
+        if (draft.frequency == TreatmentFrequency.weekly) {
+          _weekdays.addAll(draft.weekdays);
+        }
         return;
       }
       _doseTimes.add(const DoseTime(hour: 8, minute: 0));
@@ -77,6 +90,7 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
     }
     _doseTimes.addAll(treatment.doseTimes);
     _frequency = treatment.frequency;
+    _weekdays.addAll(treatment.weekdays);
     _startDate = treatment.startDate;
     _endDate = treatment.endDate;
   }
@@ -321,6 +335,14 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       }
       return;
     }
+    // Semanal sem dia não tem quando agendar: a escolha é do usuário, não
+    // nossa — "1x por semana" não diz qual dia.
+    if (_frequency == TreatmentFrequency.weekly && _weekdays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escolha pelo menos um dia da semana.')),
+      );
+      return;
+    }
 
     int? parseOptionalInt(String value) =>
         value.trim().isEmpty ? null : int.tryParse(value.trim());
@@ -336,6 +358,9 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       endDate: _endDate,
       frequency: _frequency,
       doseTimes: List.unmodifiable(_doseTimes),
+      weekdays: _frequency == TreatmentFrequency.weekly
+          ? List.unmodifiable(_weekdays.toList()..sort())
+          : const [],
       stock: parseOptionalInt(_stockController.text),
       refillThreshold: parseOptionalInt(_thresholdController.text),
       isArchived: existing?.isArchived ?? false,
@@ -392,11 +417,39 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
                       value: TreatmentFrequency.everyOtherDay,
                       child: Text('Dia sim, dia não'),
                     ),
+                    DropdownMenuItem(
+                      value: TreatmentFrequency.weekly,
+                      child: Text('Semanal'),
+                    ),
                   ],
                   onChanged: (value) {
                     if (value != null) setState(() => _frequency = value);
                   },
                 ),
+                // Semanal: "1x por semana" não diz qual dia — os chips são
+                // onde o usuário escolhe (a receita pode ter deixado marcado).
+                if (_frequency == TreatmentFrequency.weekly) ...[
+                  const SizedBox(height: 10),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        for (var day = 1; day <= 7; day++)
+                          FilterChip(
+                            label: Text(_weekdayLabels[day - 1]),
+                            selected: _weekdays.contains(day),
+                            onSelected: (selected) => setState(
+                              () => selected
+                                  ? _weekdays.add(day)
+                                  : _weekdays.remove(day),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
@@ -557,6 +610,9 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       endDate: _endDate,
       frequency: _frequency,
       doseTimes: List.unmodifiable(_doseTimes),
+      weekdays: _frequency == TreatmentFrequency.weekly
+          ? List.unmodifiable(_weekdays.toList())
+          : const [],
       stock: null,
       refillThreshold: null,
     );

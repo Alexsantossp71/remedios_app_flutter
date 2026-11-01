@@ -508,7 +508,7 @@ class TreatmentCard extends StatelessWidget {
                         ),
                         _InfoChip(
                           icon: Icons.repeat,
-                          label: _frequencyLabel(treatment.frequency),
+                          label: _frequencyLabel(treatment),
                         ),
                         if (treatment.stock != null)
                           _InfoChip(
@@ -551,14 +551,25 @@ class TreatmentCard extends StatelessWidget {
     return Icons.medication_outlined;
   }
 
-  static String _frequencyLabel(TreatmentFrequency frequency) {
-    switch (frequency) {
+  /// Rótulos curtos dos dias — mesma ordem de DateTime.weekday (1=seg … 7=dom).
+  static const List<String> _weekdayLabels = [
+    'seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom',
+  ];
+
+  static String _frequencyLabel(Treatment treatment) {
+    switch (treatment.frequency) {
       case TreatmentFrequency.daily:
         return 'Diariamente';
       case TreatmentFrequency.weekdays:
         return 'Dias úteis';
       case TreatmentFrequency.everyOtherDay:
         return 'Dias alternados';
+      case TreatmentFrequency.weekly:
+        final days = treatment.weekdays
+            .map((day) => _weekdayLabels[day - 1])
+            .join(', ');
+        // "Semanal (sáb)" — o dia é a informação que importa na lista.
+        return days.isEmpty ? 'Semanal' : 'Semanal ($days)';
     }
   }
 }

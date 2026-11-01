@@ -71,6 +71,35 @@ void main() {
       expect(loadedDoses.first.status, DoseStatus.taken);
     });
 
+    test('Treatment semanal persiste e recarrega com os dias da semana', () async {
+      final now = DateTime.now();
+      final treatment = Treatment(
+        id: 'treat-weekly',
+        name: 'Metotrexato',
+        dosage: '15MG',
+        presentation: 'Comprimido',
+        instructions: 'Tomar 1 comprimido por semana, aos sábados',
+        startDate: DateTime(now.year, now.month, now.day, 8, 0),
+        endDate: null,
+        frequency: TreatmentFrequency.weekly,
+        doseTimes: const [DoseTime(hour: 8, minute: 0)],
+        weekdays: const [DateTime.saturday],
+        stock: 4,
+        refillThreshold: 1,
+      );
+
+      await therapyService.saveTreatment(treatment);
+      final loaded = (await therapyService.loadTreatments())
+          .firstWhere((t) => t.id == 'treat-weekly');
+
+      expect(loaded.frequency, TreatmentFrequency.weekly);
+      expect(loaded.weekdays, [DateTime.saturday]);
+      // A regra de agendamento vem inteira do banco: sábado agenda, sexta não.
+      // (Sábados de novembro: o tratamento começa em hoje, 01/11/2026.)
+      expect(loaded.isScheduledOn(DateTime(2026, 11, 7)), isTrue); // sáb
+      expect(loaded.isScheduledOn(DateTime(2026, 11, 6)), isFalse); // sex
+    });
+
     test('DoctorStorageService and ConsultationStorageService persist and delete records', () async {
       const doctor = Doctor(
         id: 'doc-1',
