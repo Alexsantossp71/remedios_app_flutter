@@ -8,6 +8,7 @@ import '../providers/health_plan_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../services/card_reader_service.dart';
 import '../widgets/add_health_plan_sheet.dart';
+import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/health_plan_form_dialog.dart';
 import '../widgets/privacy_notice.dart';
@@ -78,6 +79,7 @@ class HealthPlansScreen extends StatelessWidget {
         if (provider.healthPlans.isEmpty)
           EmptyState(
             icon: Icons.health_and_safety_outlined,
+            illustration: EmptyIllustrationKind.shieldPlus,
             title: 'Nenhum plano cadastrado',
             description:
                 'Toque no + para adicionar seu primeiro plano de saúde.',

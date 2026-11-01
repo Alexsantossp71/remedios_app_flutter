@@ -11,6 +11,7 @@ import '../providers/therapy_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../screens/prescription_review_screen.dart';
 import '../services/prescription_reader_service.dart';
+import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/privacy_notice.dart';
 import '../widgets/section_header.dart';
@@ -280,6 +281,7 @@ class TreatmentsScreen extends StatelessWidget {
                 hasScrollBody: false,
                 child: EmptyState(
                   icon: Icons.medication_outlined,
+                  illustration: EmptyIllustrationKind.pillBottle,
                   title: 'Comece seu tratamento',
                   description:
                       'Cadastre seu primeiro medicamento para receber uma rotina organizada de doses.',
