@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -124,6 +126,33 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                   );
                                 },
                               ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        const SectionHeader(title: 'Jardim da adesão'),
+                        const SizedBox(height: 10),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _AdherenceGarden(provider: provider),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Últimos 14 dias: flor cheia = dia completo, '
+                                  'broto = parcial, vaso vazio = sem doses.',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.copyWith(
+                                    color:
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -279,4 +308,145 @@ class _SelectedDayCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Jardim da adesão: os últimos 14 dias viram um canteiro line-art —
+/// dia 100% floresce (pétalas verdes), dia parcial vira broto azul,
+/// dia sem doses fica só o vaso.
+class _AdherenceGarden extends StatelessWidget {
+  const _AdherenceGarden({required this.provider});
+
+  final TherapyProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now();
+    final days = [
+      for (var i = 13; i >= 0; i--)
+        DateTime(today.year, today.month, today.day - i),
+    ];
+    final kinds = [
+      for (final day in days)
+        () {
+          final adherence = provider.adherenceForDay(day);
+          if (adherence.total == 0) return _GardenDayKind.empty;
+          return adherence.taken == adherence.total
+              ? _GardenDayKind.full
+              : _GardenDayKind.partial;
+        }(),
+    ];
+    return SizedBox(
+      height: 96,
+      width: double.infinity,
+      child: CustomPaint(
+        painter: _GardenPainter(
+          kinds: kinds,
+          stroke: Theme.of(context).colorScheme.primary,
+          bloom: AppSemanticColors.of(context).success,
+          soil: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+enum _GardenDayKind { empty, partial, full }
+
+class _GardenPainter extends CustomPainter {
+  _GardenPainter({
+    required this.kinds,
+    required this.stroke,
+    required this.bloom,
+    required this.soil,
+  });
+
+  final List<_GardenDayKind> kinds;
+  final Color stroke;
+  final Color bloom;
+  final Color soil;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final strokePaint =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.2
+          ..strokeCap = StrokeCap.round
+          ..color = stroke;
+
+    final cellWidth = size.width / kinds.length;
+    final baseY = size.height * 0.86;
+
+    // Linha do canteiro.
+    canvas.drawLine(Offset(0, baseY), Offset(size.width, baseY), strokePaint);
+
+    for (var i = 0; i < kinds.length; i++) {
+      final cx = cellWidth * i + cellWidth / 2;
+      switch (kinds[i]) {
+        case _GardenDayKind.full:
+          _paintFlower(canvas, cx, baseY, strokePaint);
+        case _GardenDayKind.partial:
+          _paintSprout(canvas, cx, baseY, strokePaint);
+        case _GardenDayKind.empty:
+          _paintEmptyPot(canvas, cx, baseY, strokePaint);
+      }
+    }
+  }
+
+  void _paintFlower(Canvas canvas, double cx, double baseY, Paint strokePaint) {
+    // Haste.
+    canvas.drawLine(Offset(cx, baseY), Offset(cx, baseY - 34), strokePaint);
+    // Folhinha.
+    canvas.drawLine(
+      Offset(cx, baseY - 14),
+      Offset(cx + 8, baseY - 20),
+      strokePaint,
+    );
+    // Pétalas: cinco círculos em volta do miolo verde.
+    final center = Offset(cx, baseY - 42);
+    for (var p = 0; p < 5; p++) {
+      final angle = -math.pi / 2 + p * 2 * math.pi / 5;
+      canvas.drawCircle(
+        center + Offset(math.cos(angle), math.sin(angle)) * 7,
+        5,
+        Paint()..color = bloom.withValues(alpha: .55),
+      );
+    }
+    canvas.drawCircle(center, 4.5, Paint()..color = bloom);
+  }
+
+  void _paintSprout(Canvas canvas, double cx, double baseY, Paint strokePaint) {
+    canvas.drawLine(Offset(cx, baseY), Offset(cx, baseY - 18), strokePaint);
+    // Duas folhinhas em V.
+    canvas.drawLine(
+      Offset(cx, baseY - 18),
+      Offset(cx - 8, baseY - 26),
+      strokePaint,
+    );
+    canvas.drawLine(
+      Offset(cx, baseY - 18),
+      Offset(cx + 8, baseY - 26),
+      strokePaint,
+    );
+  }
+
+  void _paintEmptyPot(
+    Canvas canvas,
+    double cx,
+    double baseY,
+    Paint strokePaint,
+  ) {
+    final pot =
+        Path()
+          ..moveTo(cx - 7, baseY - 2)
+          ..lineTo(cx + 7, baseY - 2)
+          ..lineTo(cx + 5, baseY - 14)
+          ..lineTo(cx - 5, baseY - 14)
+          ..close();
+    canvas.drawPath(pot, strokePaint..color = soil.withValues(alpha: .45));
+  }
+
+  @override
+  bool shouldRepaint(covariant _GardenPainter oldDelegate) =>
+      oldDelegate.kinds != kinds;
 }

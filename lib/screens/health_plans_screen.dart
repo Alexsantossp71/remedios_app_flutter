@@ -50,11 +50,9 @@ class HealthPlansScreen extends StatelessWidget {
             child:
                 provider.isLoading
                     ? const Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSpacing.xl,
-                        ),
-                        child: Center(child: SkeletonList()),
-                      )
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                      child: Center(child: SkeletonList()),
+                    )
                     : _buildList(context, provider),
           ),
         );
@@ -487,121 +485,135 @@ class _HealthPlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header row
-            Row(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Faixa de carteirinha: tarja do tema com a operadora, como um
+          // cartão de convênio de verdade.
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: Text(
+              plan.provider,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w800,
+                letterSpacing: .6,
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            plan.name,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (value) {
+                        if (value == 'edit') onEdit();
+                        if (value == 'delete') onDelete();
+                      },
+                      itemBuilder:
+                          (context) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_outlined, size: 20),
+                                  SizedBox(width: 12),
+                                  Text('Editar'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.delete_outline,
+                                    size: 20,
+                                    color: AppSemanticColors.of(context).danger,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Excluir',
+                                    style: TextStyle(
+                                      color:
+                                          AppSemanticColors.of(context).danger,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                    ),
+                  ],
+                ),
+
+                // Details
+                if (plan.cardNumber != null || plan.validity != null) ...[
+                  const Divider(height: 24),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
                     children: [
-                      Text(
-                        plan.name,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        plan.provider,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      if (plan.cardNumber != null)
+                        InfoChip(
+                          icon: Icons.credit_card_outlined,
+                          label: plan.maskedCardNumber ?? plan.cardNumber!,
                         ),
-                      ),
+                      if (plan.validity != null)
+                        InfoChip(
+                          icon: Icons.calendar_today_outlined,
+                          label: 'Validade: ${plan.validity}',
+                        ),
+                      if (plan.coverageType != null)
+                        InfoChip(
+                          icon: Icons.shield_outlined,
+                          label: plan.coverageType!,
+                        ),
                     ],
                   ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (value) {
-                    if (value == 'edit') onEdit();
-                    if (value == 'delete') onDelete();
-                  },
-                  itemBuilder:
-                      (context) => [
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined, size: 20),
-                              SizedBox(width: 12),
-                              Text('Editar'),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.delete_outline,
-                                size: 20,
-                                color: AppSemanticColors.of(context).danger,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Excluir',
-                                style: TextStyle(
-                                  color: AppSemanticColors.of(context).danger,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                ),
+                ],
+
+                // Specialties
+                if (plan.specialties.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children:
+                        plan.specialties.take(5).map((s) {
+                          return Chip(
+                            label: Text(
+                              s,
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                            visualDensity: VisualDensity.compact,
+                          );
+                        }).toList(),
+                  ),
+                ],
               ],
             ),
-
-            // Details
-            if (plan.cardNumber != null || plan.validity != null) ...[
-              const Divider(height: 24),
-              Wrap(
-                spacing: 16,
-                runSpacing: 8,
-                children: [
-                  if (plan.cardNumber != null)
-                    InfoChip(
-                      icon: Icons.credit_card_outlined,
-                      label: plan.maskedCardNumber ?? plan.cardNumber!,
-                    ),
-                  if (plan.validity != null)
-                    InfoChip(
-                      icon: Icons.calendar_today_outlined,
-                      label: 'Validade: ${plan.validity}',
-                    ),
-                  if (plan.coverageType != null)
-                    InfoChip(
-                      icon: Icons.shield_outlined,
-                      label: plan.coverageType!,
-                    ),
-                ],
-              ),
-            ],
-
-            // Specialties
-            if (plan.specialties.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children:
-                    plan.specialties.take(5).map((s) {
-                      return Chip(
-                        label: Text(
-                          s,
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                        visualDensity: VisualDensity.compact,
-                      );
-                    }).toList(),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

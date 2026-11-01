@@ -680,26 +680,29 @@ class _PresetChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return ActionChip(
-      avatar: Icon(
-        active ? Icons.check_rounded : Icons.add,
-        size: 18,
-        color: active ? colorScheme.onPrimary : colorScheme.primary,
+    return Tooltip(
+      message: active ? 'Remover $label' : 'Adicionar $label',
+      child: ActionChip(
+        avatar: Icon(
+          active ? Icons.check_rounded : Icons.add,
+          size: 18,
+          color: active ? colorScheme.onPrimary : colorScheme.primary,
+        ),
+        label: Text(label),
+        labelStyle: TextStyle(
+          fontFamily: 'Nunito',
+          fontWeight: FontWeight.w700,
+          color: active ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+        ),
+        backgroundColor: active ? colorScheme.primary : null,
+        side:
+            active
+                ? BorderSide.none
+                : BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: .5),
+                ),
+        onPressed: onPressed,
       ),
-      label: Text(label),
-      labelStyle: TextStyle(
-        fontFamily: 'Nunito',
-        fontWeight: FontWeight.w700,
-        color: active ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-      ),
-      backgroundColor: active ? colorScheme.primary : null,
-      side:
-          active
-              ? BorderSide.none
-              : BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: .5),
-              ),
-      onPressed: onPressed,
     );
   }
 }

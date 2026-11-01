@@ -443,6 +443,21 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   }
 }
 
+/// Iniciais para o avatar do crachá ("Ana Silva" → "AS").
+String _initials(String name) {
+  final parts =
+      name
+          .trim()
+          .split(RegExp(r'\s+'))
+          .where((part) => part.isNotEmpty)
+          .toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first.characters.first.toUpperCase();
+  final first = parts.first.characters.first;
+  final last = parts.last.characters.first;
+  return (first + last).toUpperCase();
+}
+
 class _DoctorTile extends StatelessWidget {
   const _DoctorTile({
     required this.doctor,
@@ -473,15 +488,31 @@ class _DoctorTile extends StatelessWidget {
     ].where((value) => value.isNotEmpty).join(' · ');
 
     return Card(
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Faixa de credencial: o card lê como um crachá.
+            Container(
+              width: 5,
+              height: 96,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const SizedBox(width: 12),
             CircleAvatar(
               backgroundColor: theme.colorScheme.primaryContainer,
               foregroundColor: theme.colorScheme.onPrimaryContainer,
-              child: const Icon(Icons.medical_services_outlined),
+              child: Text(
+                _initials(doctor.name),
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -512,11 +543,10 @@ class _DoctorTile extends StatelessWidget {
                       ),
                       IconButton(
                         tooltip: 'Verificar gratuitamente no CFM',
-                        visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints.tightFor(
-                          width: 36,
-                          height: 36,
+                          width: 48,
+                          height: 48,
                         ),
                         onPressed: onVerifyCfm,
                         icon: const Icon(Icons.verified_outlined, size: 20),
