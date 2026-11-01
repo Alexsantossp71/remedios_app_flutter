@@ -6,12 +6,15 @@ import 'package:provider/provider.dart';
 import '../models/health_plan.dart';
 import '../providers/health_plan_provider.dart';
 import '../providers/user_profile_provider.dart';
+import '../core/theme/app_theme.dart';
 import '../services/card_reader_service.dart';
 import '../widgets/add_health_plan_sheet.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/health_plan_form_dialog.dart';
+import '../widgets/info_chip.dart';
 import '../widgets/privacy_notice.dart';
+import '../widgets/reading_dialog.dart';
 import '../widgets/section_header.dart';
 import 'health_plan_review_screen.dart';
 
@@ -187,10 +190,10 @@ class HealthPlansScreen extends StatelessWidget {
     // depende da leitura terminar. Awaitar aqui trava a tela para sempre sem
     // nunca enviar a imagem.
     unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const _ReadingCardDialog(),
+      showReadingDialog(
+        context,
+        title: 'Lendo o cartão…',
+        subtitle: 'Procurando operadora e número de carteirinha.',
       ),
     );
 
@@ -409,28 +412,8 @@ class HealthPlansScreen extends StatelessWidget {
   }
 }
 
-/// Diálogo modal exibido enquanto o cartão está sendo lido.
-class _ReadingCardDialog extends StatelessWidget {
-  const _ReadingCardDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      content: Row(
-        children: [
-          const CircularProgressIndicator(strokeWidth: 3),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Text(
-              'Lendo o cartão…',
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+/// A leitura usa o [ReadingDialog] — componente único compartilhado
+/// com Tratamentos e Médicos.
 
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({required this.count});
@@ -548,12 +531,15 @@ class _HealthPlanCard extends StatelessWidget {
                               Icon(
                                 Icons.delete_outline,
                                 size: 20,
-                                color: Colors.red,
+                                color: AppSemanticColors.of(context).danger,
                               ),
                               const SizedBox(width: 12),
                               Text(
                                 'Excluir',
-                                style: TextStyle(color: Colors.red),
+                                style: TextStyle(
+                                  color:
+                                      AppSemanticColors.of(context).danger,
+                                ),
                               ),
                             ],
                           ),
@@ -571,17 +557,17 @@ class _HealthPlanCard extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   if (plan.cardNumber != null)
-                    _InfoChip(
+                    InfoChip(
                       icon: Icons.credit_card_outlined,
                       label: plan.maskedCardNumber ?? plan.cardNumber!,
                     ),
                   if (plan.validity != null)
-                    _InfoChip(
+                    InfoChip(
                       icon: Icons.calendar_today_outlined,
                       label: 'Validade: ${plan.validity}',
                     ),
                   if (plan.coverageType != null)
-                    _InfoChip(
+                    InfoChip(
                       icon: Icons.shield_outlined,
                       label: plan.coverageType!,
                     ),
@@ -610,34 +596,6 @@ class _HealthPlanCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 16,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
     );
   }
 }

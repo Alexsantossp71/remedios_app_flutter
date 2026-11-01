@@ -11,8 +11,10 @@ class EmptyState extends StatelessWidget {
     this.illustration,
     this.actionLabel,
     this.onAction,
+    this.actionIcon,
     this.secondaryActionLabel,
     this.onSecondaryAction,
+    this.secondaryActionIcon,
   });
 
   final IconData icon;
@@ -24,8 +26,14 @@ class EmptyState extends StatelessWidget {
   final EmptyIllustrationKind? illustration;
   final String? actionLabel;
   final VoidCallback? onAction;
+
+  /// Ícone do CTA primário (padrão: adicionar).
+  final IconData? actionIcon;
   final String? secondaryActionLabel;
   final VoidCallback? onSecondaryAction;
+
+  /// Ícone do CTA secundário (padrão: câmera — em geral a receita).
+  final IconData? secondaryActionIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +83,7 @@ class EmptyState extends StatelessWidget {
               const SizedBox(height: 18),
               FilledButton.icon(
                 onPressed: onAction,
-                icon: const Icon(Icons.add),
+                icon: Icon(actionIcon ?? Icons.add),
                 label: Text(actionLabel!),
               ),
             ],
@@ -83,7 +91,7 @@ class EmptyState extends StatelessWidget {
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: onSecondaryAction,
-                icon: const Icon(Icons.photo_camera_outlined),
+                icon: Icon(secondaryActionIcon ?? Icons.photo_camera_outlined),
                 label: Text(secondaryActionLabel!),
               ),
             ],

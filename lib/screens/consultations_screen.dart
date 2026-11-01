@@ -6,6 +6,7 @@ import '../models/consultation.dart';
 import '../models/doctor.dart';
 import '../providers/consultation_provider.dart';
 import '../providers/doctor_provider.dart';
+import '../core/theme/app_theme.dart';
 import '../widgets/consultation_form_dialog.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
@@ -80,6 +81,7 @@ class ConsultationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final consultationProvider = context.watch<ConsultationProvider>();
     final doctorProvider = context.watch<DoctorProvider>();
+    final semantic = AppSemanticColors.of(context);
 
     final allUpcoming = consultationProvider.upcomingConsultations;
     final past = consultationProvider.pastConsultations;
@@ -179,13 +181,13 @@ class ConsultationsScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.amber.withValues(alpha: 0.2),
+                            color: semantic.warning.withValues(alpha: 0.15),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.notification_important_rounded,
                             size: 18,
-                            color: Colors.amber,
+                            color: semantic.warning,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -194,7 +196,7 @@ class ConsultationsScreen extends StatelessWidget {
                             'Atenção: Consultas nos Próximos 5 Dias (${highlighted.length})',
                             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.amber.shade900,
+                                  color: semantic.warning,
                                 ),
                           ),
                         ),
@@ -451,6 +453,7 @@ class _ConsultationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final semantic = AppSemanticColors.of(context);
     final isUpcoming = consultation.status == ConsultationStatus.scheduled &&
         consultation.date.isAfter(DateTime.now());
 
@@ -460,18 +463,18 @@ class _ConsultationTile extends StatelessWidget {
 
     switch (consultation.status) {
       case ConsultationStatus.completed:
-        statusColor = Colors.green;
+        statusColor = semantic.success;
         statusIcon = Icons.check_circle_outline;
         statusText = 'Realizada';
         break;
       case ConsultationStatus.cancelled:
-        statusColor = Colors.red;
+        statusColor = semantic.danger;
         statusIcon = Icons.cancel_outlined;
         statusText = 'Cancelada';
         break;
       default:
         if (isHighlighted) {
-          statusColor = Colors.amber.shade800;
+          statusColor = semantic.warning;
           statusIcon = Icons.priority_high_rounded;
           final days = _daysUntil(consultation.date);
           if (days == 0) {
@@ -486,7 +489,7 @@ class _ConsultationTile extends StatelessWidget {
           statusIcon = Icons.schedule_outlined;
           statusText = 'Agendada';
         } else {
-          statusColor = Colors.orange;
+          statusColor = semantic.warning;
           statusIcon = Icons.pending_outlined;
           statusText = 'Pendente';
         }
@@ -500,11 +503,11 @@ class _ConsultationTile extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: isHighlighted
-            ? BorderSide(color: Colors.amber.shade400, width: 1.5)
+            ? BorderSide(color: semantic.warning.withValues(alpha: .55), width: 1.5)
             : BorderSide.none,
       ),
       color: isHighlighted
-          ? Colors.amber.shade50.withValues(alpha: 0.5)
+          ? semantic.warning.withValues(alpha: 0.08)
           : null,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
@@ -598,6 +601,7 @@ class _ConsultationTile extends StatelessWidget {
                     }
                   },
                   itemBuilder: (context) {
+                    final semantic = AppSemanticColors.of(context);
                     final items = <PopupMenuEntry<String>>[
                       const PopupMenuItem(
                         value: 'edit',
@@ -611,11 +615,12 @@ class _ConsultationTile extends StatelessWidget {
                     ];
 
                     if (consultation.status != ConsultationStatus.completed) {
-                      items.add(const PopupMenuItem(
+                      items.add(PopupMenuItem(
                         value: 'complete',
                         child: ListTile(
-                          leading: Icon(Icons.check_circle_outline, color: Colors.green),
-                          title: Text('Marcar como realizada'),
+                          leading: Icon(Icons.check_circle_outline,
+                              color: semantic.success),
+                          title: const Text('Marcar como realizada'),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -623,11 +628,12 @@ class _ConsultationTile extends StatelessWidget {
                     }
 
                     if (consultation.status != ConsultationStatus.cancelled) {
-                      items.add(const PopupMenuItem(
+                      items.add(PopupMenuItem(
                         value: 'cancel',
                         child: ListTile(
-                          leading: Icon(Icons.cancel_outlined, color: Colors.red),
-                          title: Text('Cancelar'),
+                          leading:
+                              Icon(Icons.cancel_outlined, color: semantic.danger),
+                          title: const Text('Cancelar'),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -635,22 +641,23 @@ class _ConsultationTile extends StatelessWidget {
                     }
 
                     if (consultation.status != ConsultationStatus.scheduled) {
-                      items.add(const PopupMenuItem(
+                      items.add(PopupMenuItem(
                         value: 'reopen',
                         child: ListTile(
-                          leading: Icon(Icons.schedule_outlined, color: Colors.blue),
-                          title: Text('Reagendar'),
+                          leading: Icon(Icons.schedule_outlined,
+                              color: theme.colorScheme.primary),
+                          title: const Text('Reagendar'),
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
                       ));
                     }
 
-                    items.add(const PopupMenuItem(
+                    items.add(PopupMenuItem(
                       value: 'delete',
                       child: ListTile(
-                        leading: Icon(Icons.delete_outline, color: Colors.red),
-                        title: Text('Excluir'),
+                        leading: Icon(Icons.delete_outline, color: semantic.danger),
+                        title: const Text('Excluir'),
                         dense: true,
                         contentPadding: EdgeInsets.zero,
                       ),

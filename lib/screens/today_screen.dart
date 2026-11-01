@@ -329,6 +329,7 @@ class _TodayConsultationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final semantic = AppSemanticColors.of(context);
     final timeFormat = DateFormat('HH:mm');
 
     Color statusColor;
@@ -337,17 +338,17 @@ class _TodayConsultationCard extends StatelessWidget {
 
     switch (consultation.status) {
       case ConsultationStatus.completed:
-        statusColor = Colors.green;
+        statusColor = semantic.success;
         statusIcon = Icons.check_circle_outline;
         statusText = 'Realizada';
         break;
       case ConsultationStatus.cancelled:
-        statusColor = Colors.red;
+        statusColor = semantic.danger;
         statusIcon = Icons.cancel_outlined;
         statusText = 'Cancelada';
         break;
       default:
-        statusColor = Colors.amber.shade800;
+        statusColor = semantic.warning;
         statusIcon = Icons.medical_services_outlined;
         statusText = 'Agendada';
     }
@@ -370,11 +371,11 @@ class _TodayConsultationCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: Colors.amber.shade300,
+          color: semantic.warning.withValues(alpha: .55),
           width: 1.5,
         ),
       ),
-      color: Colors.amber.shade50.withValues(alpha: 0.4),
+      color: semantic.warning.withValues(alpha: 0.08),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -386,12 +387,12 @@ class _TodayConsultationCard extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Colors.amber.shade100,
+                    color: semantic.warning.withValues(alpha: .15),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(
                     statusIcon,
-                    color: Colors.amber.shade900,
+                    color: statusColor,
                     size: 26,
                   ),
                 ),
@@ -405,7 +406,7 @@ class _TodayConsultationCard extends StatelessWidget {
                           Text(
                             timeFormat.format(consultation.date),
                             style: theme.textTheme.labelLarge?.copyWith(
-                              color: Colors.amber.shade900,
+                              color: statusColor,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -502,7 +503,7 @@ class _TodayConsultationCard extends StatelessWidget {
                   ],
                   child: Icon(
                     Icons.more_vert,
-                    color: Colors.amber.shade900,
+                    color: statusColor,
                   ),
                 ),
               ],
@@ -516,7 +517,7 @@ class _TodayConsultationCard extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.amber.shade100.withValues(alpha: 0.5),
+                  color: semantic.warning.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -524,14 +525,14 @@ class _TodayConsultationCard extends StatelessWidget {
                     Icon(
                       Icons.info_outline,
                       size: 16,
-                      color: Colors.amber.shade900,
+                      color: statusColor,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         consultation.notes,
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.amber.shade900,
+                          color: statusColor,
                         ),
                       ),
                     ),

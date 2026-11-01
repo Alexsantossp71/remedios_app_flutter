@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../providers/therapy_provider.dart';
+import '../core/theme/app_theme.dart';
 import '../widgets/section_header.dart';
 
 class ProgressScreen extends StatefulWidget {
@@ -92,12 +93,13 @@ class _ProgressScreenState extends State<ProgressScreen> {
                             ),
                             calendarBuilders: CalendarBuilders(
                               markerBuilder: (context, day, events) {
+                                final semantic = AppSemanticColors.of(context);
                                 final adherence = provider.adherenceForDay(day);
                                 if (adherence.total == 0) return null;
                                 final color = adherence.taken == adherence.total
-                                    ? Colors.green.shade600
+                                    ? semantic.success
                                     : adherence.completed == 0
-                                        ? Colors.orange.shade600
+                                        ? semantic.warning
                                         : Theme.of(context).colorScheme.primary;
                                 return Positioned(
                                   bottom: 3,
@@ -147,7 +149,7 @@ class _StatsRow extends StatelessWidget {
                 ? '—'
                 : '${(todayAdherence.adherenceRate * 100).round()}%',
             label: 'hoje',
-            color: Colors.green.shade700,
+            color: AppSemanticColors.of(context).success,
           ),
         ),
         const SizedBox(width: 12),
