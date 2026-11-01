@@ -53,15 +53,10 @@ class HealthPlansScreen extends StatelessWidget {
 
   Widget _buildList(BuildContext context, HealthPlanProvider provider) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+      // Folga inferior para o FAB não cobrir o último card (mesmo padrão
+      // das outras telas com ação flutuante).
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 96),
       children: [
-        Text(
-          'Meus Planos de Saúde',
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 5),
         Text(
           'Gerencie seus convênios e planos médicos.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(

@@ -69,6 +69,7 @@ class _TodayScreenState extends State<TodayScreen> {
                 selectedDay: _selectedDay,
                 isToday: isToday,
                 adherence: adherence,
+                showProgressCard: !hasNothing,
                 onSelectDay: _selectDay,
               ),
             ),
@@ -166,18 +167,33 @@ class _TodayHeader extends StatelessWidget {
     required this.selectedDay,
     required this.isToday,
     required this.adherence,
+    required this.showProgressCard,
     required this.onSelectDay,
   });
 
   final DateTime selectedDay;
   final bool isToday;
   final DayAdherence adherence;
+
+  /// Quando o dia está totalmente vazio, o estado ilustrado "Seu dia está
+  /// livre" fala por si — esconder também o cartão de progresso evita duas
+  /// mensagens de "nada aqui" competindo na mesma tela.
+  final bool showProgressCard;
   final VoidCallback onSelectDay;
+
+  /// Saudação viva: acompanha a hora do dia em vez de aparecer
+  /// "Bom dia!" à noite.
+  static String _greetingForNow() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Bom dia!';
+    if (hour < 18) return 'Boa tarde!';
+    return 'Boa noite!';
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final greeting = isToday ? 'Bom dia!' : 'Sua agenda';
+    final greeting = isToday ? _greetingForNow() : 'Sua agenda';
     final formattedDate = DateFormat("EEEE, d 'de' MMMM", 'pt_BR')
         .format(selectedDay);
 
@@ -213,66 +229,71 @@ class _TodayHeader extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                theme.colorScheme.primary,
-                theme.colorScheme.primary.withValues(alpha: .78),
-              ],
+        if (showProgressCard) ...[
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  theme.colorScheme.primary,
+                  theme.colorScheme.primary.withValues(alpha: .78),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(24),
             ),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: .18),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.favorite_rounded, color: Colors.white),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      adherence.total == 0
-                          ? 'Nenhuma dose programada'
-                          : '${adherence.taken} de ${adherence.total} doses tomadas',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      adherence.total == 0
-                          ? 'Tudo tranquilo por aqui.'
-                          : 'Cada dose é um passo importante.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: .85),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (adherence.total > 0)
-                Text(
-                  '${(adherence.adherenceRate * 100).round()}%',
-                  style: theme.textTheme.titleLarge?.copyWith(
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: .18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.favorite_rounded,
                     color: Colors.white,
-                    fontWeight: FontWeight.w900,
                   ),
                 ),
-            ],
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        adherence.total == 0
+                            ? 'Nenhuma dose programada'
+                            : '${adherence.taken} de ${adherence.total} doses tomadas',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        adherence.total == 0
+                            ? 'Tudo tranquilo por aqui.'
+                            : 'Cada dose é um passo importante.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: .85),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (adherence.total > 0)
+                  Text(
+                    '${(adherence.adherenceRate * 100).round()}%',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
