@@ -89,11 +89,48 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
+          set -o pipefail
+          # Carimbo do build que ESTÁ em produção agora (referência do gate
+          # seguinte: o novo deployment precisa ter last-modified maior).
+          curl -sI "https://remedios-app-flutter.vercel.app/main.dart.js" \
+            | grep -i '^last-modified:' \
+            | sed 's/^[Ll]ast-[Mm]odified: *//' | tr -d '\r' > prod-before.txt
+          echo "produção antes do deploy: $(cat prod-before.txt)"
           npx vercel@latest deploy --prebuilt --prod --yes --token="$VERCEL_TOKEN" 2>&1 | tee deploy-out.txt
+          # Gate: o CLI da Vercel imprime "Error: ..." e MESMO ASSIM sai com
+          # código 0 — em 12/11/2026 um "Error: Unexpected error. Please try
+          # again later." deixou o run verde, o alias de produção no build
+          # antigo e ninguém sabendo (só apareceu como bug do app na mão do
+          # usuário). O passo seguinte valida o alias contra este deployment.
+          if grep -q "Error:" deploy-out.txt; then
+            echo "::error::Vercel CLI reportou erro no deploy — produção pode ter ficado no build antigo. Reexecutar o workflow."
+            exit 1
+          fi
           # O hostname único é o que identifica ESTE deployment nos logs. O alias
           # serve à requests de Instances antigas e não carrega os logs daqui.
           grep -oE 'https://[a-z0-9-]+\.vercel\.app' deploy-out.txt | tail -1 > deployment-url.txt
           echo "deployment: $(cat deployment-url.txt)"
+
+      # Gate de publicação: o alias de produção precisa passar a servir bytes
+      # deste deployment. Compara o Last-Modified do main.dart.js em produção
+      # com o carimbo capturado antes do deploy — se não andar para a frente,
+      # o alias ficou no build antigo mesmo com o CLI verde (já aconteceu).
+      - name: Verificar que produção publicou o build novo
+        run: |
+          ANTES=$(date -u -d "$(cat prod-before.txt)" +%s 2>/dev/null || echo 0)
+          echo "referência (antes do deploy): epoch $ANTES"
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            LM=$(curl -sI "https://remedios-app-flutter.vercel.app/main.dart.js" | grep -i '^last-modified:' | sed 's/^[Ll]ast-[Mm]odified: *//' | tr -d '\r')
+            LM_S=$(date -u -d "$LM" +%s 2>/dev/null || echo 0)
+            echo "tentativa $i: produção last-modified=$LM (epoch $LM_S)"
+            if [ "$LM_S" -gt "$ANTES" ]; then
+              echo "Produção publicou o build novo."
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::Produção segue no build antigo após 5 min — alias não atualizou."
+          exit 1
 
       # Diagnóstico. O gate carrega o artefato e o handler responde 405,
       # mas a Lambda em produção devolve 500: oLauncher que a Vercel
