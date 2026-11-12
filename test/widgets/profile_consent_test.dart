@@ -130,6 +130,25 @@ void main() {
     expect(provider.profile, isNull);
   });
 
+  testWidgets('cartão de emergência mostra alergia ao vivo antes de salvar',
+      (tester) async {
+    await pumpScreen(tester);
+
+    // Perfil ainda não salvo: o cartão nem existia antes da correção.
+    expect(provider.profile, isNull);
+    expect(find.text('Cartão de emergência'), findsNothing);
+
+    // Adiciona uma alergia no editor (primeiro TextField com o ⊕).
+    await tester.enterText(find.byType(TextField).at(3), 'Dipirona');
+    await tester.tap(find.byIcon(Icons.add_circle_outline).first);
+    await tester.pumpAndSettle();
+
+    // O cartão surge e reflete o estado do formulário no mesmo instante —
+    // sem esperar o "Salvar perfil". Chip + cartão = duas ocorrências.
+    expect(find.text('Cartão de emergência'), findsOneWidget);
+    expect(find.text('Dipirona'), findsNWidgets(2));
+  });
+
   testWidgets('com consentimento marcado, salva e registra consentAt',
       (tester) async {
     await pumpScreen(tester);

@@ -439,9 +439,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-            if (profile != null) ...[
+            // Cartão de emergência ao vivo: reflete o que está no formulário
+            // agora (não só o que já foi salvo) — alergia adicionada aparece
+            // no cartão no mesmo instante. Aparece desde o primeiro uso
+            // quando o usuário começa a preencher dados de emergência.
+            if (profile != null ||
+                _tipoSanguineo != null ||
+                _alergias.isNotEmpty) ...[
               const SizedBox(height: 24),
-              _EmergencyCard(profile: profile, contacts: contacts),
+              _EmergencyCard(
+                tipoSanguineo: _tipoSanguineo,
+                alergias: _alergias,
+                contacts: contacts,
+              ),
             ],
             const SizedBox(height: 28),
             const SectionHeader(title: 'Dados pessoais'),
@@ -969,10 +979,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 /// Cartão de emergência com resumo rápido do perfil.
+///
+/// Recebe os valores ao vivo do formulário (não o perfil salvo), para que
+/// o resumo reaja na hora em que o usuário edita alergias ou tipo
+/// sanguíneo — antes de apertar "Salvar perfil".
 class _EmergencyCard extends StatelessWidget {
-  const _EmergencyCard({required this.profile, required this.contacts});
+  const _EmergencyCard({
+    required this.tipoSanguineo,
+    required this.alergias,
+    required this.contacts,
+  });
 
-  final UserProfile profile;
+  final TipoSanguineo? tipoSanguineo;
+  final List<String> alergias;
   final List<EmergencyContact> contacts;
 
   @override
@@ -1008,17 +1027,17 @@ class _EmergencyCard extends StatelessWidget {
             const SizedBox(height: 12),
             _EmergencyRow(
               label: 'Tipo sanguíneo',
-              value: profile.tipoSanguineo?.value ?? 'Não informado',
+              value: tipoSanguineo?.value ?? 'Não informado',
             ),
             const SizedBox(height: 6),
             _EmergencyRow(
               label: 'Alergias',
               value:
-                  profile.alergias.isEmpty
+                  alergias.isEmpty
                       ? 'Nenhuma'
-                      : profile.alergias.length <= 2
-                      ? profile.alergias.join(', ')
-                      : '${profile.alergias.take(2).join(', ')} (+${profile.alergias.length - 2})',
+                      : alergias.length <= 2
+                      ? alergias.join(', ')
+                      : '${alergias.take(2).join(', ')} (+${alergias.length - 2})',
             ),
             const SizedBox(height: 6),
             _EmergencyRow(
