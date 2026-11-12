@@ -1,13 +1,22 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/emergency_contact.dart';
 import '../models/user_profile.dart';
+import '../providers/consultation_provider.dart';
+import '../providers/doctor_provider.dart';
+import '../providers/health_plan_provider.dart';
+import '../providers/therapy_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../screens/doctors_screen.dart';
 import '../screens/health_plans_screen.dart';
 import '../screens/progress_screen.dart';
+import '../services/backup_file.dart';
+import '../services/backup_service.dart';
+import '../widgets/app_snack_bar.dart';
 import '../widgets/br_input_formatters.dart';
 import '../widgets/privacy_notice.dart';
 import '../widgets/section_header.dart';
@@ -35,6 +44,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<String> _condicoesCronicas = [];
   bool _consentGranted = false;
   DateTime? _consentAt;
+
+  /// True enquanto um backup está sendo exportado/restaurado.
+  bool _backupBusy = false;
 
   final _dateFormat = DateFormat('dd/MM/yyyy', 'pt_BR');
 
@@ -168,6 +180,120 @@ class _ProfileScreenState extends State<ProfileScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+    }
+  }
+
+  /// Exporta todos os dados para um arquivo .json (download na web,
+  /// Documents do app no mobile).
+  Future<void> _exportBackup() async {
+    setState(() => _backupBusy = true);
+    try {
+      final json = jsonEncode(await BackupService.instance.exportAll());
+      final savedAs = await saveBackupJson(json);
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        'Backup salvo: $savedAs',
+        type: AppSnackType.success,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      showAppSnackBar(
+        context,
+        'Não foi possível gerar o backup. Tente novamente.',
+        type: AppSnackType.error,
+      );
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
+    }
+  }
+
+  /// Restaura um backup .json escolhido pelo usuário, substituindo todos
+  /// os dados atuais, e recarrega os cinco providers.
+  Future<void> _restoreBackup() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restaurar backup'),
+        content: const Text(
+          'Restaurar substitui TUDO que está no app hoje (tratamentos, '
+          'doses, médicos, consultas, planos e perfil) pelo conteúdo do '
+          'arquivo escolhido. Esta ação não pode ser desfeita. Continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Escolher arquivo e restaurar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final String? text;
+    try {
+      text = await pickBackupJsonText();
+    } catch (_) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          'Não foi possível ler o arquivo escolhido.',
+          type: AppSnackType.error,
+        );
+      }
+      return;
+    }
+    if (text == null || !mounted) return; // usuário cancelou o seletor
+
+    setState(() => _backupBusy = true);
+    try {
+      final backup = jsonDecode(text);
+      if (backup is! Map<String, dynamic>) {
+        throw const BackupFormatException('O arquivo não contém um backup.');
+      }
+      final summary = await BackupService.instance.restore(backup);
+      if (!mounted) return;
+
+      // Captura os cinco providers antes dos awaits (BuildContext não
+      // atravessa gaps assíncronos) e recarrega a partir do banco restaurado.
+      final therapy = context.read<TherapyProvider>();
+      final doctor = context.read<DoctorProvider>();
+      final consultation = context.read<ConsultationProvider>();
+      final healthPlan = context.read<HealthPlanProvider>();
+      final userProfile = context.read<UserProfileProvider>();
+      await therapy.initialize();
+      await doctor.initialize();
+      await consultation.initialize();
+      await healthPlan.initialize();
+      await userProfile.initialize();
+      if (!mounted) return;
+      setState(() {
+        _loadFromProfile(userProfile.profile);
+      });
+      showAppSnackBar(
+        context,
+        'Backup restaurado: ${summary.describe()}.',
+        type: AppSnackType.success,
+      );
+    } on BackupFormatException catch (e) {
+      if (mounted) {
+        showAppSnackBar(context, 'Arquivo inválido: ${e.message}',
+            type: AppSnackType.error);
+      }
+    } catch (_) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          'Falha ao restaurar o backup. Nada foi alterado.',
+          type: AppSnackType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _backupBusy = false);
     }
   }
 
@@ -612,6 +738,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     },
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            const SectionHeader(title: 'Backup e restauração'),
+            const SizedBox(height: 10),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Seus dados ficam apenas neste dispositivo. Exporte um '
+                      'arquivo .json para guardar ou levar para outro '
+                      'aparelho — e restaure quando precisar.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed:
+                                _backupBusy ? null : _exportBackup,
+                            icon: _backupBusy
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.download_outlined),
+                            label: const Text('Exportar'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed:
+                                _backupBusy ? null : _restoreBackup,
+                            icon: const Icon(Icons.restore_outlined),
+                            label: const Text('Restaurar'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 28),
