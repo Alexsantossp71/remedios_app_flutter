@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui' show ImageByteFormat;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -16,6 +19,7 @@ import '../screens/health_plans_screen.dart';
 import '../screens/progress_screen.dart';
 import '../services/backup_file.dart';
 import '../services/backup_service.dart';
+import '../services/emergency_card_share_service.dart';
 import '../services/web_reminder_service.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/br_input_formatters.dart';
@@ -445,11 +449,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // quando o usuário começa a preencher dados de emergência.
             if (profile != null ||
                 _tipoSanguineo != null ||
-                _alergias.isNotEmpty) ...[
+                _alergias.isNotEmpty ||
+                _condicoesCronicas.isNotEmpty) ...[
               const SizedBox(height: 24),
               _EmergencyCard(
                 tipoSanguineo: _tipoSanguineo,
                 alergias: _alergias,
+                condicoesCronicas: _condicoesCronicas,
                 contacts: contacts,
               ),
             ],
@@ -981,77 +987,228 @@ class _ProfileScreenState extends State<ProfileScreen> {
 /// Cartão de emergência com resumo rápido do perfil.
 ///
 /// Recebe os valores ao vivo do formulário (não o perfil salvo), para que
-/// o resumo reaja na hora em que o usuário edita alergias ou tipo
-/// sanguíneo — antes de apertar "Salvar perfil".
-class _EmergencyCard extends StatelessWidget {
+/// o resumo reaja na hora em que o usuário edita alergias, condições
+/// crônicas ou tipo sanguíneo — antes de apertar "Salvar perfil".
+///
+/// O botão de compartilhar captura o próprio cartão como imagem PNG
+/// (RepaintBoundary) e abre a folha de compartilhamento do sistema; no
+/// navegador, quando não há suporte a compartilhar arquivos, o PNG é
+/// baixado direto.
+class _EmergencyCard extends StatefulWidget {
   const _EmergencyCard({
     required this.tipoSanguineo,
     required this.alergias,
+    required this.condicoesCronicas,
     required this.contacts,
   });
 
   final TipoSanguineo? tipoSanguineo;
   final List<String> alergias;
+  final List<String> condicoesCronicas;
   final List<EmergencyContact> contacts;
+
+  @override
+  State<_EmergencyCard> createState() => _EmergencyCardState();
+}
+
+class _EmergencyCardState extends State<_EmergencyCard> {
+  /// RepaintBoundary que delimita o que entra na imagem compartilhada.
+  final _boundaryKey = GlobalKey();
+
+  /// True enquanto a imagem está sendo gerada/compartilhada.
+  bool _compartilhando = false;
+
+  Future<void> _compartilharComoImagem() async {
+    if (_compartilhando) return;
+    final boundary =
+        _boundaryKey.currentContext?.findRenderObject()
+            as RenderRepaintBoundary?;
+    if (boundary == null) return;
+
+    // A captura acontece ANTES do spinner: a imagem é sempre do cartão
+    // completo, nunca com o indicador de progresso por cima.
+    final Uint8List pngBytes;
+    try {
+      final image = await boundary.toImage(pixelRatio: 3.0);
+      final byteData = await image.toByteData(format: ImageByteFormat.png);
+      if (byteData == null) {
+        throw StateError('Falha ao codificar PNG do cartão de emergência');
+      }
+      pngBytes = byteData.buffer.asUint8List();
+    } catch (_) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          'Não foi possível gerar a imagem do cartão.',
+          type: AppSnackType.error,
+        );
+      }
+      return;
+    }
+
+    setState(() => _compartilhando = true);
+    try {
+      final agora = DateTime.now();
+      await shareEmergencyCardImage(
+        pngBytes: pngBytes,
+        fileName: 'cartao-emergencia-${_stampArquivo(agora)}.png',
+        sharePositionOrigin: _rectDaTela(),
+      );
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          'Imagem do cartão gerada — compartilhe ou salve onde quiser.',
+          type: AppSnackType.success,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          'Não foi possível compartilhar o cartão agora.',
+          type: AppSnackType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _compartilhando = false);
+    }
+  }
+
+  /// Retângulo do cartão em coordenadas globais — âncora do popover de
+  /// compartilhamento no iPad/macOS; ignorado nas demais plataformas.
+  Rect? _rectDaTela() {
+    final box = _boundaryKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached) return null;
+    final position = box.localToGlobal(Offset.zero);
+    return position & box.size;
+  }
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final mainContact = contacts.isNotEmpty ? contacts.first : null;
+    final mainContact = widget.contacts.isNotEmpty
+        ? widget.contacts.first
+        : null;
 
     return Card(
       color: colorScheme.errorContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.medical_information_outlined,
-                  color: colorScheme.onErrorContainer,
-                  size: 22,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Cartão de emergência',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colorScheme.onErrorContainer,
+      child: Stack(
+        children: [
+          // A captura (RepaintBoundary) cobre o conteúdo inteiro do cartão,
+          // com fundo sólido — assim o PNG não sai com fundo transparente
+          // e leva título, linhas e rodapé prontos para quem receber.
+          RepaintBoundary(
+            key: _boundaryKey,
+            child: Container(
+              color: colorScheme.errorContainer,
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.medical_information_outlined,
+                        color: colorScheme.onErrorContainer,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Cartão de emergência',
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  _EmergencyRow(
+                    label: 'Tipo sanguíneo',
+                    value: widget.tipoSanguineo?.value ?? 'Não informado',
+                  ),
+                  const SizedBox(height: 6),
+                  _EmergencyRow(
+                    label: 'Alergias',
+                    value: _resumoLista(widget.alergias),
+                  ),
+                  const SizedBox(height: 6),
+                  _EmergencyRow(
+                    label: 'Condições crônicas',
+                    value: _resumoLista(widget.condicoesCronicas),
+                  ),
+                  const SizedBox(height: 6),
+                  _EmergencyRow(
+                    label: 'Contato de emergência',
+                    value:
+                        mainContact != null
+                            ? '${mainContact.nome} — ${mainContact.telefone}'
+                            : 'Nenhum cadastrado',
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Remédio na Hora • Gerado em ${_stampRodape(DateTime.now())}',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onErrorContainer.withValues(
+                        alpha: 0.6,
+                      ),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            _EmergencyRow(
-              label: 'Tipo sanguíneo',
-              value: tipoSanguineo?.value ?? 'Não informado',
-            ),
-            const SizedBox(height: 6),
-            _EmergencyRow(
-              label: 'Alergias',
-              value:
-                  alergias.isEmpty
-                      ? 'Nenhuma'
-                      : alergias.length <= 2
-                      ? alergias.join(', ')
-                      : '${alergias.take(2).join(', ')} (+${alergias.length - 2})',
-            ),
-            const SizedBox(height: 6),
-            _EmergencyRow(
-              label: 'Contato de emergência',
-              value:
-                  mainContact != null
-                      ? '${mainContact.nome} — ${mainContact.telefone}'
-                      : 'Nenhum cadastrado',
-            ),
-          ],
-        ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child:
+                _compartilhando
+                    ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2.4),
+                      ),
+                    )
+                    : IconButton(
+                      tooltip: 'Compartilhar como imagem',
+                      icon: const Icon(Icons.ios_share_outlined),
+                      color: colorScheme.onErrorContainer,
+                      onPressed: _compartilharComoImagem,
+                    ),
+          ),
+        ],
       ),
     );
   }
+}
+
+/// Resumo compacto de uma lista do cartão: 'Nenhuma' quando vazia,
+/// itens separados por vírgula e "(+N)" quando passa de dois.
+String _resumoLista(List<String> valores) {
+  if (valores.isEmpty) return 'Nenhuma';
+  if (valores.length <= 2) return valores.join(', ');
+  return '${valores.take(2).join(', ')} (+${valores.length - 2})';
+}
+
+/// Carimbo para o nome do arquivo: YYYYMMDD-HHMMSS.
+///
+/// Formatação manual (sem intl) para não depender do locale inicializado.
+String _stampArquivo(DateTime d) {
+  String p2(int v) => v.toString().padLeft(2, '0');
+  return '${d.year.toString().padLeft(4, '0')}${p2(d.month)}${p2(d.day)}'
+      '-${p2(d.hour)}${p2(d.minute)}${p2(d.second)}';
+}
+
+/// Carimbo legível para o rodapé da imagem: dd/MM/yyyy HH:mm.
+String _stampRodape(DateTime d) {
+  String p2(int v) => v.toString().padLeft(2, '0');
+  return '${p2(d.day)}/${p2(d.month)}/${d.year} ${p2(d.hour)}:${p2(d.minute)}';
 }
 
 class _EmergencyRow extends StatelessWidget {
