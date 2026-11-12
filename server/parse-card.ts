@@ -52,6 +52,24 @@ function indexAfterLabel(line: string, label: string): number {
   return match.index + match[0].length;
 }
 
+/** Índice da primeira linha com conteúdo na direção indicada, pulando até
+ * `maxGap` linhas em branco — o Tesseract costuma soltar linhas em branco
+ * entre o rótulo e o valor ("Validade:", "", "04/2028"), e exigir
+ * adjacência imediata perde o campo. Devolve -1 quando não encontra. */
+function nextContentLine(
+  foldedLines: string[],
+  from: number,
+  direction: 1 | -1,
+  maxGap = 3,
+): number {
+  for (let step = 1; step <= maxGap; step += 1) {
+    const index = from + direction * step;
+    if (index < 0 || index >= foldedLines.length) return -1;
+    if (foldedLines[index].trim()) return index;
+  }
+  return -1;
+}
+
 function longestDigitRun(text: string, minimum = 3): string {
   const runs = text.match(/\d+/g) ?? [];
   let best = '';
@@ -80,7 +98,9 @@ function valueForLabel(
       if (cut === -1) continue;
       const sameLine = longestDigitRun(stripDates(line.slice(cut)), minimum);
       if (sameLine) return sameLine;
-      const nextLine = longestDigitRun(stripDates(foldedLines[i + 1] ?? ''), minimum);
+      const below = nextContentLine(foldedLines, i, 1);
+      if (below === -1) continue;
+      const nextLine = longestDigitRun(stripDates(foldedLines[below]), minimum);
       if (nextLine) return nextLine;
     }
   }
@@ -121,6 +141,7 @@ const CARD_NUMBER_LABELS = [
   'CARTAO SAUDE',
   'NUMERO DO CARTAO',
   'N CARTEIRINHA',
+  'N CARTAO',
 ];
 
 const GROUP_LABELS = ['CODIGO DO GRUPO', 'GRUPO', 'GRP'];
@@ -317,18 +338,20 @@ function findHolder(foldedLines: string[], rawLines: string[]): string {
       if (isPersonName(foldedLines[i].slice(cut))) {
         return rawLines[i].slice(cut).trim();
       }
-      const above = (foldedLines[i - 1] ?? '').trim();
+      const aboveIndex = nextContentLine(foldedLines, i, -1);
+      const above = aboveIndex !== -1 ? foldedLines[aboveIndex].trim() : '';
       // Linha de cima com palavra-chave de plano ("E Salutá PLANO
       // FAMILIAR" / "Titular") é marca do cartão, não o titular — o nome
       // está abaixo do rótulo nesse layout.
       const aboveIsBrand =
         PLAN_KEYWORDS.some((keyword) => hasLabel(above, keyword));
       if (!aboveIsBrand && isPersonName(above)) {
-        return (rawLines[i - 1] ?? '').trim();
+        return (rawLines[aboveIndex] ?? '').trim();
       }
-      const below = (foldedLines[i + 1] ?? '').trim();
+      const belowIndex = nextContentLine(foldedLines, i, 1);
+      const below = belowIndex !== -1 ? foldedLines[belowIndex].trim() : '';
       if (isPersonName(below)) {
-        return (rawLines[i + 1] ?? '').trim();
+        return (rawLines[belowIndex] ?? '').trim();
       }
     }
   }
@@ -413,7 +436,10 @@ export function parseCardText(rawText: string): CardFields {
         const cut = indexAfterLabel(foldedLines[i], label);
         if (cut === -1) continue;
         let source = extract(foldedLines[i].slice(cut));
-        if (!source) source = extract(foldedLines[i + 1] ?? '');
+        if (!source) {
+          const below = nextContentLine(foldedLines, i, 1);
+          if (below !== -1) source = extract(foldedLines[below]);
+        }
         if (!source) {
           // Layout em colunas: o OCR lineariza valor antes do rótulo
           // ("PRIVATIVA 30/04/2023" / "Acomodação Validade"; "30/10/2009

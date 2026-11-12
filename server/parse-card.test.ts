@@ -71,6 +71,34 @@ test('sem rótulo de cartão, usa a maior sequência longa de dígitos', () => {
   assert.equal(card.cardNumber, '112233445566778899');
 });
 
+test('linha em branco entre rótulo e valor não perde o campo (OCR real: "Validade:", "", "04/2028")', () => {
+  const card = parseCardText(
+    'UNIMED Nacional Plus\nN Cartao:\n0611 4002 7385 6021\nNome do titular:\nMARIA APARECIDA SOUZA\nValidade:\n\n04/2028',
+  );
+  assert.equal(card.validity, '04/2028');
+  assert.equal(card.cardNumber, '0611400273856021');
+});
+
+test('código de beneficiário após linha em branco também é casado', () => {
+  const card = parseCardText('UNIMED\nBENEFICIARIO:\n\n456789123\nVALIDADE 12/2028');
+  assert.equal(card.beneficiaryCode, '456789123');
+});
+
+test('titular a duas linhas do rótulo (linha em branco no meio) é encontrado', () => {
+  const card = parseCardText('UNIMED\nNOME DO TITULAR:\n\nMARIA APARECIDA SOUZA');
+  assert.equal(card.notes, 'Titular: MARIA APARECIDA SOUZA');
+});
+
+test('rótulo N CARTAO é reconhecido (layout "N Cartao:")', () => {
+  const card = parseCardText('UNIMED\nN CARTAO 0611400273856021\nVALIDADE 12/2028');
+  assert.equal(card.cardNumber, '0611400273856021');
+});
+
+test('gap de linhas em branco não inventa validade de rótulo sem data', () => {
+  const card = parseCardText('UNIMED\nVALIDADE:\n\nNOME DO TITULAR:\nMARIA SOUZA');
+  assert.equal(card.validity, '');
+});
+
 test('rejeita mês inválido na validade', () => {
   const card = parseCardText('UNIMED\nVALIDADE 19/2028');
   assert.equal(card.validity, '');
