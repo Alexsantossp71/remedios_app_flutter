@@ -104,6 +104,32 @@ void main() {
     expect(provider.profile, isNull);
   });
 
+  testWidgets('com campo inválido, salvar mostra aviso e não grava',
+      (tester) async {
+    await pumpScreen(tester);
+
+    await tester.enterText(find.byType(TextFormField).first, 'Maria Silva');
+    // Telefone com 5 dígitos: válido ao olhar, inválido para o validador.
+    // O campo fica longe do botão "Salvar perfil" — antes da correção o
+    // toque não produzia reação visível (erro fora da viewport).
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Telefone'),
+      '99999',
+    );
+
+    await tester.ensureVisible(saveProfileButton);
+    await tester.tap(saveProfileButton);
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Verifique os campos destacados em vermelho para salvar o perfil.',
+      ),
+      findsOneWidget,
+    );
+    expect(provider.profile, isNull);
+  });
+
   testWidgets('com consentimento marcado, salva e registra consentAt',
       (tester) async {
     await pumpScreen(tester);

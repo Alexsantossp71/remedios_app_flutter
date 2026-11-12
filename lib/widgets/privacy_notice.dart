@@ -133,38 +133,44 @@ class ConsentCheckbox extends StatelessWidget {
           width: 1.5,
         ),
       ),
-      child: CheckboxListTile(
-        value: value,
-        onChanged: locked ? null : onChanged,
-        controlAffinity: ListTileControlAffinity.leading,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-        checkboxShape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
-        title: Text(
-          'Autorizo o tratamento dos meus dados sensíveis de saúde '
-          '(tipo sanguíneo, alergias, condições crônicas, peso, altura, '
-          'observações e contatos de emergência), conforme o aviso de '
-          'privacidade acima.',
-          style: theme.textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            height: 1.4,
+      // Material transparente: o ListTile precisa de um ancestral Material
+      // próprio para pintar fundo e ink splash — o Container decorado acima
+      // esconde esses efeitos e dispara assertion no Flutter 3.47+.
+      child: Material(
+        type: MaterialType.transparency,
+        child: CheckboxListTile(
+          value: value,
+          onChanged: locked ? null : onChanged,
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          checkboxShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(4),
           ),
-        ),
-        subtitle:
-            locked
-                ? Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(
-                    'Consentimento registrado em '
-                    '${DateFormat('dd/MM/yyyy HH:mm').format(grantedAt!.toLocal())}. '
-                    'Para revogar, use “Apagar meus dados”.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onPrimaryContainer,
+          title: Text(
+            'Autorizo o tratamento dos meus dados sensíveis de saúde '
+            '(tipo sanguíneo, alergias, condições crônicas, peso, altura, '
+            'observações e contatos de emergência), conforme o aviso de '
+            'privacidade acima.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              height: 1.4,
+            ),
+          ),
+          subtitle:
+              locked
+                  ? Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Consentimento registrado em '
+                      '${DateFormat('dd/MM/yyyy HH:mm').format(grantedAt!.toLocal())}. '
+                      'Para revogar, use “Apagar meus dados”.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onPrimaryContainer,
+                      ),
                     ),
-                  ),
-                )
-                : null,
+                  )
+                  : null,
+        ),
       ),
     );
   }
