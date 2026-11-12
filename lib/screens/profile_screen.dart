@@ -32,6 +32,21 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // Chave por campo: permite rolar a tela até o primeiro erro de
+  // validação quando o usuário toca em "Salvar perfil" — sem isso,
+  // um CPF/peso inválido bem acima do botão deixava o toque sem
+  // reação visível (o erro aparecia fora da viewport).
+  final _nomeFieldKey = GlobalKey();
+  final _cpfFieldKey = GlobalKey();
+  final _telefoneFieldKey = GlobalKey();
+  final _pesoFieldKey = GlobalKey();
+  final _alturaFieldKey = GlobalKey();
+
+  /// Primeiro campo que falhou na validação corrente. Os validadores
+  /// rodam na ordem visual do formulário, então o primeiro a registrar
+  /// é o mais alto na tela — é até lá que a rolagem leva o usuário.
+  GlobalKey? _firstInvalidFieldKey;
+
   late final TextEditingController _nomeController;
   late final TextEditingController _cpfController;
   late final TextEditingController _telefoneController;
@@ -121,7 +136,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
+    _firstInvalidFieldKey = null;
+    if (!_formKey.currentState!.validate()) {
+      await _revealInvalidField();
+      if (mounted) {
+        showAppSnackBar(
+          context,
+          'Verifique os campos destacados em vermelho para salvar o perfil.',
+          type: AppSnackType.error,
+        );
+      }
+      return;
+    }
 
     final provider = context.read<UserProfileProvider>();
     final now = DateTime.now().toUtc().toIso8601String();
@@ -130,14 +156,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // específico e destacado (art. 11).
     if (!_consentGranted) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Autorize o tratamento dos seus dados de saúde para salvar '
-              'o perfil.',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
+        showAppSnackBar(
+          context,
+          'Autorize o tratamento dos seus dados de saúde para salvar o '
+          'perfil.',
         );
       }
       return;
@@ -175,13 +197,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (mounted) {
       setState(() => _consentAt = consentAt);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Perfil salvo com sucesso!'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      showAppSnackBar(
+        context,
+        'Perfil salvo com sucesso!',
+        type: AppSnackType.success,
       );
     }
+  }
+
+  /// Traz à viewport o primeiro campo com erro de validação.
+  Future<void> _revealInvalidField() async {
+    final target = _firstInvalidFieldKey?.currentContext;
+    if (target == null) return;
+    await Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+      alignment: 0.2,
+    );
   }
 
   /// Exporta todos os dados para um arquivo .json (download na web,
@@ -420,6 +453,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     TextFormField(
+                      key: _nomeFieldKey,
                       controller: _nomeController,
                       decoration: const InputDecoration(
                         labelText: 'Nome',
@@ -429,6 +463,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       textCapitalization: TextCapitalization.words,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
+                          _firstInvalidFieldKey ??= _nomeFieldKey;
                           return 'Informe seu nome';
                         }
                         return null;
@@ -436,6 +471,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      key: _cpfFieldKey,
                       controller: _cpfController,
                       decoration: const InputDecoration(
                         labelText: 'CPF',
@@ -474,6 +510,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
+                      key: _telefoneFieldKey,
                       controller: _telefoneController,
                       decoration: const InputDecoration(
                         labelText: 'Telefone',
@@ -527,6 +564,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Expanded(
                           child: TextFormField(
+                            key: _pesoFieldKey,
                             controller: _pesoController,
                             decoration: const InputDecoration(
                               labelText: 'Peso (kg)',
@@ -542,6 +580,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: TextFormField(
+                            key: _alturaFieldKey,
                             controller: _alturaController,
                             decoration: const InputDecoration(
                               labelText: 'Altura (m)',
@@ -849,6 +888,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// CPF opcional: se preenchido, precisa ter 11 dígitos com dígitos
   /// verificadores válidos.
   String? _validateCpf(String? value) {
+    final error = _cpfError(value);
+    if (error != null) _firstInvalidFieldKey ??= _cpfFieldKey;
+    return error;
+  }
+
+  String? _cpfError(String? value) {
     final trimmed = value?.trim() ?? '';
     if (trimmed.isEmpty) return null;
     final digits = trimmed.replaceAll(RegExp(r'\D'), '');
@@ -874,6 +919,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Telefone opcional: se preenchido, precisa ter 10 ou 11 dígitos.
   String? _validateTelefone(String? value) {
+    final error = _telefoneError(value);
+    if (error != null) _firstInvalidFieldKey ??= _telefoneFieldKey;
+    return error;
+  }
+
+  String? _telefoneError(String? value) {
     final trimmed = value?.trim() ?? '';
     if (trimmed.isEmpty) return null;
     final digits = trimmed.replaceAll(RegExp(r'\D'), '');
@@ -885,6 +936,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// Peso opcional: se preenchido, deve ser um número entre 1 e 500 kg.
   String? _validatePeso(String? value) {
+    final error = _pesoError(value);
+    if (error != null) _firstInvalidFieldKey ??= _pesoFieldKey;
+    return error;
+  }
+
+  String? _pesoError(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     final peso = _parseNumber(value);
     if (peso == null) return 'Informe um peso válido';
@@ -895,6 +952,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// Altura opcional: se preenchida, deve ser um número entre 0,30 e
   /// 3,00 metros.
   String? _validateAltura(String? value) {
+    final error = _alturaError(value);
+    if (error != null) _firstInvalidFieldKey ??= _alturaFieldKey;
+    return error;
+  }
+
+  String? _alturaError(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     final altura = _parseNumber(value);
     if (altura == null) return 'Informe uma altura válida';
