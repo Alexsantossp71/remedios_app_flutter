@@ -11,6 +11,7 @@ import 'providers/therapy_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'screens/main_shell.dart';
 import 'services/notification_service.dart';
+import 'services/web_reminder_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,6 +32,10 @@ Future<void> main() async {
   await consultationProvider.initialize();
   await healthPlanProvider.initialize();
   await userProfileProvider.initialize();
+
+  // Web: lembrete de dose enquanto o app está aberto no navegador (no-op
+  // em mobile, onde os alarmes do sistema fazem esse papel — ADR 0005).
+  WebReminderService.instance.attach(therapyProvider);
 
   runApp(
     MultiProvider(
