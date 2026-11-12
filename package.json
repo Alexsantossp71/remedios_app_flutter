@@ -13,6 +13,7 @@
     "verify:build": "node scripts/verify-vercel-build.mjs"
   },
   "dependencies": {
+    "jpeg-js": "^0.4.4",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {

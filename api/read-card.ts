@@ -26,13 +26,15 @@
  * comum aqui, sem `.get()`.
  */
 
-import { parseCardText } from '../server/parse-card.ts';
+import { parseCardText, type CardFields } from '../server/parse-card.ts';
 import {
   clientIp,
   createRateLimiter,
   parseBody,
-  recognizeText,
+  preprocessCardImage,
+  recognizeBuffer,
   sendJson,
+  withDeadline,
   type NodeRequestLike,
   type NodeResponseLike,
 } from '../server/ocr-runtime.ts';
@@ -90,26 +92,86 @@ export default async function handler(
 
   rateLimiter.register(ip);
 
-  let rawText: string;
-  try {
-    rawText = await recognizeText(image, 'read-card');
-  } catch (err) {
+  // Duas passadas de OCR: a imagem original e a imagem preprocessada
+  // (alpha nivelado, ampliada, inclinação corrigida, contraste esticado).
+  // Carteirinhas reais mostram que cada passada ganha em cenários diferentes
+  // — scans limpos leem melhor sem intervenção; fotos tortas/pequenas só
+  // leem com preprocessamento. A melhor leitura vence por:
+  //   campos preenchidos (peso 1000 cada) > confiança do Tesseract (×10)
+  //   > volume de texto bruto. Nada é misturado entre passadas.
+  const originalBuffer = Buffer.from(image, 'base64');
+  const preparedBuffer = preprocessCardImage(originalBuffer, mimeType);
+
+  const [originalPass, preparedPass] = await Promise.all([
+    (async () => {
+      try {
+        return await withDeadline(recognizeBuffer(originalBuffer), 'recognize');
+      } catch (err) {
+        console.error(
+          '[read-card] OCR original falhou:',
+          err instanceof Error ? err.message : String(err),
+        );
+        return null;
+      }
+    })(),
+    (async () => {
+      if (preparedBuffer === originalBuffer) return null; // nada a preprocessar
+      try {
+        return await withDeadline(recognizeBuffer(preparedBuffer), 'recognize');
+      } catch (err) {
+        console.error(
+          '[read-card] OCR preprocessado falhou:',
+          err instanceof Error ? err.message : String(err),
+        );
+        return null;
+      }
+    })(),
+  ]);
+
+  if (!originalPass && !preparedPass) {
     // Sem este log, "traineddata ausente", "WASM quebrado" e "timeout"
-    // chegam ao cliente como o mesmo 502 unreadable — indistinguíveis de fora,
-    // e cada hipótese custa um deploy inteiro.
-    console.error(
-      '[read-card] OCR falhou:',
-      err instanceof Error ? err.message : String(err),
-    );
+    // chegam ao cliente como o mesmo 502 unreadable — indistinguíveis de
+    // fora, e cada hipótese custa um deploy inteiro.
     sendJson(res, 502, { error: 'unreadable' });
     return;
   }
 
-  // Texto vazio (foto sem nada legível) não é erro: os campos vão vazios e o
-  // cliente Dart já mostra "não encontrei dados, tente outra foto".
-  const card = parseCardText(rawText);
+  const candidates = [
+    { pass: originalPass, card: originalPass ? parseCardText(originalPass.text) : null },
+    { pass: preparedPass, card: preparedPass ? parseCardText(preparedPass.text) : null },
+  ].filter((entry) => entry.card !== null) as {
+    pass: { text: string; confidence: number };
+    card: CardFields;
+  }[];
+
+  let best = candidates[0];
+  let bestScore = -1;
+  for (const entry of candidates) {
+    const score = scoreCardRead(entry.card, entry.pass.confidence);
+    if (score > bestScore) {
+      bestScore = score;
+      best = entry;
+    }
+  }
+
   sendJson(res, 200, {
-    content: JSON.stringify(card),
+    content: JSON.stringify(best.card),
     model: 'tesseract-ocr',
   });
+}
+
+/** Pontua uma leitura: mais campos preenchidos ganha; empate pela confiança
+ * do OCR e, por fim, pelo volume de texto (carteirinha lida > página em
+ * branco). Sempre >= 0 porque a confiança pode ser 0. */
+function scoreCardRead(card: CardFields, confidence: number): number {
+  const filled = [
+    card.name,
+    card.provider,
+    card.cardNumber,
+    card.groupNumber,
+    card.beneficiaryCode,
+    card.validity,
+    card.coverageType,
+  ].filter((value) => value && value.trim().length > 0).length;
+  return filled * 1000 + confidence * 10 + Math.min(card.rawText.length, 400);
 }
