@@ -72,14 +72,16 @@ void main() {
     });
 
     test('Treatment semanal persiste e recarrega com os dias da semana', () async {
-      final now = DateTime.now();
+      // Datas FIXAS: o teste é sobre a regra de agendamento semanal, não
+      // sobre "hoje". Usar o dia corrente como início fez este teste quebrar
+      // sozinho quando o calendário passou do sábado fixo nas expectativas.
       final treatment = Treatment(
         id: 'treat-weekly',
         name: 'Metotrexato',
         dosage: '15MG',
         presentation: 'Comprimido',
         instructions: 'Tomar 1 comprimido por semana, aos sábados',
-        startDate: DateTime(now.year, now.month, now.day, 8, 0),
+        startDate: DateTime(2026, 11, 1, 8, 0),
         endDate: null,
         frequency: TreatmentFrequency.weekly,
         doseTimes: const [DoseTime(hour: 8, minute: 0)],
@@ -95,7 +97,6 @@ void main() {
       expect(loaded.frequency, TreatmentFrequency.weekly);
       expect(loaded.weekdays, [DateTime.saturday]);
       // A regra de agendamento vem inteira do banco: sábado agenda, sexta não.
-      // (Sábados de novembro: o tratamento começa em hoje, 01/11/2026.)
       expect(loaded.isScheduledOn(DateTime(2026, 11, 7)), isTrue); // sáb
       expect(loaded.isScheduledOn(DateTime(2026, 11, 6)), isFalse); // sex
     });
