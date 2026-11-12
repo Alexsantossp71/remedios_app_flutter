@@ -41,19 +41,10 @@ Future<String?> pickBackupJsonText() {
     if (!completer.isCompleted) completer.complete(text);
   }
 
-  input.addEventListener('change', (() async {
-    final files = input.files;
-    final file = (files == null || files.length == 0) ? null : files.item(0);
-    if (file == null) {
-      finish(null);
-      return;
-    }
-    try {
-      final text = await file.text().toDart;
-      finish(text.toDart);
-    } catch (_) {
-      finish(null);
-    }
+  // Listeners precisam ser síncronos para o .toJS (funções async não
+  // podem ser convertidas — assinatura Future não é mapeável para JS).
+  input.addEventListener('change', (() {
+    _readSelectedFile(input, finish);
   }).toJS);
 
   input.addEventListener('cancel', (() {
@@ -66,4 +57,22 @@ Future<String?> pickBackupJsonText() {
   input.remove();
 
   return completer.future;
+}
+
+Future<void> _readSelectedFile(
+  web.HTMLInputElement input,
+  void Function(String? text) finish,
+) async {
+  final files = input.files;
+  final file = (files == null || files.length == 0) ? null : files.item(0);
+  if (file == null) {
+    finish(null);
+    return;
+  }
+  try {
+    final text = await file.text().toDart;
+    finish(text.toDart);
+  } catch (_) {
+    finish(null);
+  }
 }
