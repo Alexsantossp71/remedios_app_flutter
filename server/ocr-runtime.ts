@@ -13,6 +13,10 @@ import { createWorker, type Worker } from 'tesseract.js';
 import { tmpdir } from 'node:os';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { preprocessCardImage } from './card-image';
+
+// Reexportado para api/read-card.ts orquestrar as duas passadas.
+export { preprocessCardImage };
 
 export interface NodeRequestLike {
   method?: string;
@@ -158,12 +162,31 @@ export function getOcrWorker(logLabel: string): Promise<Worker> {
   return workerPromise;
 }
 
+export interface OcrResult {
+  text: string;
+  /** Confiança média do Tesseract (0-100), para comparar passadas. */
+  confidence: number;
+}
+
+/** Uma passada de OCR sobre um buffer já pronto. */
+export async function recognizeBuffer(buffer: Buffer): Promise<OcrResult> {
+  const worker = await withDeadline(getOcrWorker('ocr'), 'worker');
+  const { data } = await withDeadline(worker.recognize(buffer), 'recognize');
+  return { text: data.text ?? '', confidence: data.confidence ?? 0 };
+}
+
+/**
+ * OCR com preprocessamento (alpha, escala, inclinação, margens, contraste):
+ * carteirinhas reais chegam tortas, pequenas e com canal alpha — o
+ * Tesseract puro devolve texto vazio ou embaralhado nesses casos. JPEG e
+ * PNG são decodificados e processados; WEBP segue como veio.
+ */
 export async function recognizeText(
   imageBase64: string,
+  mime: string,
   logLabel: string,
-): Promise<string> {
-  const worker = await withDeadline(getOcrWorker(logLabel), 'worker');
+): Promise<OcrResult> {
   const buffer = Buffer.from(imageBase64, 'base64');
-  const { data } = await withDeadline(worker.recognize(buffer), 'recognize');
-  return data.text ?? '';
+  const prepared = preprocessCardImage(buffer, mime);
+  return recognizeBuffer(prepared === buffer ? buffer : prepared);
 }

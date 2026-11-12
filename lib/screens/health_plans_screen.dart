@@ -256,9 +256,11 @@ class HealthPlansScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Para ler a foto do cartão, a imagem é enviada a um '
-                    'serviço de IA e descartada após a leitura. Essa opção '
-                    'usa a internet; o cadastro manual não envia nada.',
+                    'Para ler a foto do cartão, a imagem é enviada ao '
+                    'serviço de leitura automática do próprio app e '
+                    'descartada após a leitura — nada vai para terceiros. '
+                    'Essa opção usa a internet; o cadastro manual não '
+                    'envia nada.',
                   ),
                   SizedBox(height: 12),
                   PrivacyNoticeCard(),

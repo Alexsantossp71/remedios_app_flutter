@@ -86,7 +86,7 @@ export default async function handler(
 
   let rawText: string;
   try {
-    rawText = await recognizeText(image, 'read-receita');
+    rawText = (await recognizeText(image, mimeType, 'read-receita')).text;
   } catch (err) {
     console.error(
       '[read-receita] OCR falhou:',
