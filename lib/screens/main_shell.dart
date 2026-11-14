@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/design/app_shell.dart';
 import '../core/design/app_tokens.dart';
 import '../models/consultation.dart';
 import '../models/doctor.dart';
@@ -151,16 +152,17 @@ class _MainShellState extends State<MainShell>
     final content = IndexedStack(index: _selectedIndex, children: _pages);
 
     return Scaffold(
+      // AppShell pinta o brilho radial teal do PWA atrás de todas as abas.
       body:
           isWide
               ? Row(
                 children: [
                   _buildRail(),
                   const VerticalDivider(width: 1, thickness: 1),
-                  Expanded(child: content),
+                  Expanded(child: AppShell(child: content)),
                 ],
               )
-              : content,
+              : AppShell(child: content),
       floatingActionButton: FloatingActionButton(
         tooltip: 'Cadastrar',
         shape: const CircleBorder(),

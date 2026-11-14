@@ -7,6 +7,9 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../core/design/app_tokens.dart';
+import '../core/design/brand_colors.dart';
+import '../core/design/dashboard_hero.dart';
+import '../core/design/stat_card.dart';
 import '../core/theme/app_theme.dart';
 import '../models/consultation.dart';
 import '../models/doctor.dart';
@@ -95,6 +98,7 @@ class _TodayScreenState extends State<TodayScreen> {
                 showProgressCard: !hasNothing,
                 streak: streak,
                 events: events,
+                consultationCount: consultations.length,
                 onSelectDay: _selectDay,
               ),
             ),
@@ -230,6 +234,7 @@ class _TodayHeader extends StatelessWidget {
     required this.showProgressCard,
     required this.streak,
     required this.events,
+    required this.consultationCount,
     required this.onSelectDay,
   });
 
@@ -247,6 +252,10 @@ class _TodayHeader extends StatelessWidget {
 
   /// Doses do dia, para o badge "próxima dose".
   final List<DoseEvent> events;
+
+  /// Consultas do dia, para o cartão de estatística.
+  final int consultationCount;
+
   final VoidCallback onSelectDay;
 
   /// Saudação viva: acompanha a hora do dia em vez de aparecer
@@ -305,76 +314,102 @@ class _TodayHeader extends StatelessWidget {
         ),
         if (showProgressCard) ...[
           const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primary,
-                  theme.colorScheme.primary.withValues(alpha: .78),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .18),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.favorite_rounded,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            adherence.total == 0
-                                ? 'Nenhuma dose programada'
-                                : '${adherence.taken} de ${adherence.total} doses tomadas',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            adherence.total == 0
-                                ? 'Tudo tranquilo por aqui.'
-                                : 'Cada dose é um passo importante.',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.white.withValues(alpha: .85),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (adherence.total > 0)
-                      Text(
-                        '${(adherence.adherenceRate * 100).round()}%',
-                        style: theme.textTheme.titleLarge?.copyWith(
+          DashboardHero(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: .18),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.favorite_rounded,
                           color: Colors.white,
-                          fontWeight: FontWeight.w900,
                         ),
                       ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              adherence.total == 0
+                                  ? 'Nenhuma dose programada'
+                                  : '${adherence.taken} de ${adherence.total} doses tomadas',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              adherence.total == 0
+                                  ? 'Tudo tranquilo por aqui.'
+                                  : 'Cada dose é um passo importante.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.white.withValues(alpha: .85),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (adherence.total > 0)
+                        Text(
+                          '${(adherence.adherenceRate * 100).round()}%',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (isToday) ...[
+                    const SizedBox(height: 14),
+                    _NextDoseBadge(events: events),
                   ],
-                ),
-                if (isToday) ...[
-                  const SizedBox(height: 14),
-                  _NextDoseBadge(events: events),
                 ],
-              ],
+              ),
             ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: StatCard(
+                  icon: Icons.medication_rounded,
+                  value: '${adherence.taken}/${adherence.total}',
+                  label: isToday ? 'doses de hoje' : 'doses do dia',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: StatCard(
+                  icon: Icons.local_fire_department_rounded,
+                  value: streak > 0 ? '$streak' : '0',
+                  label: streak == 1 ? 'dia em sequência' : 'dias em sequência',
+                  iconColor: BrandColors.yellow,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: StatCard(
+                  icon: Icons.event_available_rounded,
+                  value: '$consultationCount',
+                  label:
+                      consultationCount == 1
+                          ? 'consulta no dia'
+                          : 'consultas no dia',
+                  iconColor: BrandColors.teal600,
+                ),
+              ),
+            ],
           ),
         ],
       ],

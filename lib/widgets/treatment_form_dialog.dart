@@ -690,7 +690,6 @@ class _PresetChip extends StatelessWidget {
         ),
         label: Text(label),
         labelStyle: TextStyle(
-          fontFamily: 'Nunito',
           fontWeight: FontWeight.w700,
           color: active ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
         ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../design/brand_colors.dart';
+
 /// Cores semânticas do app (sucesso, perigo, alerta) que não existem no
 /// [ColorScheme] do Material 3. Acessível via
 /// `Theme.of(context).extension<AppSemanticColors>()!`.
@@ -69,8 +71,58 @@ class AppSemanticColors extends ThemeExtension<AppSemanticColors> {
 }
 
 class AppTheme {
+  /// V5 — "Identidade do PWA": a paleta teal do app irmão web
+  /// ("Remédios na Hora") com tipografia Inter, para que os dois produtos
+  /// sejam reconhecíveis como o mesmo serviço. Tema claro.
+  static ThemeData v5() {
+    return _buildTheme(
+      seedColor: BrandColors.teal700,
+      canvasColor: BrandColors.canvas,
+      inputFill: BrandColors.inputFill,
+      titleColor: BrandColors.ink,
+      cardColor: Colors.white,
+      navColor: Colors.white,
+      fontFamily: 'Inter',
+      inputRadius: 13,
+      cardRadius: 20,
+      semantic: const AppSemanticColors(
+        success: Color(0xFF2E9E6B),
+        onSuccess: Colors.white,
+        successContainer: Color(0xFFDDF3E7),
+        danger: BrandColors.red,
+        warning: BrandColors.yellow,
+      ),
+      accentLabel: 'V5 - Identidade do PWA (claro)',
+    );
+  }
+
+  /// V5 escuro: superfícies slate do PWA (#0f172a / #1e293b) com acento
+  /// teal claro (#2dd4bf) como semente.
+  static ThemeData v5Dark() {
+    return _buildTheme(
+      seedColor: BrandColors.teal400,
+      canvasColor: BrandColors.darkCanvas,
+      inputFill: BrandColors.darkInputFill,
+      titleColor: BrandColors.darkInk,
+      cardColor: BrandColors.darkSurface,
+      navColor: BrandColors.darkSurface,
+      fontFamily: 'Inter',
+      inputRadius: 13,
+      cardRadius: 20,
+      semantic: const AppSemanticColors(
+        success: Color(0xFF63C894),
+        onSuccess: Color(0xFF0C2A1C),
+        successContainer: Color(0xFF1E4634),
+        danger: Color(0xFFF08C8C),
+        warning: Color(0xFFE9B45C),
+      ),
+      accentLabel: 'V5 - Identidade do PWA (escuro)',
+    );
+  }
+
   /// V3 — "Clínico calmo": azul de confiança profundo + verde-saúde,
-  /// tipografia Nunito. Tema claro.
+  /// tipografia Nunito. Tema claro. Mantido como legado (o tema ativo é o
+  /// V5, que replica a identidade visual do PWA).
   static ThemeData v3() {
     return _buildTheme(
       seedColor: const Color(0xFF1E5BA8),
@@ -79,6 +131,9 @@ class AppTheme {
       titleColor: const Color(0xFF0F2A52),
       cardColor: Colors.white,
       navColor: Colors.white,
+      fontFamily: 'Nunito',
+      inputRadius: 16,
+      cardRadius: 24,
       semantic: const AppSemanticColors(
         success: Color(0xFF2E9E6B),
         onSuccess: Colors.white,
@@ -92,7 +147,7 @@ class AppTheme {
 
   /// V3 escuro: segue o sistema pelo [ThemeMode.system] no MaterialApp.
   /// Superfícies azul-petróleo escuro em vez de cinza puro para manter a
-  /// identidade clínica.
+  /// identidade clínica. Legado — o tema ativo é o [v5Dark].
   static ThemeData v3Dark() {
     return _buildTheme(
       seedColor: const Color(0xFF7FB0EC),
@@ -101,6 +156,9 @@ class AppTheme {
       titleColor: const Color(0xFFE7F0FB),
       cardColor: const Color(0xFF17233A),
       navColor: const Color(0xFF142032),
+      fontFamily: 'Nunito',
+      inputRadius: 16,
+      cardRadius: 24,
       semantic: const AppSemanticColors(
         success: Color(0xFF63C894),
         onSuccess: Color(0xFF0C2A1C),
@@ -112,9 +170,9 @@ class AppTheme {
     );
   }
 
-  static ThemeData light() => v3();
+  static ThemeData light() => v5();
 
-  static ThemeData dark() => v3Dark();
+  static ThemeData dark() => v5Dark();
 
   static ThemeData _buildTheme({
     required Color seedColor,
@@ -123,6 +181,9 @@ class AppTheme {
     required Color titleColor,
     required Color cardColor,
     required Color navColor,
+    required String fontFamily,
+    required double inputRadius,
+    required double cardRadius,
     required AppSemanticColors semantic,
     required String accentLabel,
   }) {
@@ -135,7 +196,7 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
-      fontFamily: 'Nunito',
+      fontFamily: fontFamily,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: canvasColor,
       dialogTheme: DialogThemeData(backgroundColor: cardColor),
@@ -147,7 +208,7 @@ class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          fontFamily: 'Nunito',
+          fontFamily: fontFamily,
           fontSize: 22,
           fontWeight: FontWeight.w800,
           color: titleColor,
@@ -157,40 +218,42 @@ class AppTheme {
         color: cardColor,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(cardRadius),
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: inputFill,
         labelStyle: TextStyle(color: titleColor.withValues(alpha: .75)),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(inputRadius),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(inputRadius),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(inputRadius),
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: inputFill,
-        // Seleção óbvia: chip escolhido fica PREENCHIDO com o azul de ação
+        // Seleção óbvia: chip escolhido fica PREENCHIDO com o teal de ação
         // (não um contêiner pálido) + check branco. É o estado que o usuário
         // apontou como pouco visível.
         selectedColor: colorScheme.primary,
         checkmarkColor: colorScheme.onPrimary,
         secondarySelectedColor: colorScheme.primary,
         labelStyle: TextStyle(
-          fontFamily: 'Nunito',
+          fontFamily: fontFamily,
           fontWeight: FontWeight.w600,
           color: titleColor.withValues(alpha: .85),
         ),
         secondaryLabelStyle: TextStyle(
-          fontFamily: 'Nunito',
+          fontFamily: fontFamily,
           fontWeight: FontWeight.w700,
           color: colorScheme.onPrimary,
         ),
@@ -206,7 +269,7 @@ class AppTheme {
         indicatorColor: colorScheme.primaryContainer,
         labelTextStyle: WidgetStatePropertyAll(
           TextStyle(
-            fontFamily: 'Nunito',
+            fontFamily: fontFamily,
             // Fonte de rótulo menor e em linha única: com 6 destinos em
             // telas de ~412px, o tamanho padrão quebrava "Tratamentos"
             // em duas linhas.
