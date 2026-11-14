@@ -18,6 +18,7 @@ import '../core/design/brand_colors.dart';
 import '../core/design/record_card.dart';
 import '../screens/doctors_screen.dart';
 import '../screens/exams_screen.dart';
+import '../screens/lab_results_screen.dart';
 import '../screens/health_plans_screen.dart';
 import '../screens/progress_screen.dart';
 import '../services/backup_file.dart';
@@ -781,6 +782,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const ExamsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: _CadastroIconBox(
+                      icon: Icons.biotech_outlined,
+                      isDark: isDark,
+                    ),
+                    title: const Text('Resultados de laboratório'),
+                    subtitle: const Text(
+                      'Laudos, valores e evolução dos exames',
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const LabResultsScreen(),
                         ),
                       );
                     },

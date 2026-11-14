@@ -13,6 +13,7 @@ import '../core/design/record_card.dart';
 import '../core/design/stat_card.dart';
 import '../models/exam.dart';
 import '../providers/exam_provider.dart';
+import 'lab_results_screen.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
@@ -116,6 +117,17 @@ class ExamsScreen extends StatelessWidget {
                           ),
                         ],
                       ),
+                    ),
+                    IconButton(
+                      tooltip: 'Resultados de laboratório',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const LabResultsScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.biotech_outlined),
                     ),
                     IconButton(
                       tooltip: 'Novo exame',
