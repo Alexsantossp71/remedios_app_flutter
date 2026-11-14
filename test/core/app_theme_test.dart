@@ -1,33 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:remedios_app_flutter/core/design/brand_colors.dart';
 import 'package:remedios_app_flutter/core/theme/app_theme.dart';
 
-/// Tema V3 "Clínico calmo": Nunito, azul de confiança, verde-saúde e o
-/// par claro/escuro que alimenta o ThemeMode.system do MaterialApp.
+/// Tema V5 "Identidade do PWA": Inter, paleta teal do app irmão
+/// "Remédios na Hora" e o par claro/escuro que alimenta o
+/// ThemeMode.system do MaterialApp. O V3 segue como legado compilável.
 void main() {
-  group('AppTheme.v3 (claro)', () {
+  group('AppTheme.v5 (claro)', () {
     final theme = AppTheme.light();
 
-    test('usa Nunito e registra as cores semânticas', () {
-      expect(theme.textTheme.bodyMedium?.fontFamily, 'Nunito');
+    test('usa Inter e registra as cores semânticas', () {
+      expect(theme.textTheme.bodyMedium?.fontFamily, 'Inter');
       expect(theme.extension<AppSemanticColors>()!.success,
           const Color(0xFF2E9E6B));
-      expect(theme.extension<AppSemanticColors>()!.danger,
-          const Color(0xFFD64545));
+      expect(
+        theme.extension<AppSemanticColors>()!.danger,
+        BrandColors.red,
+      );
+      expect(
+        theme.extension<AppSemanticColors>()!.warning,
+        BrandColors.yellow,
+      );
     });
 
-    test('primário na família do azul de confiança (canal azul dominante)', () {
+    test('primário na família do teal de ação (canal verde-azulado)', () {
       // fromSeed deriva o tom exato da paleta M3; a família é o que importa.
       final primary = theme.colorScheme.primary;
       final red = (primary.r * 255.0).round();
       final green = (primary.g * 255.0).round();
       final blue = (primary.b * 255.0).round();
+      expect(green, greaterThan(red));
       expect(blue, greaterThan(red));
-      expect(blue, greaterThan(green));
     });
 
-    test('chip selecionado fica PREENCHIDO com o azul de ação', () {
+    test('chip selecionado fica PREENCHIDO com o teal de ação', () {
       // A seleção precisa ser impossível de não ver (queixa da v2).
       expect(theme.chipTheme.selectedColor, theme.colorScheme.primary);
       expect(theme.chipTheme.checkmarkColor, theme.colorScheme.onPrimary);
@@ -42,13 +50,24 @@ void main() {
       expect(dark.extension<AppSemanticColors>()!.success,
           const Color(0xFF63C894));
       // Fundos escuros realmente escuros (não branco de noite).
-      expect(dark.scaffoldBackgroundColor, const Color(0xFF101826));
-      expect(dark.cardTheme.color, const Color(0xFF17233A));
+      expect(dark.scaffoldBackgroundColor, BrandColors.darkCanvas);
+      expect(dark.cardTheme.color, BrandColors.darkSurface);
     });
 
-    test('mantém Nunito e o mesmo idioma visual', () {
-      expect(dark.textTheme.bodyMedium?.fontFamily, 'Nunito');
+    test('mantém Inter e o mesmo idioma visual', () {
+      expect(dark.textTheme.bodyMedium?.fontFamily, 'Inter');
       expect(dark.chipTheme.selectedColor, dark.colorScheme.primary);
+    });
+  });
+
+  group('AppTheme.v3 legado', () {
+    test('continua compilando com a identidade original intacta', () {
+      final v3 = AppTheme.v3();
+      expect(v3.textTheme.bodyMedium?.fontFamily, 'Nunito');
+      expect(
+        v3.extension<AppSemanticColors>()!.danger,
+        const Color(0xFFD64545),
+      );
     });
   });
 
