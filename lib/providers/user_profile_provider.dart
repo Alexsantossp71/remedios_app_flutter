@@ -71,6 +71,7 @@ class UserProfileProvider extends ChangeNotifier {
         'telefone': profile.telefone,
         'observacoes': profile.observacoes,
         'consent_at': profile.consentAt?.toUtc().toIso8601String(),
+        'ai_consent_at': profile.aiConsentAt?.toUtc().toIso8601String(),
         'created_at': createdAt,
         'updated_at': now,
       },
@@ -90,6 +91,7 @@ class UserProfileProvider extends ChangeNotifier {
       telefone: profile.telefone,
       observacoes: profile.observacoes,
       consentAt: profile.consentAt,
+      aiConsentAt: profile.aiConsentAt,
       createdAt: createdAt,
       updatedAt: now,
     );
@@ -105,6 +107,19 @@ class UserProfileProvider extends ChangeNotifier {
       current != null
           ? current.copyWith(consentAt: consentAt)
           : UserProfile.empty().copyWith(consentAt: consentAt),
+    );
+  }
+
+  /// Registra o consentimento para o uso das ferramentas de IA (envio de
+  /// nomes de medicamentos ao proxy), preservando os demais dados.
+  Future<void> grantAiConsent() async {
+    final current = _profile;
+    if (current != null && current.aiConsentAt != null) return;
+    final consentAt = DateTime.now().toUtc();
+    await saveProfile(
+      current != null
+          ? current.copyWith(aiConsentAt: consentAt)
+          : UserProfile.empty().copyWith(aiConsentAt: consentAt),
     );
   }
 
@@ -212,6 +227,9 @@ class UserProfileProvider extends ChangeNotifier {
       observacoes: nullIfEmpty(row['observacoes'] as String?),
       consentAt: row['consent_at'] != null
           ? DateTime.tryParse(row['consent_at'] as String)
+          : null,
+      aiConsentAt: row['ai_consent_at'] != null
+          ? DateTime.tryParse(row['ai_consent_at'] as String)
           : null,
       createdAt: row['created_at'] as String,
       updatedAt: row['updated_at'] as String,

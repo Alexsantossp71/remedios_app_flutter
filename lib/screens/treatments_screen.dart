@@ -14,8 +14,12 @@ import '../screens/prescription_review_screen.dart';
 import '../services/prescription_reader_service.dart';
 import '../core/design/app_tokens.dart';
 import '../core/design/brand_colors.dart';
+import '../core/design/quick_action.dart';
 import '../core/design/record_card.dart';
 import '../core/design/stat_card.dart';
+import '../widgets/ai_interactions_sheet.dart';
+import '../widgets/ai_medication_guide_sheet.dart';
+import '../widgets/ai_schedule_advisor_sheet.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/skeleton.dart';
@@ -265,6 +269,26 @@ class TreatmentsScreen extends StatelessWidget {
                         activeCount: treatments.length,
                         lowStockCount: lowStockCount,
                       ),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: QuickAction(
+                              icon: Icons.health_and_safety_outlined,
+                              label: 'Checar interações',
+                              onTap: () => showAiInteractionsSheet(context),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: QuickAction(
+                              icon: Icons.schedule_rounded,
+                              label: 'Consultor de horários',
+                              onTap: () => showAiScheduleAdvisorSheet(context),
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 26),
                       const SectionHeader(title: 'Em uso'),
                     ],
@@ -309,6 +333,10 @@ class TreatmentsScreen extends StatelessWidget {
                           () =>
                               _openTreatmentForm(context, treatment: treatment),
                       onArchive: () => _confirmArchive(context, treatment),
+                      onGuide: () => showAiMedicationGuideSheet(
+                        context,
+                        treatment,
+                      ),
                     );
                   },
                 ),
@@ -394,11 +422,15 @@ class TreatmentCard extends StatelessWidget {
     required this.treatment,
     required this.onEdit,
     required this.onArchive,
+    required this.onGuide,
   });
 
   final Treatment treatment;
   final VoidCallback onEdit;
   final VoidCallback onArchive;
+
+  /// Explica o medicamento com IA (bula simplificada).
+  final VoidCallback onGuide;
 
   @override
   Widget build(BuildContext context) {
@@ -460,6 +492,7 @@ class TreatmentCard extends StatelessWidget {
                       onSelected: (value) {
                         if (value == 'edit') onEdit();
                         if (value == 'archive') onArchive();
+                        if (value == 'guide') onGuide();
                       },
                       itemBuilder:
                           (_) => const [
@@ -468,6 +501,14 @@ class TreatmentCard extends StatelessWidget {
                               child: ListTile(
                                 leading: Icon(Icons.edit_outlined),
                                 title: Text('Editar'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'guide',
+                              child: ListTile(
+                                leading: Icon(Icons.auto_awesome_outlined),
+                                title: Text('Explicar com IA'),
                                 contentPadding: EdgeInsets.zero,
                               ),
                             ),

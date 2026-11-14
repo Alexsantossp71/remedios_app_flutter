@@ -9,6 +9,8 @@ import '../models/doctor.dart';
 import '../providers/consultation_provider.dart';
 import '../providers/doctor_provider.dart';
 import '../core/theme/app_theme.dart';
+import '../core/design/quick_action.dart';
+import '../widgets/ai_consultation_questions_sheet.dart';
 import '../widgets/consultation_form_dialog.dart';
 import '../core/design/app_tokens.dart';
 import '../core/design/brand_colors.dart';
@@ -159,6 +161,15 @@ class ConsultationsScreen extends StatelessWidget {
                       'Agendamentos e histórico de atendimentos médicos.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: QuickAction(
+                        icon: Icons.medical_information_outlined,
+                        label: 'Preparar consulta com IA',
+                        onTap: () => showAiConsultationQuestionsSheet(context),
                       ),
                     ),
                     if (hasConsultations) ...[

@@ -38,6 +38,10 @@ class UserProfile {
   final String? telefone;
   final String? observacoes;
   final DateTime? consentAt;
+
+  /// Momento em que o usuário autorizou o envio de dados clínicos
+  /// (nomes de medicamentos) ao serviço de IA. Null = nunca autorizou.
+  final DateTime? aiConsentAt;
   final String createdAt;
   final String updatedAt;
 
@@ -54,6 +58,7 @@ class UserProfile {
     this.telefone,
     this.observacoes,
     this.consentAt,
+    this.aiConsentAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -87,6 +92,9 @@ class UserProfile {
       consentAt: json['consentAt'] != null
           ? DateTime.tryParse(json['consentAt'] as String)
           : null,
+      aiConsentAt: json['aiConsentAt'] != null
+          ? DateTime.tryParse(json['aiConsentAt'] as String)
+          : null,
       createdAt: json['createdAt'] as String,
       updatedAt: json['updatedAt'] as String,
     );
@@ -106,6 +114,7 @@ class UserProfile {
       'telefone': telefone,
       'observacoes': observacoes,
       'consentAt': consentAt?.toUtc().toIso8601String(),
+      'aiConsentAt': aiConsentAt?.toUtc().toIso8601String(),
       'createdAt': createdAt,
       'updatedAt': updatedAt,
     };
@@ -124,6 +133,7 @@ class UserProfile {
     String? telefone,
     String? observacoes,
     DateTime? consentAt,
+    DateTime? aiConsentAt,
   }) {
     return UserProfile(
       nome: nome ?? this.nome,
@@ -138,6 +148,7 @@ class UserProfile {
       telefone: telefone ?? this.telefone,
       observacoes: observacoes ?? this.observacoes,
       consentAt: consentAt ?? this.consentAt,
+      aiConsentAt: aiConsentAt ?? this.aiConsentAt,
       createdAt: createdAt,
       updatedAt: DateTime.now().toUtc().toIso8601String(),
     );
