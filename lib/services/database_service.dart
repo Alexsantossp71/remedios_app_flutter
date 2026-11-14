@@ -17,7 +17,7 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._();
 
   static const String _databaseName = 'remedios_app.db';
-  static const int _databaseVersion = 7;
+  static const int _databaseVersion = 8;
 
   Database? _db;
   bool _isInitialized = false;
@@ -235,6 +235,7 @@ class DatabaseService {
         telefone TEXT,
         observacoes TEXT,
         consent_at TEXT,
+        ai_consent_at TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -326,6 +327,11 @@ class DatabaseService {
       // Version 7: Add weekdays column (frequency weekly — "N vezes por semana",
       // ex.: metotrexato 1x/sem). NULL = frequência não semanal.
       await db.execute('ALTER TABLE treatments ADD COLUMN weekdays TEXT');
+    }
+    if (oldVersion < 8) {
+      // Version 8: Add ai_consent_at column (consentimento para envio de
+      // dados clínicos ao serviço de IA; timestamp UTC, NULL = não autorizou).
+      await db.execute('ALTER TABLE user_profile ADD COLUMN ai_consent_at TEXT');
     }
   }
 
