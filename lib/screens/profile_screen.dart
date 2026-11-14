@@ -14,6 +14,8 @@ import '../providers/doctor_provider.dart';
 import '../providers/health_plan_provider.dart';
 import '../providers/therapy_provider.dart';
 import '../providers/user_profile_provider.dart';
+import '../core/design/brand_colors.dart';
+import '../core/design/record_card.dart';
 import '../screens/doctors_screen.dart';
 import '../screens/health_plans_screen.dart';
 import '../screens/progress_screen.dart';
@@ -251,24 +253,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _restoreBackup() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Restaurar backup'),
-        content: const Text(
-          'Restaurar substitui TUDO que está no app hoje (tratamentos, '
-          'doses, médicos, consultas, planos e perfil) pelo conteúdo do '
-          'arquivo escolhido. Esta ação não pode ser desfeita. Continuar?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Restaurar backup'),
+            content: const Text(
+              'Restaurar substitui TUDO que está no app hoje (tratamentos, '
+              'doses, médicos, consultas, planos e perfil) pelo conteúdo do '
+              'arquivo escolhido. Esta ação não pode ser desfeita. Continuar?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Escolher arquivo e restaurar'),
+              ),
+            ],
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Escolher arquivo e restaurar'),
-          ),
-        ],
-      ),
     );
     if (confirmed != true || !mounted) return;
 
@@ -319,8 +322,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
     } on BackupFormatException catch (e) {
       if (mounted) {
-        showAppSnackBar(context, 'Arquivo inválido: ${e.message}',
-            type: AppSnackType.error);
+        showAppSnackBar(
+          context,
+          'Arquivo inválido: ${e.message}',
+          type: AppSnackType.error,
+        );
       }
     } catch (_) {
       if (mounted) {
@@ -423,6 +429,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final provider = context.watch<UserProfileProvider>();
     final profile = provider.profile;
     final contacts = provider.emergencyContacts;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SafeArea(
       child: Form(
@@ -462,7 +469,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 28),
             const SectionHeader(title: 'Dados pessoais'),
             const SizedBox(height: 10),
-            Card(
+            RecordCard(
+              padding: EdgeInsets.zero,
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
@@ -645,7 +653,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 28),
             const SectionHeader(title: 'Contatos de emergência'),
             const SizedBox(height: 10),
-            Card(
+            RecordCard(
+              padding: EdgeInsets.zero,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -673,9 +682,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (i > 0)
                           const Divider(height: 1, indent: 64, endIndent: 12),
                         ListTile(
-                          leading: Icon(
-                            Icons.contact_emergency_outlined,
-                            color: Theme.of(context).colorScheme.primary,
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              // Caixa de ícone com véu vermelho — contexto
+                              // de emergência no PWA usa o brand.red.
+                              color: BrandColors.red.withValues(
+                                alpha: isDark ? .16 : .10,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.contact_emergency_outlined,
+                              color: BrandColors.red,
+                              size: 22,
+                            ),
                           ),
                           title: Text(contacts[i].nome),
                           subtitle: Text(
@@ -719,17 +741,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 28),
             const SectionHeader(title: 'Meus cadastros'),
             const SizedBox(height: 10),
-            Card(
+            RecordCard(
+              padding: EdgeInsets.zero,
               child: Column(
                 children: [
                   ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                      child: Icon(
-                        Icons.medical_services_outlined,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
+                    leading: _CadastroIconBox(
+                      icon: Icons.medical_services_outlined,
+                      isDark: isDark,
                     ),
                     title: const Text('Médicos'),
                     subtitle: const Text('Seu catálogo de médicos e contatos'),
@@ -747,13 +766,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                      child: Icon(
-                        Icons.health_and_safety,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
+                    leading: _CadastroIconBox(
+                      icon: Icons.health_and_safety,
+                      isDark: isDark,
                     ),
                     title: const Text('Planos e convênios'),
                     subtitle: const Text('Gerencie seus planos de saúde'),
@@ -771,13 +786,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primaryContainer,
-                      child: Icon(
-                        Icons.insights_outlined,
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
+                    leading: _CadastroIconBox(
+                      icon: Icons.insights_outlined,
+                      isDark: isDark,
                     ),
                     title: const Text('Progresso'),
                     subtitle: const Text('Constância e histórico de doses'),
@@ -805,7 +816,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
             const SectionHeader(title: 'Backup e restauração'),
             const SizedBox(height: 10),
-            Card(
+            RecordCard(
+              padding: EdgeInsets.zero,
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
@@ -824,24 +836,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Expanded(
                           child: FilledButton.icon(
-                            onPressed:
-                                _backupBusy ? null : _exportBackup,
-                            icon: _backupBusy
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  )
-                                : const Icon(Icons.download_outlined),
+                            onPressed: _backupBusy ? null : _exportBackup,
+                            icon:
+                                _backupBusy
+                                    ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                    : const Icon(Icons.download_outlined),
                             label: const Text('Exportar'),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed:
-                                _backupBusy ? null : _restoreBackup,
+                            onPressed: _backupBusy ? null : _restoreBackup,
                             icon: const Icon(Icons.restore_outlined),
                             label: const Text('Restaurar'),
                           ),
@@ -855,7 +867,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 28),
             const SectionHeader(title: 'Dados e privacidade'),
             const SizedBox(height: 10),
-            Card(
+            RecordCard(
+              padding: EdgeInsets.zero,
               child: Padding(
                 padding: const EdgeInsets.all(18),
                 child: Column(
@@ -1085,14 +1098,18 @@ class _EmergencyCardState extends State<_EmergencyCard> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final textTheme = Theme.of(context).textTheme;
-    final mainContact = widget.contacts.isNotEmpty
-        ? widget.contacts.first
-        : null;
+    final inkColor = isDark ? BrandColors.darkInk : BrandColors.ink;
+    final mutedColor = isDark ? BrandColors.darkMuted : BrandColors.muted;
+    final mainContact =
+        widget.contacts.isNotEmpty ? widget.contacts.first : null;
 
-    return Card(
-      color: colorScheme.errorContainer,
+    return RecordCard(
+      // Acento vermelho da marca: cartão de emergência pede atenção —
+      // o mesmo papel do errorContainer antes da migração.
+      accentColor: BrandColors.red,
+      padding: EdgeInsets.zero,
       child: Stack(
         children: [
           // A captura (RepaintBoundary) cobre o conteúdo inteiro do cartão,
@@ -1101,7 +1118,7 @@ class _EmergencyCardState extends State<_EmergencyCard> {
           RepaintBoundary(
             key: _boundaryKey,
             child: Container(
-              color: colorScheme.errorContainer,
+              color: isDark ? BrandColors.darkSurface : Colors.white,
               padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1110,7 +1127,7 @@ class _EmergencyCardState extends State<_EmergencyCard> {
                     children: [
                       Icon(
                         Icons.medical_information_outlined,
-                        color: colorScheme.onErrorContainer,
+                        color: BrandColors.red,
                         size: 22,
                       ),
                       const SizedBox(width: 8),
@@ -1119,7 +1136,7 @@ class _EmergencyCardState extends State<_EmergencyCard> {
                           'Cartão de emergência',
                           style: textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: colorScheme.onErrorContainer,
+                            color: inkColor,
                           ),
                         ),
                       ),
@@ -1152,9 +1169,7 @@ class _EmergencyCardState extends State<_EmergencyCard> {
                   Text(
                     'Remédio na Hora • Gerado em ${_stampRodape(DateTime.now())}',
                     style: textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onErrorContainer.withValues(
-                        alpha: 0.6,
-                      ),
+                      color: mutedColor,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1178,7 +1193,7 @@ class _EmergencyCardState extends State<_EmergencyCard> {
                     : IconButton(
                       tooltip: 'Compartilhar como imagem',
                       icon: const Icon(Icons.ios_share_outlined),
-                      color: colorScheme.onErrorContainer,
+                      color: BrandColors.red,
                       onPressed: _compartilharComoImagem,
                     ),
           ),
@@ -1219,7 +1234,7 @@ class _EmergencyRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1228,7 +1243,7 @@ class _EmergencyRow extends StatelessWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colorScheme.onErrorContainer.withValues(alpha: 0.75),
+              color: isDark ? BrandColors.darkMuted : BrandColors.muted,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1237,7 +1252,7 @@ class _EmergencyRow extends StatelessWidget {
           child: Text(
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onErrorContainer,
+              color: isDark ? BrandColors.darkInk : BrandColors.ink,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -1343,6 +1358,32 @@ class _StringListEditorState extends State<_StringListEditor> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Caixa de ícone `.stat-icon` do PWA para os atalhos de cadastro do
+/// Perfil: véu teal com anel fino, no claro e no escuro.
+class _CadastroIconBox extends StatelessWidget {
+  const _CadastroIconBox({required this.icon, required this.isDark});
+
+  final IconData icon;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color:
+            isDark
+                ? BrandColors.teal700.withValues(alpha: .18)
+                : BrandColors.accentSoft,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: BrandColors.teal700.withValues(alpha: .07)),
+      ),
+      child: Icon(icon, color: BrandColors.teal700, size: 22),
     );
   }
 }
@@ -1512,7 +1553,8 @@ class _WebReminderCardState extends State<_WebReminderCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
+    return RecordCard(
+      padding: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
@@ -1522,10 +1564,13 @@ class _WebReminderCardState extends State<_WebReminderCard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  _granted ? Icons.notifications_active_outlined : Icons.notifications_outlined,
-                  color: _granted
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
+                  _granted
+                      ? Icons.notifications_active_outlined
+                      : Icons.notifications_outlined,
+                  color:
+                      _granted
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1535,13 +1580,13 @@ class _WebReminderCardState extends State<_WebReminderCard> {
                             'estiver aberto, você recebe o aviso na hora da '
                             'dose, mesmo com a aba em segundo plano.'
                         : _denied
-                            ? 'As notificações estão bloqueadas para este '
-                                'site. Libere nas permissões do navegador e '
-                                'recarregue a página para ativar.'
-                            : 'O navegador pode avisar na hora da dose '
-                                'enquanto o app estiver aberto — mesmo com '
-                                'a aba em segundo plano. No celular (APK), '
-                                'os avisos já funcionam com o app fechado.',
+                        ? 'As notificações estão bloqueadas para este '
+                            'site. Libere nas permissões do navegador e '
+                            'recarregue a página para ativar.'
+                        : 'O navegador pode avisar na hora da dose '
+                            'enquanto o app estiver aberto — mesmo com '
+                            'a aba em segundo plano. No celular (APK), '
+                            'os avisos já funcionam com o app fechado.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -1553,13 +1598,14 @@ class _WebReminderCardState extends State<_WebReminderCard> {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _busy ? null : _activate,
-                icon: _busy
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.notifications_on_outlined),
+                icon:
+                    _busy
+                        ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.notifications_on_outlined),
                 label: const Text('Ativar lembretes'),
               ),
             ],

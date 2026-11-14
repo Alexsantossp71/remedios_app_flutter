@@ -13,6 +13,9 @@ import '../providers/user_profile_provider.dart';
 import '../screens/prescription_review_screen.dart';
 import '../services/prescription_reader_service.dart';
 import '../core/design/app_tokens.dart';
+import '../core/design/brand_colors.dart';
+import '../core/design/record_card.dart';
+import '../core/design/stat_card.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/skeleton.dart';
@@ -48,7 +51,9 @@ class TreatmentsScreen extends StatelessWidget {
     if (!context.mounted) return;
     showAppSnackBar(
       context,
-      treatment == null ? 'Tratamento salvo. Bom começo!' : 'Tratamento atualizado.',
+      treatment == null
+          ? 'Tratamento salvo. Bom começo!'
+          : 'Tratamento atualizado.',
       type: AppSnackType.success,
     );
   }
@@ -256,7 +261,7 @@ class TreatmentsScreen extends StatelessWidget {
                     ),
                     if (treatments.isNotEmpty) ...[
                       const SizedBox(height: 22),
-                      _TreatmentSummary(
+                      _TreatmentStats(
                         activeCount: treatments.length,
                         lowStockCount: lowStockCount,
                       ),
@@ -337,8 +342,11 @@ class TreatmentsScreen extends StatelessWidget {
   }
 }
 
-class _TreatmentSummary extends StatelessWidget {
-  const _TreatmentSummary({
+/// Fileira de estatísticas da tela — a linha de `.app-stat-card` do PWA:
+/// tratamentos ativos e itens que precisam de reposição, cada um em seu
+/// cartão de estatística com o ícone em caixa arredondada.
+class _TreatmentStats extends StatelessWidget {
+  const _TreatmentStats({
     required this.activeCount,
     required this.lowStockCount,
   });
@@ -348,54 +356,34 @@ class _TreatmentSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withValues(alpha: .7),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.health_and_safety_outlined,
-              color: theme.colorScheme.primary,
-            ),
+    return Row(
+      children: [
+        Expanded(
+          child: StatCard(
+            icon: Icons.medication_rounded,
+            value: '$activeCount',
+            label: activeCount == 1 ? 'tratamento ativo' : 'tratamentos ativos',
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$activeCount ${activeCount == 1 ? 'tratamento ativo' : 'tratamentos ativos'}',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  lowStockCount == 0
-                      ? 'Seus estoques estão em dia.'
-                      : '$lowStockCount ${lowStockCount == 1 ? 'item precisa' : 'itens precisam'} de reposição.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ),
-              ],
-            ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: StatCard(
+            icon:
+                lowStockCount > 0
+                    ? Icons.inventory_2_rounded
+                    : Icons.check_circle_outline_rounded,
+            value: '$lowStockCount',
+            label:
+                lowStockCount == 0
+                    ? 'estoque em dia'
+                    : lowStockCount == 1
+                    ? 'item para repor'
+                    : 'itens para repor',
+            iconColor:
+                lowStockCount > 0 ? BrandColors.yellow : BrandColors.teal600,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -415,6 +403,7 @@ class TreatmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final formattedTimes = treatment.doseTimes
         .map(
           (time) => DateFormat.Hm().format(
@@ -423,121 +412,123 @@ class TreatmentCard extends StatelessWidget {
         )
         .join(' · ');
 
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: onEdit,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Icon(
-                  _presentationIcon(treatment.presentation),
-                  color: theme.colorScheme.onSecondaryContainer,
-                  size: 28,
-                ),
+    return RecordCard(
+      onTap: onEdit,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              // Caixa de ícone `.stat-icon` do PWA: véu teal com anel fino.
+              color:
+                  isDark
+                      ? BrandColors.teal700.withValues(alpha: .18)
+                      : BrandColors.accentSoft,
+              borderRadius: BorderRadius.circular(AppRadius.iconBox),
+              border: Border.all(
+                color: BrandColors.teal700.withValues(alpha: .07),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
+            ),
+            child: Icon(
+              _presentationIcon(treatment.presentation),
+              color: BrandColors.teal700,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            treatment.name,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
+                    Expanded(
+                      child: Text(
+                        treatment.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    PopupMenuButton<String>(
+                      tooltip: 'Opções do tratamento',
+                      padding: EdgeInsets.zero,
+                      onSelected: (value) {
+                        if (value == 'edit') onEdit();
+                        if (value == 'archive') onArchive();
+                      },
+                      itemBuilder:
+                          (_) => const [
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: ListTile(
+                                leading: Icon(Icons.edit_outlined),
+                                title: Text('Editar'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
                             ),
-                          ),
-                        ),
-                        PopupMenuButton<String>(
-                          tooltip: 'Opções do tratamento',
-                          padding: EdgeInsets.zero,
-                          onSelected: (value) {
-                            if (value == 'edit') onEdit();
-                            if (value == 'archive') onArchive();
-                          },
-                          itemBuilder:
-                              (_) => const [
-                                PopupMenuItem(
-                                  value: 'edit',
-                                  child: ListTile(
-                                    leading: Icon(Icons.edit_outlined),
-                                    title: Text('Editar'),
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'archive',
-                                  child: ListTile(
-                                    leading: Icon(Icons.archive_outlined),
-                                    title: Text('Arquivar'),
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                ),
-                              ],
-                          child: const Icon(Icons.more_horiz),
-                        ),
-                      ],
+                            PopupMenuItem(
+                              value: 'archive',
+                              child: ListTile(
+                                leading: Icon(Icons.archive_outlined),
+                                title: Text('Arquivar'),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ],
+                      child: const Icon(Icons.more_horiz),
                     ),
-                    Text(
-                      [
-                        treatment.dosage,
-                        treatment.presentation,
-                      ].where((part) => part.trim().isNotEmpty).join(' · '),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        InfoChip(icon: Icons.schedule, label: formattedTimes),
-                        InfoChip(
-                          icon: Icons.repeat,
-                          label: _frequencyLabel(treatment),
-                        ),
-                        if (treatment.stock != null)
-                          InfoChip(
-                            icon:
-                                treatment.needsRefill
-                                    ? Icons.warning_amber_rounded
-                                    : Icons.inventory_2_outlined,
-                            label: '${treatment.stock} un.',
-                            isWarning: treatment.needsRefill,
-                          ),
-                      ],
-                    ),
-                    if (treatment.instructions.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        treatment.instructions,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
-              ),
-            ],
+                Text(
+                  [
+                    treatment.dosage,
+                    treatment.presentation,
+                  ].where((part) => part.trim().isNotEmpty).join(' · '),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    InfoChip(icon: Icons.schedule, label: formattedTimes),
+                    InfoChip(
+                      icon: Icons.repeat,
+                      label: _frequencyLabel(treatment),
+                    ),
+                    if (treatment.stock != null)
+                      InfoChip(
+                        icon:
+                            treatment.needsRefill
+                                ? Icons.warning_amber_rounded
+                                : Icons.inventory_2_outlined,
+                        label: '${treatment.stock} un.',
+                        isWarning: treatment.needsRefill,
+                      ),
+                  ],
+                ),
+                if (treatment.instructions.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    treatment.instructions,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
