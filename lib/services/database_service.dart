@@ -17,7 +17,7 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._();
 
   static const String _databaseName = 'remedios_app.db';
-  static const int _databaseVersion = 9;
+  static const int _databaseVersion = 10;
 
   Database? _db;
   bool _isInitialized = false;
@@ -271,6 +271,20 @@ class DatabaseService {
         updated_at TEXT NOT NULL
       )
     ''');
+
+    // 9. Lab results table (laudos de laboratório com valores por marcador)
+    await db.execute('''
+      CREATE TABLE lab_results (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL,
+        lab_name TEXT NOT NULL DEFAULT '',
+        photo TEXT,
+        values_json TEXT NOT NULL DEFAULT '[]',
+        notes TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _onConfigure(Database db) async {
@@ -368,6 +382,23 @@ class DatabaseService {
           doctor_name TEXT NOT NULL DEFAULT '',
           place TEXT NOT NULL DEFAULT '',
           results TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+    }
+    if (oldVersion < 10) {
+      // Version 10: Create lab_results table (laudos com valores por
+      // marcador; a lista vive em values_json e as flags são recalculadas
+      // no app ao ler — a IA nunca classifica resultado).
+      await db.execute('''
+        CREATE TABLE lab_results (
+          id TEXT PRIMARY KEY,
+          date TEXT NOT NULL,
+          lab_name TEXT NOT NULL DEFAULT '',
+          photo TEXT,
+          values_json TEXT NOT NULL DEFAULT '[]',
+          notes TEXT NOT NULL DEFAULT '',
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
         )
