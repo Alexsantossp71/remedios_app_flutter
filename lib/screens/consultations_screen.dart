@@ -23,6 +23,7 @@ import '../widgets/empty_state.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stepped_form_sheet.dart';
 import 'doctors_screen.dart';
+import 'exams_screen.dart';
 
 class ConsultationsScreen extends StatelessWidget {
   const ConsultationsScreen({super.key});
@@ -170,6 +171,21 @@ class ConsultationsScreen extends StatelessWidget {
                         icon: Icons.medical_information_outlined,
                         label: 'Preparar consulta com IA',
                         onTap: () => showAiConsultationQuestionsSheet(context),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(
+                      width: double.infinity,
+                      child: QuickAction(
+                        icon: Icons.science_outlined,
+                        label: 'Exames — do pedido ao laudo',
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ExamsScreen(),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     if (hasConsultations) ...[

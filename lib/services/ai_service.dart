@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'dart:typed_data';
+
+import '../models/exam.dart';
 import '../models/treatment.dart';
 import 'ai_proxy_client.dart';
 
@@ -160,6 +163,55 @@ class AiService {
 
     return sanitizeConsultationQuestions(aiExtractJson(content));
   }
+
+  // ===== Leitura do pedido de exame (modelo de visão) =====
+
+  /// Lê a foto de um pedido médico de exames e devolve os campos
+  /// reconhecidos para preencher o formulário — quem revisa e salva é
+  /// sempre o usuário. Porta do `scanExamRequest` do PWA.
+  Future<AiExamScan> scanExamRequest({
+    required Uint8List imageBytes,
+    required String mimeType,
+  }) async {
+    final base64Image = base64Encode(imageBytes);
+    final content = await _proxy.chatCompletion(
+      messages: [
+        {
+          'role': 'user',
+          'content': [
+            {
+              'type': 'image_url',
+              'image_url': {
+                'url': 'data:$mimeType;base64,$base64Image',
+              },
+            },
+            {'type': 'text', 'text': examScanPrompt},
+          ],
+        },
+      ],
+      model: AiProxyClient.defaultVisionModel,
+      hasImages: true,
+      maxTokens: 500,
+      temperature: 0.1,
+    );
+
+    final parsed = aiExtractJson(content);
+    if (parsed['error'] == 'not_a_request') {
+      throw AiException(
+        'A foto não parece ser um pedido de exame. Tente outra imagem com '
+        'melhor luz e enquadramento.',
+      );
+    }
+
+    final scan = sanitizeExamScan(parsed);
+    if (scan.name.isEmpty) {
+      throw AiException(
+        'A IA não reconheceu os dados do pedido. Tente uma foto mais '
+        'nítida, sem reflexos, ou preencha manualmente.',
+      );
+    }
+    return scan;
+  }
 }
 
 // ===== Contexto de consulta (montado pela tela a partir dos providers) =====
@@ -231,6 +283,29 @@ class AiInteractionReport {
 }
 
 enum AiInteractionSeverity { alta, moderada, baixa }
+
+/// Campos reconhecidos na foto do pedido de exame; todos opcionais —
+/// o usuário completa o que faltar no formulário.
+class AiExamScan {
+  const AiExamScan({
+    required this.name,
+    required this.category,
+    required this.doctorName,
+    required this.place,
+    required this.date,
+  });
+
+  /// Nome(s) do(s) exame(s), separados por vírgula.
+  final String name;
+
+  /// Uma das [examCategories] ou '' quando não classificado.
+  final String category;
+  final String doctorName;
+  final String place;
+
+  /// 'AAAA-MM-DD' ou '' quando ilegível/ausente.
+  final String date;
+}
 
 class AiMedicationGuide {
   const AiMedicationGuide({
@@ -788,5 +863,55 @@ AiScheduleAdvice sanitizeScheduleAdvice(
   return AiScheduleAdvice(
     summary: aiClipText(record['summary'], 400),
     suggestions: suggestions,
+  );
+}
+
+// ===== Leitura do pedido de exame (prompt e sanitização) =====
+
+/// Porta verbatim do `EXAM_SCAN_PROMPT` do PWA: a IA só transcreve o que
+/// está impresso — campos ilegíveis ficam vazios e ela não inventa dados.
+const String examScanPrompt =
+    'Analise a foto de um pedido médico de exames do Brasil e extraia os '
+    'dados para o cadastro.\n'
+    '\n'
+    'Responda APENAS com um JSON válido, sem nenhum texto antes ou depois, '
+    'neste formato:\n'
+    '{"name":"...","category":"...","doctorName":"...","place":"...",'
+    '"date":"..."}\n'
+    '\n'
+    'Regras:\n'
+    '- name: nome do exame pedido (se houver vários, separe por vírgula). '
+    'Ex.: "Hemograma completo, Glicemia em jejum".\n'
+    '- category: classifique o(s) exame(s) em exatamente uma destas opções: '
+    '"Laboratório" (sangue, urina, fezes), "Imagem" (raio-x, ultrassom, '
+    'tomografia, ressonância, mamografia), "Cardiológico" (ECG, '
+    'ecocardiograma, teste ergométrico), "Oftalmológico" ou "Outro". Use '
+    'string vazia se não for possível classificar.\n'
+    '- doctorName: nome do médico solicitante impresso no pedido (mantenha '
+    '"Dr."/"Dra." se constar).\n'
+    '- place: nome do laboratório ou clínica indicado no pedido, se houver; '
+    'senão string vazia.\n'
+    '- date: data do pedido visível no documento, em AAAA-MM-DD; string '
+    'vazia se não houver.\n'
+    '- Qualquer campo ilegível, ausente ou incompleto deve ser string '
+    'vazia. Não invente dados.\n'
+    '- Se a imagem não for um pedido de exame, responda apenas '
+    '{"error":"not_a_request"}.';
+
+/// Normaliza a resposta da leitura do pedido; nunca lança — entrada
+/// estranha vira campos vazios. Categoria fora da lista fixa e data fora
+/// do formato AAAA-MM-DD são descartadas (a IA não decide o cadastro).
+AiExamScan sanitizeExamScan(Object? value) {
+  final record = value is Map<String, dynamic> ? value : <String, dynamic>{};
+
+  final category = aiClipText(record['category'], 40);
+  final date = aiClipText(record['date'], 10);
+
+  return AiExamScan(
+    name: aiClipText(record['name'], 200),
+    category: examCategories.contains(category) ? category : '',
+    doctorName: aiClipText(record['doctorName'], 120),
+    place: aiClipText(record['place'], 120),
+    date: RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(date) ? date : '',
   );
 }
