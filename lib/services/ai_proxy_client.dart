@@ -162,7 +162,7 @@ class AiProxyClient {
     try {
       final response = await _client
           .post(
-            Uri.parse('$defaultProxyUrl/chat/completions'),
+            Uri.parse('$defaultProxyUrl/v1/chat/completions'),
             headers: _headers(),
             body: jsonEncode(<String, dynamic>{
               'model': candidateModel,
@@ -237,7 +237,7 @@ class AiProxyClient {
     try {
       final response = await _client
           .get(
-            Uri.parse('$defaultProxyUrl/models'),
+            Uri.parse('$defaultProxyUrl/v1/models'),
             headers: _headers(),
           )
           .timeout(catalogTimeout);

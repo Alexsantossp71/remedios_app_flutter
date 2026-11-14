@@ -40,6 +40,31 @@ http.Response _chatContent(String content, {int status = 200}) =>
     }, status: status);
 
 void main() {
+  group('AiProxyClient — rotas do Worker', () {
+    test('chat e catálogo usam os paths /v1/ reais do Worker', () async {
+      // O Worker só aceita '/v1/chat/completions' (POST) e '/v1/models'
+      // (GET); qualquer outro path cai no 404 genérico. Este teste fixa o
+      // contrato ao vivo — sem o prefixo /v1 todas as chamadas falhariam.
+      final client = RecordingClient((request) async {
+        if (request.method == 'GET') return _json({'data': []});
+        return _chatContent('ok');
+      });
+      final proxy = AiProxyClient(client: client, isWebOverride: false);
+      await proxy.chatCompletion(messages: [
+        {'role': 'user', 'content': 'olá'},
+      ]);
+
+      expect(client.requests, hasLength(2));
+      final catalog = client.requests
+          .firstWhere((r) => r.method == 'GET' && r.url.path.endsWith('/models'));
+      expect(catalog.url.toString(),
+          '${AiProxyClient.defaultProxyUrl}/v1/models');
+      final chat = client.requests.firstWhere((r) => r.method == 'POST');
+      expect(chat.url.toString(),
+          '${AiProxyClient.defaultProxyUrl}/v1/chat/completions');
+    });
+  });
+
   group('AiProxyClient — cabeçalhos', () {
     test('nativo envia Origin autorizada e Content-Type JSON', () async {
       final client = RecordingClient((request) async => _chatContent('ok'));
