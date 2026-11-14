@@ -29,8 +29,11 @@ Future<bool> ensureAiConsent(BuildContext context) async {
               'As ferramentas de IA enviam os NOMES e DOSAGENS dos seus '
               'medicamentos (e um resumo de adesão, na preparação de '
               'consultas) a um serviço de inteligência artificial, que '
-              'devolve análises educativas. Nada é salvo nesse serviço e '
-              'nenhum resultado altera seus dados sem sua confirmação.\n\n'
+              'devolve análises educativas. As ferramentas de leitura de '
+              'documentos enviam a FOTO escolhida por você (pedido de '
+              'exame ou laudo) para transcrever os campos impressos. '
+              'Nada é salvo nesse serviço e nenhum resultado altera seus '
+              'dados sem sua confirmação.\n\n'
               'Se preferir, não use estas ferramentas — todo o resto do '
               'app funciona igual.',
             ),

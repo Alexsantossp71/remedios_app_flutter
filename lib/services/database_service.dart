@@ -17,7 +17,7 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._();
 
   static const String _databaseName = 'remedios_app.db';
-  static const int _databaseVersion = 8;
+  static const int _databaseVersion = 9;
 
   Database? _db;
   bool _isInitialized = false;
@@ -252,6 +252,25 @@ class DatabaseService {
         updated_at TEXT NOT NULL
       )
     ''');
+
+    // 8. Exams table (pedidos/agendamentos/laudos de exames)
+    await db.execute('''
+      CREATE TABLE exams (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'requested',
+        date TEXT NOT NULL,
+        time TEXT,
+        photo TEXT,
+        doctor_id TEXT NOT NULL DEFAULT '',
+        doctor_name TEXT NOT NULL DEFAULT '',
+        place TEXT NOT NULL DEFAULT '',
+        results TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _onConfigure(Database db) async {
@@ -332,6 +351,27 @@ class DatabaseService {
       // Version 8: Add ai_consent_at column (consentimento para envio de
       // dados clínicos ao serviço de IA; timestamp UTC, NULL = não autorizou).
       await db.execute('ALTER TABLE user_profile ADD COLUMN ai_consent_at TEXT');
+    }
+    if (oldVersion < 9) {
+      // Version 9: Create exams table (módulo de exames — pedido → agendado
+      // → realizado, com foto opcional do pedido/laudo em base64).
+      await db.execute('''
+        CREATE TABLE exams (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          category TEXT NOT NULL DEFAULT '',
+          status TEXT NOT NULL DEFAULT 'requested',
+          date TEXT NOT NULL,
+          time TEXT,
+          photo TEXT,
+          doctor_id TEXT NOT NULL DEFAULT '',
+          doctor_name TEXT NOT NULL DEFAULT '',
+          place TEXT NOT NULL DEFAULT '',
+          results TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
     }
   }
 

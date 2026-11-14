@@ -5,13 +5,16 @@ import '../core/design/app_shell.dart';
 import '../core/design/app_tokens.dart';
 import '../models/consultation.dart';
 import '../models/doctor.dart';
+import '../models/exam.dart';
 import '../models/treatment.dart';
 import '../providers/consultation_provider.dart';
 import '../providers/doctor_provider.dart';
+import '../providers/exam_provider.dart';
 import '../providers/therapy_provider.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/consultation_form_dialog.dart';
 import '../widgets/doctor_form_dialog.dart';
+import '../widgets/exam_form_dialog.dart';
 import '../widgets/stepped_form_sheet.dart';
 import '../widgets/treatment_form_dialog.dart';
 import 'consultations_screen.dart';
@@ -127,6 +130,22 @@ class _MainShellState extends State<MainShell>
     }
   }
 
+  Future<void> _createExam() async {
+    final result = await showSteppedFormSheet<Exam>(
+      context: context,
+      builder: (_) => const ExamFormDialog(),
+    );
+    if (result == null || !mounted) return;
+    await context.read<ExamProvider>().saveExam(result);
+    if (mounted) {
+      showAppSnackBar(
+        context,
+        'Exame registrado.',
+        type: AppSnackType.success,
+      );
+    }
+  }
+
   Future<void> _openCreateMenu() async {
     await showGeneralDialog<void>(
       context: context,
@@ -139,6 +158,7 @@ class _MainShellState extends State<MainShell>
             onTreatment: _createTreatment,
             onConsultation: _createConsultation,
             onDoctor: _createDoctor,
+            onExam: _createExam,
           ),
     );
   }
@@ -313,11 +333,13 @@ class _RadialCreateMenu extends StatelessWidget {
     required this.onTreatment,
     required this.onConsultation,
     required this.onDoctor,
+    required this.onExam,
   });
 
   final VoidCallback onTreatment;
   final VoidCallback onConsultation;
   final VoidCallback onDoctor;
+  final VoidCallback onExam;
 
   Future<void> _pick(BuildContext context, VoidCallback action) async {
     Navigator.of(context).pop();
@@ -339,13 +361,19 @@ class _RadialCreateMenu extends StatelessWidget {
         icon: Icons.calendar_month_rounded,
         label: 'Consulta',
         action: onConsultation,
-        stagger: 0.18,
+        stagger: 0.15,
+      ),
+      (
+        icon: Icons.science_rounded,
+        label: 'Exame',
+        action: onExam,
+        stagger: 0.30,
       ),
       (
         icon: Icons.medical_services_rounded,
         label: 'Médico',
         action: onDoctor,
-        stagger: 0.36,
+        stagger: 0.45,
       ),
     ];
 

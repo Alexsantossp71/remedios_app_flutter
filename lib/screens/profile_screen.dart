@@ -17,6 +17,7 @@ import '../providers/user_profile_provider.dart';
 import '../core/design/brand_colors.dart';
 import '../core/design/record_card.dart';
 import '../screens/doctors_screen.dart';
+import '../screens/exams_screen.dart';
 import '../screens/health_plans_screen.dart';
 import '../screens/progress_screen.dart';
 import '../services/backup_file.dart';
@@ -760,6 +761,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const DoctorsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: _CadastroIconBox(
+                      icon: Icons.science_outlined,
+                      isDark: isDark,
+                    ),
+                    title: const Text('Exames'),
+                    subtitle: const Text('Do pedido do médico ao laudo, com leitura por IA'),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const ExamsScreen(),
                         ),
                       );
                     },
