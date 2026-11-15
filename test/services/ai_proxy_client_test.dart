@@ -222,6 +222,15 @@ void main() {
       expect(AiProxyClient.extractChatContent(null), '');
     });
 
+    test('timeout padrão cobre modelos de raciocínio (>= 30 s)', () {
+      // Regressão: com 12 s, os modelos de raciocínio gratuitos da NVIDIA
+      // (15-35 s) eram cortados no meio e a chamada caía no fallback.
+      expect(
+        AiProxyClient.defaultRequestTimeout,
+        greaterThanOrEqualTo(const Duration(seconds: 30)),
+      );
+    });
+
     test('readServiceError lê error.message do proxy e do upstream', () {
       expect(
         AiProxyClient.readServiceError(

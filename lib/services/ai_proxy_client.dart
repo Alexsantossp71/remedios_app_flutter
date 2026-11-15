@@ -71,7 +71,12 @@ class AiProxyClient {
     'z-ai/glm-5.3-flash',
   ];
 
-  static const Duration defaultRequestTimeout = Duration(seconds: 12);
+  /// Modelos de raciocínio (nemotron-super-vl, glm-5.3-flash) demoram
+  /// 15-35 s só para raciocinar antes de responder — 12 s cortava quase
+  /// toda chamada no meio e derrubava o usuário para o fallback. Falhas
+  /// reais (rede, 403, 404) retornam imediatamente, sem esperar o
+  /// timeout, então o fallback rápido não é afetado.
+  static const Duration defaultRequestTimeout = Duration(seconds: 30);
   static const Duration catalogTimeout = Duration(seconds: 8);
   static const Duration catalogTtl = Duration(minutes: 5);
 
