@@ -93,10 +93,36 @@ void main() {
       find.widgetWithText(TextFormField, 'Nome do médico'),
       'Dra. Paula Costa',
     );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Especialidade'),
-      'Dermatologia',
-    );
+    // Especialidade é LISTA FIXA: escolhe no dropdown, sem texto livre.
+    // O teclado do nome espreme a sheet e atrapalha o menu (mesmo cuidado
+    // do dropdown de UF abaixo): esconde antes de interagir.
+    tester.testTextInput.hide();
+    await _pumpFor(tester);
+    await tester.ensureVisible(find.byKey(const ValueKey('doctorSpecialty')));
+    await _pumpFor(tester);
+    await tester.tap(find.byKey(const ValueKey('doctorSpecialty')));
+    await _pumpFor(tester);
+    // Menu lazy: 'Dermatologia' fica abaixo da janela inicial — arrasta
+    // até o item ficar VISÍVEL (o cacheExtent constrói widgets fora da
+    // área clicável do menu, e tapar neles não registra). O finder é
+    // reavaliado a cada volta: `.last` lança em lista vazia.
+    const dermaText = 'Dermatologia';
+    for (var i = 0; i < 10; i++) {
+      final hits = find.text(dermaText).evaluate();
+      if (hits.isNotEmpty &&
+          tester.getCenter(find.text(dermaText).last).dy < 420) {
+        break;
+      }
+      await tester.drag(find.byType(ListView).last, const Offset(0, -300));
+      await _pumpFor(tester);
+    }
+    // A inércia do drag continua rolando a lista: sem acomodar antes do
+    // toque, o item escapa de baixo do dedo e a seleção não registra.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.tap(find.text(dermaText).last);
+    await _pumpFor(tester);
     await tester.enterText(
       find.widgetWithText(TextFormField, 'Telefone'),
       '(21) 99999-0000',

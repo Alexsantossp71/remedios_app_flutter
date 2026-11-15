@@ -38,15 +38,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   Future<void> _editDoctor(DoctorProvider provider, [Doctor? doctor]) async {
     final result = await showSteppedFormSheet<Doctor>(
       context: context,
-      builder:
-          (context) => DoctorFormDialog(
-            initialDoctor: doctor,
-            knownSpecialties:
-                provider.doctors
-                    .map((item) => item.specialty)
-                    .where((specialty) => specialty.trim().isNotEmpty)
-                    .toList(),
-          ),
+      builder: (context) => DoctorFormDialog(initialDoctor: doctor),
     );
     if (result != null) {
       await provider.saveDoctor(result);

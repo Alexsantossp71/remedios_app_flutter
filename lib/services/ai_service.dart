@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../core/lab_values.dart';
+import '../data/medical_specialties.dart';
 import '../models/exam.dart';
 import '../models/treatment.dart';
 import 'ai_proxy_client.dart';
@@ -262,6 +263,51 @@ class AiService {
       throw AiException(
         'A IA não reconheceu valores neste laudo. Tente uma foto mais '
         'nítida, sem reflexos, ou preencha manualmente.',
+      );
+    }
+    return result;
+  }
+
+  // ===== Dados do médico a partir de texto colado/digitado =====
+
+  /// Extrai nome, CRM, UF, especialidade e telefone de um texto livre
+  /// (ex.: "Dra. Ana Silva, CRM 123456-SP, cardiologista"). A IA só
+  /// transcreve: campos ausentes ficam vazios e a especialidade volta
+  /// APENAS se casar com a lista fixa do cadastro — nada é inventado.
+  Future<DoctorAiData> extractDoctorData(String rawText) async {
+    final text = rawText.trim();
+    if (text.isEmpty) {
+      throw AiException('Cole ou digite os dados do médico primeiro.');
+    }
+
+    final content = await _proxy.chatCompletion(
+      messages: [
+        {
+          'role': 'user',
+          'content':
+              '$doctorExtractPrompt\n\nLista de especialidades válidas:\n'
+              '${kMedicalSpecialties.join(', ')}\n\n'
+              'Texto do usuário:\n$text',
+        },
+      ],
+      model: AiProxyClient.defaultTextModel,
+      maxTokens: 400,
+      temperature: 0.1,
+    );
+
+    final parsed = aiExtractJson(content);
+    if (parsed['error'] == 'not_a_doctor') {
+      throw AiException(
+        'O texto não parece conter dados de um médico. Confira e tente de '
+        'novo, ou preencha os campos manualmente.',
+      );
+    }
+
+    final result = sanitizeDoctorData(parsed);
+    if (result.isEmpty) {
+      throw AiException(
+        'A IA não encontrou dados do médico nesse texto. Preencha os campos '
+        'manualmente.',
       );
     }
     return result;
@@ -920,6 +966,38 @@ AiScheduleAdvice sanitizeScheduleAdvice(
   );
 }
 
+/// Dados do médico extraídos de texto livre pela IA. Todos opcionais —
+/// quem preenche e salva é o usuário; a IA só sugere o preenchimento.
+class DoctorAiData {
+  const DoctorAiData({
+    this.name = '',
+    this.specialty = '',
+    this.crm = '',
+    this.crmState = '',
+    this.phone = '',
+  });
+
+  /// Nome sem o prefixo Dr./Dra. (mesma convenção do rascunho da receita).
+  final String name;
+
+  /// Só se casou com a lista fixa de especialidades do cadastro.
+  final String specialty;
+
+  /// Só dígitos.
+  final String crm;
+
+  /// UF válida do Brasil ("SP") ou vazio.
+  final String crmState;
+
+  final String phone;
+
+  bool get isEmpty =>
+      name.trim().isEmpty &&
+      crm.trim().isEmpty &&
+      specialty.trim().isEmpty &&
+      phone.trim().isEmpty;
+}
+
 // ===== Leitura do pedido de exame (prompt e sanitização) =====
 
 /// Porta verbatim do `EXAM_SCAN_PROMPT` do PWA: a IA só transcreve o que
@@ -1007,3 +1085,87 @@ const String labScanPrompt =
     'campo ilegível deve ser string vazia.\n'
     '- Se a imagem não for um laudo com valores de exames, responda '
     'apenas {"error":"not_a_report"}.';
+
+// ===== Dados do médico por texto (prompt e sanitização) =====
+
+/// A IA transcreve o que o usuário colou; a especialidade deve ser
+/// escolhida APENAS entre as da lista enviada no prompt — nada de
+/// especialidade inventada fora do cadastro.
+const String doctorExtractPrompt =
+    'O usuário vai colar ou digitar dados de um médico do Brasil em texto '
+    'livre (pode vir de uma indicação, mensagem, site ou receita). Extraia '
+    'os dados para preencher um cadastro.\n'
+    '\n'
+    'Responda APENAS com um JSON válido, sem nenhum texto antes ou depois, '
+    'neste formato:\n'
+    '{"nome":"...","especialidade":"...","crm":"...","uf":"...",'
+    '"telefone":"..."}\n'
+    '\n'
+    'Regras:\n'
+    '- nome: nome do médico sem os prefixos "Dr.", "Dra.", "Dr", "Dra" '
+    '(ex.: "Ana Silva"). string vazia se não houver.\n'
+    '- especialidade: escolha EXATAMENTE uma opção da lista de '
+    'especialidades válidas enviada abaixo, com a escrita idêntica à da '
+    'lista. Se nenhuma casar (ex.: "nutricionista", "dentista", '
+    '"fisioterapeuta"), use string vazia.\n'
+    '- crm: apenas os dígitos do número do CRM (ex.: "123456"). string '
+    'vazia se não houver. Não confunda com CRO, CREN ou outros conselhos '
+    'que não sejam CRM.\n'
+    '- uf: a UF do CRM em duas letras maiúsculas (ex.: "SP") quando o '
+    'texto indicar (ex.: "CRM 123456-SP"). string vazia se não houver.\n'
+    '- telefone: telefone com DDD exatamente como escrito (ex.: "(11) '
+    '99999-1234"). string vazia se não houver.\n'
+    '- Qualquer dado ausente deve ser string vazia. NÃO invente dados que '
+    'não estão no texto.\n'
+    '- Se o texto não descrever um médico (ex.: receita de farmácia, '
+    'recado qualquer), responda apenas {"error":"not_a_doctor"}.';
+
+/// Normaliza a resposta da extração; nunca lança — entrada estranha vira
+/// campos vazios. UF fora da lista do Brasil e especialidade fora da
+/// lista fixa do cadastro são descartadas (a IA não decide o cadastro).
+DoctorAiData sanitizeDoctorData(Object? value) {
+  final record = value is Map<String, dynamic> ? value : <String, dynamic>{};
+
+  final crm = aiClipText(record['crm'], 12).replaceAll(RegExp(r'\D'), '');
+  final uf = aiClipText(record['uf'], 2).trim().toUpperCase();
+  final specialty = matchFixedSpecialty(aiClipText(record['especialidade'], 80));
+
+  return DoctorAiData(
+    name: _cleanAiDoctorName(aiClipText(record['nome'], 120)),
+    specialty: specialty,
+    crm: crm,
+    crmState: isValidBrazilianUf(uf) ? uf : '',
+    phone: aiClipText(record['telefone'], 30).trim(),
+  );
+}
+
+/// Casa o texto da IA com a lista fixa do cadastro: primeiro igualdade
+/// exata (sem maiúsculas), depois um contém o outro. Sem casamento, vazio
+/// — o usuário escolhe na lista. Também usada pelo retorno do conselho
+/// (CREMESP) para manter o cadastro dentro da lista fixa.
+String matchFixedSpecialty(String raw) {
+  final value = raw.trim();
+  if (value.isEmpty) return '';
+  final needle = value.toLowerCase();
+  for (final specialty in kMedicalSpecialties) {
+    if (specialty.toLowerCase() == needle) return specialty;
+  }
+  for (final specialty in kMedicalSpecialties) {
+    final haystack = specialty.toLowerCase();
+    if (haystack.contains(needle) || needle.contains(haystack)) {
+      return specialty;
+    }
+  }
+  return '';
+}
+
+/// Tira o prefixo Dr./Dra. e espaços duplicados (mesma convenção do
+/// rascunho lido da receita).
+String _cleanAiDoctorName(String raw) {
+  var value = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
+  value = value.replaceFirst(
+    RegExp(r'^dra?\.?\s*', caseSensitive: false),
+    '',
+  );
+  return value.trim();
+}

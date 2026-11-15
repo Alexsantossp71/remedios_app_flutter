@@ -83,17 +83,18 @@ void main() {
     expect(find.textContaining('CRM ativo:'), findsOneWidget);
 
     // Nome e especialidade moram no passo 1: volta para conferir o
-    // preenchimento vindo do conselho.
+    // preenchimento vindo do conselho. A especialidade é dropdown da
+    // lista fixa: "ENDOCRINOLOGIA E METABOLOGIA" do conselho casa com
+    // "Endocrinologia" da lista — o cadastro nunca sai dela.
     await tester.tap(find.text('Voltar'));
     await tester.pumpAndSettle();
     expect(
       find.widgetWithText(TextFormField, 'Sandra Lina dos Reis Alpendre'),
       findsOneWidget,
     );
-    expect(
-      find.widgetWithText(TextFormField, 'ENDOCRINOLOGIA E METABOLOGIA'),
-      findsOneWidget,
-    );
+    await tester.ensureVisible(find.byKey(const ValueKey('doctorSpecialty')));
+    await tester.pumpAndSettle();
+    expect(find.text('Endocrinologia'), findsOneWidget);
   });
 
   testWidgets('lookup without UF shows a warning and does not call the API',

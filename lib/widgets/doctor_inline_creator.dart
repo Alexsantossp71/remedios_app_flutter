@@ -27,15 +27,7 @@ Future<Doctor?> createDoctorInline(
   final provider = context.read<DoctorProvider>();
   final result = await showSteppedFormSheet<Doctor>(
     context: context,
-    builder:
-        (_) => DoctorFormDialog(
-          draft: draft,
-          knownSpecialties:
-              provider.doctors
-                  .map((item) => item.specialty)
-                  .where((specialty) => specialty.trim().isNotEmpty)
-                  .toList(),
-        ),
+    builder: (_) => DoctorFormDialog(draft: draft),
   );
   if (result == null || !context.mounted) return null;
   await provider.saveDoctor(result);
