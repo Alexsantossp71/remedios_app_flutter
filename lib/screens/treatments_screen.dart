@@ -1,22 +1,15 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/treatment.dart';
-import '../models/treatment_draft.dart';
 import '../providers/therapy_provider.dart';
-import '../providers/user_profile_provider.dart';
-import '../screens/prescription_review_screen.dart';
-import '../services/prescription_reader_service.dart';
 import '../core/design/app_tokens.dart';
 import '../core/design/brand_colors.dart';
 import '../core/design/quick_action.dart';
 import '../core/design/record_card.dart';
 import '../core/design/stat_card.dart';
+import 'create_flows.dart';
 import '../widgets/ai_interactions_sheet.dart';
 import '../widgets/ai_medication_guide_sheet.dart';
 import '../widgets/ai_schedule_advisor_sheet.dart';
@@ -25,9 +18,6 @@ import '../widgets/empty_illustration.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/info_chip.dart';
-import '../widgets/media_source_sheet.dart';
-import '../widgets/privacy_notice.dart';
-import '../widgets/reading_dialog.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stepped_form_sheet.dart';
 import '../widgets/treatment_form_dialog.dart';
@@ -35,174 +25,23 @@ import '../widgets/treatment_form_dialog.dart';
 class TreatmentsScreen extends StatelessWidget {
   const TreatmentsScreen({super.key});
 
-  Future<void> _openTreatmentForm(
-    BuildContext context, {
-    Treatment? treatment,
-  }) async {
+  /// Edição de um tratamento existente. O cadastro (manual ou pela foto da
+  /// receita) vive em [createTreatmentManually] e
+  /// [createTreatmentFromPrescription] — usados pela tela e pelo menu central.
+  Future<void> _editTreatment(BuildContext context, Treatment treatment) async {
     final result = await showSteppedFormSheet<Treatment>(
       context: context,
       builder: (_) => TreatmentFormDialog(initialTreatment: treatment),
     );
     if (result == null || !context.mounted) return;
 
-    final provider = context.read<TherapyProvider>();
-    if (treatment == null) {
-      await provider.addTreatment(result);
-    } else {
-      await provider.updateTreatment(result);
-    }
-    unawaited(HapticFeedback.mediumImpact());
+    await context.read<TherapyProvider>().updateTreatment(result);
     if (!context.mounted) return;
     showAppSnackBar(
       context,
-      treatment == null
-          ? 'Tratamento salvo. Bom começo!'
-          : 'Tratamento atualizado.',
+      'Tratamento atualizado.',
       type: AppSnackType.success,
     );
-  }
-
-  /// Foto da receita: ler, conferir e salvar um tratamento por medicamento.
-  /// Cada rascunho passa pelo formulário de tratamento — a leitura só
-  /// preenche, quem salva é o usuário.
-  Future<void> _startPrescriptionFlow(BuildContext context) async {
-    final consented = await _ensurePrescriptionConsent(context);
-    if (!consented || !context.mounted) return;
-
-    final source = await _pickImageSource(context);
-    if (source == null || !context.mounted) return;
-
-    final XFile? file;
-    try {
-      file = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 85,
-      );
-    } catch (_) {
-      if (context.mounted) {
-        _showSnack(context, 'Não foi possível acessar a imagem.');
-      }
-      return;
-    }
-    if (file == null) return;
-
-    final bytes = await file.readAsBytes();
-    if (!context.mounted) return;
-
-    // Diálogo sem await: só é dispensado quando a leitura termina, e awaitar
-    // aqui travaria a tela sem nunca enviar a imagem (padrão da leitura de
-    // cartão).
-    unawaited(showReadingDialog(context));
-
-    PrescriptionReadResult? result;
-    String? error;
-    try {
-      result = await PrescriptionReaderService().readPrescription(
-        imageBytes: bytes,
-        mimeType: _mimeTypeOf(file),
-      );
-    } on PrescriptionReaderException catch (e) {
-      error = e.message;
-    } catch (_) {
-      error =
-          'Não foi possível ler a receita. Tente outra foto ou cadastre '
-          'manualmente.';
-    }
-
-    if (!context.mounted) return;
-    Navigator.of(
-      context,
-      rootNavigator: true,
-    ).pop(); // fecha o diálogo de leitura
-
-    if (result == null) {
-      _showSnack(context, error!);
-      return;
-    }
-
-    final drafts = await Navigator.of(context).push<List<TreatmentDraft>>(
-      MaterialPageRoute(
-        builder: (_) => PrescriptionReviewScreen(result: result!),
-      ),
-    );
-    if (drafts == null || drafts.isEmpty || !context.mounted) return;
-
-    final provider = context.read<TherapyProvider>();
-    for (final draft in drafts) {
-      if (!context.mounted) return;
-      final saved = await showSteppedFormSheet<Treatment>(
-        context: context,
-        builder: (_) => TreatmentFormDialog(draft: draft),
-      );
-      if (saved != null) {
-        await provider.addTreatment(saved);
-      }
-    }
-  }
-
-  Future<bool> _ensurePrescriptionConsent(BuildContext context) async {
-    final userProvider = context.read<UserProfileProvider>();
-    if (userProvider.profile?.consentAt != null) return true;
-
-    final accepted = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (dialogContext) => AlertDialog(
-            title: const Text('Autorização necessária'),
-            content: const SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Para ler a foto da receita, a imagem é enviada ao nosso '
-                    'servidor e descartada após a leitura por OCR. Essa opção '
-                    'usa a internet; o cadastro manual não envia nada.',
-                  ),
-                  SizedBox(height: 12),
-                  PrivacyNoticeCard(),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Aceito e autorizo'),
-              ),
-            ],
-          ),
-    );
-
-    if (accepted != true || !context.mounted) return false;
-    await userProvider.grantConsent();
-    return true;
-  }
-
-  Future<ImageSource?> _pickImageSource(BuildContext context) {
-    return showImageSourceSheet(
-      context,
-      cameraLabel: 'Tirar foto da receita',
-      galleryLabel: 'Escolher imagem da galeria',
-    );
-  }
-
-  void _showSnack(BuildContext context, String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  static String _mimeTypeOf(XFile file) {
-    final path = file.path.toLowerCase();
-    if (path.endsWith('.png')) return 'image/png';
-    if (path.endsWith('.webp')) return 'image/webp';
-    return 'image/jpeg';
   }
 
   Future<void> _confirmArchive(
@@ -314,9 +153,9 @@ class TreatmentsScreen extends StatelessWidget {
                   description:
                       'Cadastre seu primeiro medicamento para receber uma rotina organizada de doses.',
                   actionLabel: 'Adicionar medicamento',
-                  onAction: () => _openTreatmentForm(context),
+                  onAction: () => createTreatmentManually(context),
                   secondaryActionLabel: 'Usar foto da receita',
-                  onSecondaryAction: () => _startPrescriptionFlow(context),
+                  onSecondaryAction: () => createTreatmentFromPrescription(context),
                 ),
               )
             else
@@ -329,9 +168,7 @@ class TreatmentsScreen extends StatelessWidget {
                     final treatment = treatments[index];
                     return TreatmentCard(
                       treatment: treatment,
-                      onEdit:
-                          () =>
-                              _openTreatmentForm(context, treatment: treatment),
+                      onEdit: () => _editTreatment(context, treatment),
                       onArchive: () => _confirmArchive(context, treatment),
                       onGuide: () => showAiMedicationGuideSheet(
                         context,
@@ -353,14 +190,14 @@ class TreatmentsScreen extends StatelessWidget {
                 children: [
                   FloatingActionButton.extended(
                     heroTag: 'prescription-scan-fab',
-                    onPressed: () => _startPrescriptionFlow(context),
+                    onPressed: () => createTreatmentFromPrescription(context),
                     icon: const Icon(Icons.photo_camera_outlined),
                     label: const Text('Foto da receita'),
                   ),
                   const SizedBox(height: 12),
                   FloatingActionButton.extended(
                     heroTag: 'add-treatment-fab',
-                    onPressed: () => _openTreatmentForm(context),
+                    onPressed: () => createTreatmentManually(context),
                     icon: const Icon(Icons.add),
                     label: const Text('Adicionar'),
                   ),

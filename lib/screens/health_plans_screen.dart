@@ -1,25 +1,19 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+
 import '../models/health_plan.dart';
 import '../providers/health_plan_provider.dart';
-import '../providers/user_profile_provider.dart';
 import '../core/design/app_tokens.dart';
 import '../core/theme/app_theme.dart';
 import '../services/card_reader_service.dart';
-import '../widgets/add_health_plan_sheet.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/health_plan_form_dialog.dart';
 import '../widgets/info_chip.dart';
-import '../widgets/privacy_notice.dart';
-import '../widgets/reading_dialog.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stepped_form_sheet.dart';
-import 'health_plan_review_screen.dart';
+import 'create_flows.dart';
 
 /// Screen for managing health plans and medical insurance.
 class HealthPlansScreen extends StatelessWidget {
@@ -28,8 +22,8 @@ class HealthPlansScreen extends StatelessWidget {
   /// Fábrica do serviço de leitura do cartão.
   ///
   /// Existe apenas para permitir injetar um cliente HTTP nos testes de widget;
-  /// sem isso, qualquer teste que chegue ao `_scanCard` dispararia uma chamada
-  /// real para o endpoint de produção.
+  /// sem isso, qualquer teste que chegue à leitura ([scanHealthPlanCard])
+  /// dispararia uma chamada real para o endpoint de produção.
   final CardReaderService Function()? cardReaderFactory;
 
   @override
@@ -106,254 +100,12 @@ class HealthPlansScreen extends StatelessWidget {
     );
   }
 
-  /// Inicia o cadastro de um novo plano: imagem do cartão (com leitura e
-  /// conferência) ou preenchimento manual.
+  /// Inicia o cadastro de um novo plano: a escolha (foto do cartão lida por
+  /// IA × manual), o consentimento, a leitura e a conferência vivem em
+  /// [addHealthPlan] — compartilhados com o menu central “+”. O
+  /// [cardReaderFactory] existe só para os testes injetarem um cliente HTTP.
   Future<void> _addPlan(BuildContext context) async {
-    final provider = context.read<HealthPlanProvider>();
-    final choice = await showAddHealthPlanSheet(context);
-    if (choice == null || !context.mounted) return;
-
-    if (choice == AddPlanChoice.manual) {
-      await _openManualForm(context, provider);
-      return;
-    }
-
-    final scan = await _scanCard(context);
-    if (scan == null || !context.mounted) return;
-
-    final plan = await Navigator.of(context).push<HealthPlan>(
-      MaterialPageRoute(
-        builder:
-            (_) => HealthPlanReviewScreen(
-              scan: scan,
-              onRescan: () => _scanCard(context),
-              onManualEntry: (scan) => _leaveReviewForManual(context, scan),
-            ),
-      ),
-    );
-
-    if (plan == null) return;
-    await provider.saveHealthPlan(plan);
-    if (!context.mounted) return;
-    _showSnack(context, '${plan.name} adicionado com sucesso!');
-  }
-
-  /// Abre o formulário manual (cadastro ou edição).
-  Future<void> _openManualForm(
-    BuildContext context,
-    HealthPlanProvider provider, [
-    HealthPlan? existing,
-  ]) async {
-    final plan = await showSteppedFormSheet<HealthPlan>(
-      context: context,
-      builder: (_) => HealthPlanFormDialog(healthPlan: existing),
-    );
-
-    if (plan == null || !context.mounted) return;
-    await provider.saveHealthPlan(plan);
-    if (!context.mounted) return;
-    _showSnack(
-      context,
-      existing == null
-          ? '${plan.name} adicionado com sucesso!'
-          : '${plan.name} atualizado!',
-    );
-  }
-
-  /// Escolhe a imagem, faz a leitura e devolve os dados extraídos.
-  /// Retorna `null` quando o usuário cancela, não consentiu ou a leitura
-  /// falha.
-  Future<CardScanResult?> _scanCard(BuildContext context) async {
-    // LGPD: a foto do cartão sai do dispositivo para a leitura por IA, então
-    // o consentimento específico é obrigatório antes de abrir o seletor.
-    final consented = await _ensureScanConsent(context);
-    if (!consented || !context.mounted) return null;
-
-    final source = await _pickImageSource(context);
-    if (source == null || !context.mounted) return null;
-
-    final XFile? file;
-    try {
-      file = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 85,
-      );
-    } catch (_) {
-      if (context.mounted) {
-        _showSnack(context, 'Não foi possível acessar a imagem.');
-      }
-      return null;
-    }
-    if (file == null) return null;
-
-    final bytes = await file.readAsBytes();
-    if (!context.mounted) return null;
-
-    // O diálogo é empurrado sem await: showDialog só completa quando a rota
-    // é dispensada, e a única linha que a dispensa (o pop no fim do fluxo)
-    // depende da leitura terminar. Awaitar aqui trava a tela para sempre sem
-    // nunca enviar a imagem.
-    unawaited(
-      showReadingDialog(
-        context,
-        title: 'Lendo o cartão…',
-        subtitle: 'Procurando operadora e número de carteirinha.',
-      ),
-    );
-
-    CardReadResult? data;
-    String? error;
-    try {
-      data = await (cardReaderFactory?.call() ?? CardReaderService()).readCard(
-        imageBytes: bytes,
-        mimeType: _mimeTypeOf(file),
-      );
-    } on CardReaderException catch (e) {
-      error = e.message;
-    } catch (_) {
-      error =
-          'Não foi possível ler o cartão. Tente outra foto ou cadastre '
-          'manualmente.';
-    }
-
-    if (!context.mounted) return null;
-    Navigator.of(context).pop(); // fecha o diálogo de leitura
-
-    if (data == null) {
-      _showSnack(
-        context,
-        error ?? 'Não foi possível ler o cartão.',
-        action: SnackBarAction(
-          label: 'Cadastrar manualmente',
-          onPressed: () {
-            final provider = context.read<HealthPlanProvider>();
-            _openManualForm(context, provider);
-          },
-        ),
-      );
-      return null;
-    }
-
-    return CardScanResult(data: data, imageBytes: bytes);
-  }
-
-  /// Garante o consentimento LGPD antes do envio da imagem. Retorna `true`
-  /// quando o usuário já consentiu ou acabou de consentir.
-  Future<bool> _ensureScanConsent(BuildContext context) async {
-    final userProvider = context.read<UserProfileProvider>();
-    if (userProvider.profile?.consentAt != null) return true;
-
-    final accepted = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (dialogContext) => AlertDialog(
-            title: const Text('Autorização necessária'),
-            content: const SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Para ler a foto do cartão, a imagem é enviada ao '
-                    'serviço de leitura automática do próprio app e '
-                    'descartada após a leitura — nada vai para terceiros. '
-                    'Essa opção usa a internet; o cadastro manual não '
-                    'envia nada.',
-                  ),
-                  SizedBox(height: 12),
-                  PrivacyNoticeCard(),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Aceito e autorizo'),
-              ),
-            ],
-          ),
-    );
-
-    if (accepted != true || !context.mounted) return false;
-    await userProvider.grantConsent();
-    return true;
-  }
-
-  Future<ImageSource?> _pickImageSource(BuildContext context) {
-    return showModalBottomSheet<ImageSource>(
-      context: context,
-      showDragHandle: true,
-      builder:
-          (sheetContext) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.photo_camera_outlined),
-                  title: const Text('Tirar foto do cartão'),
-                  onTap:
-                      () => Navigator.of(sheetContext).pop(ImageSource.camera),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.photo_library_outlined),
-                  title: const Text('Escolher imagem da galeria'),
-                  onTap:
-                      () => Navigator.of(sheetContext).pop(ImageSource.gallery),
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-    );
-  }
-
-  /// Volta da revisão da foto para o cadastro manual levando os dados lidos:
-  /// o formulário abre preenchido como rascunho — nada do que a IA leu é
-  /// descartado na troca de caminho.
-  Future<void> _leaveReviewForManual(
-    BuildContext context,
-    CardScanResult scan,
-  ) async {
-    Navigator.of(context).pop();
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-    if (!context.mounted) return;
-    final plan = await showSteppedFormSheet<HealthPlan>(
-      context: context,
-      builder: (_) => HealthPlanFormDialog(draft: scan.data),
-    );
-    if (plan == null || !context.mounted) return;
-    await context.read<HealthPlanProvider>().saveHealthPlan(plan);
-    if (!context.mounted) return;
-    _showSnack(context, '${plan.name} adicionado com sucesso!');
-  }
-
-  String _mimeTypeOf(XFile file) {
-    final mimeType = file.mimeType;
-    if (mimeType != null && mimeType.startsWith('image/')) return mimeType;
-    final name = file.name.toLowerCase();
-    if (name.endsWith('.png')) return 'image/png';
-    if (name.endsWith('.webp')) return 'image/webp';
-    return 'image/jpeg';
-  }
-
-  void _showSnack(
-    BuildContext context,
-    String message, {
-    SnackBarAction? action,
-  }) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        action: action,
-      ),
-    );
+    await addHealthPlan(context, cardReaderFactory: cardReaderFactory);
   }
 
   void _editPlan(
