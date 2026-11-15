@@ -104,6 +104,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
+    // "Quem receitou" é obrigatório: preenche o médico antes de salvar.
+    await tester.ensureVisible(
+      find.widgetWithText(TextField, 'Médico que receitou'),
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Médico que receitou'),
+      'Dr. Teste',
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 
@@ -132,6 +141,15 @@ void main() {
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continuar'));
+    await tester.pumpAndSettle();
+    // "Quem receitou" é obrigatório: preenche o médico antes de salvar.
+    await tester.ensureVisible(
+      find.widgetWithText(TextField, 'Médico que receitou'),
+    );
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Médico que receitou'),
+      'Dr. Teste',
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();

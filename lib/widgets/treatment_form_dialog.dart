@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 import '../core/design/app_tokens.dart';
 import '../data/medicine_data.dart';
 import '../models/doctor.dart';
+import '../models/doctor_draft.dart';
 import '../models/medicine.dart';
 import '../models/prescription_record.dart';
 import '../models/treatment.dart';
@@ -14,6 +15,7 @@ import '../models/treatment_draft.dart';
 import '../screens/barcode_scan_screen.dart';
 import '../services/dose_schedule_presets.dart';
 import '../services/prescription_reader_service.dart';
+import 'doctor_inline_creator.dart';
 import 'stepped_form_sheet.dart';
 
 class TreatmentFormDialog extends StatefulWidget {
@@ -37,7 +39,8 @@ class TreatmentFormDialog extends StatefulWidget {
   final PrescriptionDoctor? prescriptionDoctor;
 
   /// Catálogo de médicos para o seletor "Do catálogo" (o formulário não
-  /// acessa provider — o chamador entrega a lista).
+  /// acessa provider — o chamador entrega a lista; médicos criados inline
+  /// nesta sessão entram via [_extraDoctors]).
   final List<Doctor> doctorCatalog;
 
   /// Histórico de receitas anteriores do tratamento (só na edição):
@@ -77,6 +80,37 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   /// Médico selecionado no seletor "Do catálogo" — preenche os campos, que
   /// seguem editáveis; a identidade final é o que o usuário digitar.
   Doctor? _selectedCatalogDoctor;
+
+  /// Médicos criados inline nesta sessão do formulário (banner "Cadastrar
+  /// médico") — entram no seletor sem depender do provider: o formulário
+  /// não observa DoctorProvider, o chamador entrega o catálogo.
+  final List<Doctor> _extraDoctors = [];
+
+  /// Catálogo exibido no seletor: o entregue pelo chamador + quem nasceu
+  /// inline aqui. O médico novo já entra selecionado via [_applyInlineDoctor].
+  List<Doctor> get _mergedCatalog => [...widget.doctorCatalog, ..._extraDoctors];
+
+  /// Rascunho para o cadastro inline de médico: aproveita o que o usuário
+  /// já digitou em "Quem receitou" — nada de redigitar nome e CRM.
+  DoctorDraft? get _prescriberDraft {
+    final name = _prescriberNameController.text.trim();
+    if (name.isEmpty) return null;
+    return DoctorDraft(
+      name: name,
+      crm: _prescriberCrmController.text.trim(),
+      crmState: _prescriberUfController.text.trim().toUpperCase(),
+    );
+  }
+
+  void _applyInlineDoctor(Doctor doctor) {
+    setState(() {
+      _extraDoctors.add(doctor);
+      _selectedCatalogDoctor = doctor;
+      _prescriberNameController.text = doctor.name;
+      _prescriberCrmController.text = doctor.crm;
+      _prescriberUfController.text = doctor.crmState;
+    });
+  }
 
   /// Rótulos curtos dos dias para os chips — mesma ordem de DateTime.weekday.
   static const List<String> _weekdayLabels = [
@@ -472,7 +506,7 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       title: _isEditing ? 'Editar tratamento' : 'Novo tratamento',
       intro:
           'Três passos rápidos: o remédio, os horários e por quanto tempo. '
-          'No fim, opcional, registre quem receitou.',
+          'No fim, registre quem receitou.',
       saveLabel: 'Salvar',
       steps: [
         // ── Passo 1: o medicamento ─────────────────────────────────────────
@@ -706,14 +740,13 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
     );
   }
 
-  /// Validação do trecho "Quem receitou": CRM/UF sem nome é convite ao
-  /// registro pela metade — se vai registrar, registra quem assinou.
+  /// "Quem receitou" é OBRIGATÓRIO (regra do produto: tratamento nasce
+  /// sabendo quem prescreveu e em que dia). Escolhe do catálogo, cadastra
+  /// inline ou digita — o que não pode é ficar sem.
   String? _validatePrescriber() {
     final name = _prescriberNameController.text.trim();
-    final crm = _prescriberCrmController.text.trim();
-    final uf = _prescriberUfController.text.trim();
-    if ((crm.isNotEmpty || uf.isNotEmpty) && name.isEmpty) {
-      return 'Informe também o nome de quem receitou.';
+    if (name.isEmpty) {
+      return 'Informe o médico que receitou.';
     }
     return null;
   }
@@ -723,8 +756,9 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       '${_prescribedOn.month.toString().padLeft(2, '0')}/'
       '${_prescribedOn.year}';
 
-  /// Seção "Quem receitou (opcional)": escolhe do catálogo ou digita, com a
-  /// data da receita; na edição, o histórico fica à disposição aqui.
+  /// Seção "Quem receitou" (obrigatório): escolhe do catálogo, cadastra o
+  /// médico ali mesmo ou digita, com a data da receita; na edição, o
+  /// histórico fica à disposição aqui.
   Widget _buildPrescriberSection() {
     final theme = Theme.of(context);
     return Column(
@@ -732,7 +766,7 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'Quem receitou (opcional)',
+          'Quem receitou',
           style: theme.textTheme.labelLarge?.copyWith(
             fontWeight: FontWeight.w800,
           ),
@@ -745,7 +779,16 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        if (widget.doctorCatalog.isNotEmpty) ...[
+        if (_mergedCatalog.isEmpty) ...[
+          // Tratamento exige médico: com o catálogo vazio, o cadastro
+          // acontece ali mesmo — o nome já digitado vai pré-preenchido.
+          InlineDoctorBanner(
+            draft: _prescriberDraft,
+            onDoctorCreated: _applyInlineDoctor,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        if (_mergedCatalog.isNotEmpty) ...[
           DropdownButtonFormField<Doctor>(
             initialValue: _selectedCatalogDoctor,
             decoration: const InputDecoration(
@@ -753,7 +796,7 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
               hintText: 'Escolher médico já cadastrado',
             ),
             items: [
-              for (final doctor in widget.doctorCatalog)
+              for (final doctor in _mergedCatalog)
                 DropdownMenuItem(
                   value: doctor,
                   child: Text(
