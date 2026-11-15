@@ -2,23 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/doctor.dart';
-import '../models/doctor_draft.dart';
 import '../providers/doctor_provider.dart';
-import '../providers/user_profile_provider.dart';
-import '../services/prescription_reader_service.dart';
 import '../widgets/doctor_form_dialog.dart';
 import '../widgets/stepped_form_sheet.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
-import '../widgets/media_source_sheet.dart';
-import '../widgets/privacy_notice.dart';
-import '../widgets/reading_dialog.dart';
+import 'create_flows.dart';
 
 class DoctorsScreen extends StatefulWidget {
   const DoctorsScreen({super.key});
@@ -37,147 +31,9 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
     super.dispose();
   }
 
-  /// Foto da receita: identifica o médico emissor (nome + CRM) por OCR e
-  /// abre o formulário preenchido para conferência — a leitura só preenche,
-  /// quem salva é o usuário.
-  Future<void> _startDoctorReceiptFlow(BuildContext context) async {
-    final consented = await _ensurePrescriptionConsent(context);
-    if (!consented || !context.mounted) return;
-
-    final source = await _pickImageSource(context);
-    if (source == null || !context.mounted) return;
-
-    final XFile? file;
-    try {
-      file = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 85,
-      );
-    } catch (_) {
-      if (context.mounted) {
-        _showMessage('Não foi possível acessar a imagem.');
-      }
-      return;
-    }
-    if (file == null) return;
-
-    final bytes = await file.readAsBytes();
-    if (!context.mounted) return;
-
-    // Diálogo sem await: só é dispensado quando a leitura termina (padrão
-    // do fluxo de tratamentos).
-    unawaited(
-      showReadingDialog(context, subtitle: 'Procurando o médico que assinou.'),
-    );
-
-    PrescriptionDoctor? medico;
-    String? error;
-    try {
-      medico = await PrescriptionReaderService().readDoctorFromImage(
-        imageBytes: bytes,
-        mimeType: _mimeTypeOf(file),
-      );
-    } on PrescriptionReaderException catch (e) {
-      error = e.message;
-    } catch (_) {
-      error =
-          'Não foi possível ler a receita. Tente outra foto ou cadastre '
-          'manualmente.';
-    }
-
-    if (!context.mounted) return;
-    Navigator.of(
-      context,
-      rootNavigator: true,
-    ).pop(); // fecha o diálogo de leitura
-
-    if (medico == null) {
-      _showMessage(error!);
-      return;
-    }
-
-    final provider = context.read<DoctorProvider>();
-    // Variável final: a promoção de nulos sobrevive à captura do builder.
-    final medicoDraft = medico;
-    final saved = await showSteppedFormSheet<Doctor>(
-      context: context,
-      builder:
-          (dialogContext) => DoctorFormDialog(
-            draft: DoctorDraft(
-              name: medicoDraft.nome,
-              crm: medicoDraft.crm,
-              crmState: medicoDraft.uf,
-            ),
-            knownSpecialties:
-                provider.doctors
-                    .map((item) => item.specialty)
-                    .where((specialty) => specialty.trim().isNotEmpty)
-                    .toList(),
-          ),
-    );
-    if (saved != null && context.mounted) {
-      await provider.saveDoctor(saved);
-    }
-  }
-
-  Future<bool> _ensurePrescriptionConsent(BuildContext context) async {
-    final userProvider = context.read<UserProfileProvider>();
-    if (userProvider.profile?.consentAt != null) return true;
-
-    final accepted = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (dialogContext) => AlertDialog(
-            title: const Text('Autorização necessária'),
-            content: const SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Para ler a foto da receita, a imagem é enviada ao nosso '
-                    'servidor e descartada após a leitura por OCR. Essa opção '
-                    'usa a internet; o cadastro manual não envia nada.',
-                  ),
-                  SizedBox(height: 12),
-                  PrivacyNoticeCard(),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Aceito e autorizo'),
-              ),
-            ],
-          ),
-    );
-
-    if (accepted != true || !context.mounted) return false;
-    await userProvider.grantConsent();
-    return true;
-  }
-
-  Future<ImageSource?> _pickImageSource(BuildContext context) {
-    return showImageSourceSheet(
-      context,
-      cameraLabel: 'Tirar foto da receita',
-      galleryLabel: 'Escolher imagem da galeria',
-    );
-  }
-
-  static String _mimeTypeOf(XFile file) {
-    final path = file.path.toLowerCase();
-    if (path.endsWith('.png')) return 'image/png';
-    if (path.endsWith('.webp')) return 'image/webp';
-    return 'image/jpeg';
-  }
+  /// Foto da receita: a leitura (consentimento → imagem → OCR → formulário
+  /// preenchido) vive em [createDoctorFromPrescription], compartilhada com o
+  /// menu central “+”.
 
   Future<void> _editDoctor(DoctorProvider provider, [Doctor? doctor]) async {
     final result = await showSteppedFormSheet<Doctor>(
@@ -342,7 +198,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                           runSpacing: 8,
                           children: [
                             FilledButton.tonalIcon(
-                              onPressed: () => _startDoctorReceiptFlow(context),
+                              onPressed: () => createDoctorFromPrescription(context),
                               icon: const Icon(Icons.photo_camera_outlined),
                               label: const Text('Foto da receita'),
                             ),
@@ -414,7 +270,7 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                         onAction: () => _editDoctor(provider),
                         secondaryActionLabel: 'Foto da receita',
                         onSecondaryAction:
-                            () => _startDoctorReceiptFlow(context),
+                            () => createDoctorFromPrescription(context),
                       )
                     else if (doctors.isEmpty)
                       const _NoSearchResults()

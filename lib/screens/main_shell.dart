@@ -1,36 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../core/design/app_shell.dart';
 import '../core/design/app_tokens.dart';
-import '../models/consultation.dart';
-import '../models/doctor.dart';
-import '../models/exam.dart';
-import '../models/treatment.dart';
-import '../providers/consultation_provider.dart';
-import '../providers/doctor_provider.dart';
-import '../providers/exam_provider.dart';
-import '../providers/therapy_provider.dart';
-import '../widgets/app_snack_bar.dart';
-import '../widgets/consultation_form_dialog.dart';
-import '../widgets/doctor_form_dialog.dart';
-import '../widgets/exam_form_dialog.dart';
-import '../widgets/stepped_form_sheet.dart';
-import '../widgets/treatment_form_dialog.dart';
+import '../widgets/create_choice_sheet.dart';
 import 'consultations_screen.dart';
+import 'create_flows.dart';
 import 'profile_screen.dart';
 import 'today_screen.dart';
 import 'treatments_screen.dart';
 
 /// Shell principal V4: 4 abas (Hoje, Tratamentos, Consultas, Perfil) com o
-/// FAB central que abre o menu radial de cadastro — Medicamento, Consulta
-/// e Médico. Em telas largas (>= 900px) a navegação vira um rail lateral.
+/// FAB central que abre o menu de cadastro com TODAS as funcionalidades —
+/// Medicamento, Consulta, Exame, Laudo, Plano de saúde e Médico —, cada uma
+/// perguntando manual × foto quando existe leitura por IA. Em telas largas
+/// (>= 900px) a navegação vira um rail lateral.
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
   @override
   State<MainShell> createState() => _MainShellState();
 }
+
+/// Como o usuário quer cadastrar um domínio que tem leitura de foto:
+/// preencher no dedo ou deixar a IA ler a imagem para conferência.
+enum _CreationMode { manual, photo }
 
 class _MainShellState extends State<MainShell>
     with SingleTickerProviderStateMixin {
@@ -73,76 +66,121 @@ class _MainShellState extends State<MainShell>
     ProfileScreen(),
   ];
 
-  // ── Cadastros pelo menu radial ──────────────────────────────────────────
+  // ── Cadastros pelo menu central ─────────────────────────────────────
+  //
+  // Todo domínio com leitura de foto PERGUNTA antes (manual × foto) —
+  // escolhido o caminho, o fluxo compartilhado de create_flows.dart roda
+  // igual ao da tela correspondente.
+
+  /// Respira entre fechar uma folha e abrir o próximo diálogo (o scrim
+  /// precisa terminar de baixar antes de a próxima rota subir).
+  Future<void> _settleSheet() async {
+    await Future<void>.delayed(AppDurations.fast);
+  }
 
   Future<void> _createTreatment() async {
-    final result = await showSteppedFormSheet<Treatment>(
-      context: context,
-      builder: (_) => const TreatmentFormDialog(),
+    final mode = await showCreateChoiceSheet<_CreationMode>(
+      context,
+      title: 'Novo medicamento',
+      options: [
+        const CreateChoiceOption(
+          value: _CreationMode.manual,
+          icon: Icons.edit_outlined,
+          title: 'Digitar manualmente',
+          subtitle: 'Preencha nome, dosagem e horários no formulário.',
+        ),
+        const CreateChoiceOption(
+          value: _CreationMode.photo,
+          icon: Icons.photo_camera_outlined,
+          title: 'Usar foto da receita',
+          subtitle:
+              'A IA lê a receita e você confere cada medicamento antes de '
+              'salvar.',
+        ),
+      ],
     );
-    if (result == null || !mounted) return;
-    await context.read<TherapyProvider>().addTreatment(result);
-    if (mounted) {
-      showAppSnackBar(
-        context,
-        'Tratamento salvo. Bom começo!',
-        type: AppSnackType.success,
-      );
+    if (mode == null || !mounted) return;
+    await _settleSheet();
+    if (!mounted) return;
+    if (mode == _CreationMode.manual) {
+      await createTreatmentManually(context);
+    } else {
+      await createTreatmentFromPrescription(context);
     }
   }
 
   Future<void> _createConsultation() async {
-    final result = await showSteppedFormSheet<Consultation>(
-      context: context,
-      builder: (_) => const ConsultationFormDialog(),
-    );
-    if (result == null || !mounted) return;
-    await context.read<ConsultationProvider>().saveConsultation(result);
-    if (mounted) {
-      showAppSnackBar(
-        context,
-        'Consulta agendada.',
-        type: AppSnackType.success,
-      );
-    }
-  }
-
-  Future<void> _createDoctor() async {
-    final knownSpecialties =
-        context
-            .read<DoctorProvider>()
-            .doctors
-            .map((doctor) => doctor.specialty)
-            .where((specialty) => specialty.trim().isNotEmpty)
-            .toList();
-    final result = await showSteppedFormSheet<Doctor>(
-      context: context,
-      builder: (_) => DoctorFormDialog(knownSpecialties: knownSpecialties),
-    );
-    if (result == null || !mounted) return;
-    await context.read<DoctorProvider>().saveDoctor(result);
-    if (mounted) {
-      showAppSnackBar(
-        context,
-        'Médico salvo no seu catálogo.',
-        type: AppSnackType.success,
-      );
-    }
+    await createConsultation(context);
   }
 
   Future<void> _createExam() async {
-    final result = await showSteppedFormSheet<Exam>(
-      context: context,
-      builder: (_) => const ExamFormDialog(),
+    await createExam(context);
+  }
+
+  Future<void> _createLabResult() async {
+    final mode = await showCreateChoiceSheet<_CreationMode>(
+      context,
+      title: 'Novo laudo',
+      options: [
+        const CreateChoiceOption(
+          value: _CreationMode.manual,
+          icon: Icons.edit_outlined,
+          title: 'Digitar manualmente',
+          subtitle: 'Informe laboratório, data e os valores dos marcadores.',
+        ),
+        const CreateChoiceOption(
+          value: _CreationMode.photo,
+          icon: Icons.photo_camera_outlined,
+          title: 'Ler foto com IA',
+          subtitle:
+              'A IA transcreve os valores impressos para você conferir e '
+              'salvar.',
+        ),
+      ],
     );
-    if (result == null || !mounted) return;
-    await context.read<ExamProvider>().saveExam(result);
-    if (mounted) {
-      showAppSnackBar(
-        context,
-        'Exame registrado.',
-        type: AppSnackType.success,
-      );
+    if (mode == null || !mounted) return;
+    await _settleSheet();
+    if (!mounted) return;
+    if (mode == _CreationMode.manual) {
+      await createLabResultManually(context);
+    } else {
+      await createLabResultFromPhoto(context);
+    }
+  }
+
+  Future<void> _createHealthPlan() async {
+    // O módulo de planos já tem a folha própria (foto do cartão × manual) —
+    // é ela a entrada canônica.
+    await addHealthPlan(context);
+  }
+
+  Future<void> _createDoctor() async {
+    final mode = await showCreateChoiceSheet<_CreationMode>(
+      context,
+      title: 'Novo médico',
+      options: [
+        const CreateChoiceOption(
+          value: _CreationMode.manual,
+          icon: Icons.edit_outlined,
+          title: 'Digitar manualmente',
+          subtitle: 'Nome, especialidade, contato e endereço.',
+        ),
+        const CreateChoiceOption(
+          value: _CreationMode.photo,
+          icon: Icons.photo_camera_outlined,
+          title: 'Foto da receita',
+          subtitle:
+              'A IA identifica quem assinou (nome e CRM) para você conferir.',
+        ),
+      ],
+    );
+    if (mode == null || !mounted) return;
+    await _settleSheet();
+    if (!mounted) return;
+    if (mode == _CreationMode.manual) {
+      await createDoctorManually(context);
+    } else {
+      await createDoctorFromPrescription(context);
     }
   }
 
@@ -157,8 +195,10 @@ class _MainShellState extends State<MainShell>
           (dialogContext, _, __) => _RadialCreateMenu(
             onTreatment: _createTreatment,
             onConsultation: _createConsultation,
-            onDoctor: _createDoctor,
             onExam: _createExam,
+            onLabResult: _createLabResult,
+            onHealthPlan: _createHealthPlan,
+            onDoctor: _createDoctor,
           ),
     );
   }
@@ -326,20 +366,25 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-/// Menu radial de cadastro: três "pétalas" que brotam do FAB central com
-/// stagger — o gesto memorável de criar algo novo no app.
+/// Menu de cadastro do FAB central: as seis pétalas brotam do botão com
+/// stagger — o gesto memorável de criar algo novo no app, agora com todos
+/// os domínios e com os caminhos de foto lida por IA no mesmo lugar.
 class _RadialCreateMenu extends StatelessWidget {
   const _RadialCreateMenu({
     required this.onTreatment,
     required this.onConsultation,
-    required this.onDoctor,
     required this.onExam,
+    required this.onLabResult,
+    required this.onHealthPlan,
+    required this.onDoctor,
   });
 
   final VoidCallback onTreatment;
   final VoidCallback onConsultation;
-  final VoidCallback onDoctor;
   final VoidCallback onExam;
+  final VoidCallback onLabResult;
+  final VoidCallback onHealthPlan;
+  final VoidCallback onDoctor;
 
   Future<void> _pick(BuildContext context, VoidCallback action) async {
     Navigator.of(context).pop();
@@ -361,19 +406,31 @@ class _RadialCreateMenu extends StatelessWidget {
         icon: Icons.calendar_month_rounded,
         label: 'Consulta',
         action: onConsultation,
-        stagger: 0.15,
+        stagger: 0.1,
       ),
       (
         icon: Icons.science_rounded,
         label: 'Exame',
         action: onExam,
-        stagger: 0.30,
+        stagger: 0.2,
+      ),
+      (
+        icon: Icons.description_rounded,
+        label: 'Laudo',
+        action: onLabResult,
+        stagger: 0.3,
+      ),
+      (
+        icon: Icons.health_and_safety_rounded,
+        label: 'Plano de saúde',
+        action: onHealthPlan,
+        stagger: 0.4,
       ),
       (
         icon: Icons.medical_services_rounded,
         label: 'Médico',
         action: onDoctor,
-        stagger: 0.45,
+        stagger: 0.5,
       ),
     ];
 

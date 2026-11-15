@@ -1,8 +1,6 @@
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -14,16 +12,13 @@ import '../core/design/record_card.dart';
 import '../core/design/stat_card.dart';
 import '../models/lab_result.dart';
 import '../providers/lab_result_provider.dart';
-import '../services/ai_proxy_client.dart';
-import '../services/ai_service.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/empty_illustration.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/lab_result_review_sheet.dart';
-import '../widgets/media_source_sheet.dart';
-import '../widgets/reading_dialog.dart';
 import '../widgets/section_header.dart';
 import '../widgets/skeleton.dart';
+import 'create_flows.dart';
 
 /// Módulo de Resultados de laboratório — portado do PWA: histórico de
 /// laudos com valores por marcador, comparação com a faixa impressa
@@ -31,87 +26,13 @@ import '../widgets/skeleton.dart';
 class LabResultsScreen extends StatelessWidget {
   const LabResultsScreen({super.key});
 
-  // ── Fluxo principal: ler laudo com IA ────────────────────────────────
+  // ── Cadastro ────────────────────────────────────────────────────────────
+  //
+  // Os dois caminhos de criação (foto lida por IA e digitação manual) vivem
+  // em create_flows.dart — compartilhados com o menu central “+”.
 
-  Future<void> _readReportWithAi(BuildContext context) async {
-    final source = await showImageSourceSheet(
-      context,
-      cameraLabel: 'Tirar foto do laudo',
-      galleryLabel: 'Escolher imagem da galeria',
-    );
-    if (source == null || !context.mounted) return;
-
-    final XFile? file;
-    try {
-      file = await ImagePicker().pickImage(
-        source: source,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 85,
-      );
-    } catch (_) {
-      if (context.mounted) {
-        showAppSnackBar(context, 'Não foi possível acessar a imagem.');
-      }
-      return;
-    }
-    if (file == null) return;
-
-    final bytes = await file.readAsBytes();
-    final mimeType = file.mimeType ?? 'image/jpeg';
-    if (!context.mounted) return;
-
-    unawaited(showReadingDialog(
-      context,
-      title: 'Lendo laudo…',
-      subtitle: 'A IA transcreve os valores impressos no laudo.',
-    ));
-
-    LabScanResult? scan;
-    String? error;
-    try {
-      scan = await AiService().extractLabValues(
-        imageBytes: bytes,
-        mimeType: mimeType.startsWith('image/') ? mimeType : 'image/jpeg',
-      );
-    } on AiException catch (e) {
-      error = e.message;
-    } catch (_) {
-      error = 'Não foi possível ler o laudo. Tente outra foto ou preencha '
-          'manualmente.';
-    }
-
-    if (!context.mounted) return;
-    Navigator.of(context, rootNavigator: true).pop(); // diálogo de leitura
-
-    if (scan == null) {
-      showAppSnackBar(context, error!);
-      return;
-    }
-
-    final result = await showLabResultReviewSheet(
-      context,
-      scannedLabName: scan.labName,
-      scannedExamDate: scan.examDate,
-      scannedValues: scan.values,
-      photoBytes: bytes,
-    );
-    if (result == null || !context.mounted) return;
-
-    await context.read<LabResultProvider>().saveResult(result);
-    if (context.mounted) {
-      showAppSnackBar(
-        context,
-        'Laudo salvo.',
-        type: AppSnackType.success,
-      );
-    }
-  }
-
-  Future<void> _openReviewSheet(
-    BuildContext context, {
-    LabResult? result,
-  }) async {
+  /// Edição de um laudo existente.
+  Future<void> _editLabResult(BuildContext context, LabResult result) async {
     final saved = await showLabResultReviewSheet(
       context,
       initialResult: result,
@@ -120,11 +41,7 @@ class LabResultsScreen extends StatelessWidget {
 
     await context.read<LabResultProvider>().saveResult(saved);
     if (context.mounted) {
-      showAppSnackBar(
-        context,
-        result == null ? 'Laudo salvo.' : 'Laudo atualizado.',
-        type: AppSnackType.success,
-      );
+      showAppSnackBar(context, 'Laudo atualizado.', type: AppSnackType.success);
     }
   }
 
@@ -225,10 +142,10 @@ class LabResultsScreen extends StatelessWidget {
                       'mão para acompanhar a evolução dos seus exames.',
                   actionLabel: 'Digitar manualmente',
                   actionIcon: Icons.edit_outlined,
-                  onAction: () => _openReviewSheet(context),
+                  onAction: () => createLabResultManually(context),
                   secondaryActionLabel: 'Ler foto com IA',
                   secondaryActionIcon: Icons.photo_camera_outlined,
-                  onSecondaryAction: () => _readReportWithAi(context),
+                  onSecondaryAction: () => createLabResultFromPhoto(context),
                 ),
               )
             else ...[
@@ -264,7 +181,7 @@ class LabResultsScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: FilledButton.icon(
-                          onPressed: () => _readReportWithAi(context),
+                          onPressed: () => createLabResultFromPhoto(context),
                           icon: const Icon(Icons.photo_camera_outlined),
                           label: const Text('Ler foto com IA'),
                         ),
@@ -272,7 +189,7 @@ class LabResultsScreen extends StatelessWidget {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => _openReviewSheet(context),
+                          onPressed: () => createLabResultManually(context),
                           icon: const Icon(Icons.edit_outlined),
                           label: const Text('Digitar'),
                         ),
@@ -293,10 +210,7 @@ class LabResultsScreen extends StatelessWidget {
                   itemCount: results.length,
                   itemBuilder: (context, index) => _LabResultCard(
                     result: results[index],
-                    onEdit: () => _openReviewSheet(
-                      context,
-                      result: results[index],
-                    ),
+                    onEdit: () => _editLabResult(context, results[index]),
                     onDelete: () => _confirmDelete(context, results[index]),
                   ),
                   separatorBuilder: (context, index) =>
