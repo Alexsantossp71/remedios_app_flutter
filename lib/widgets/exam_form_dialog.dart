@@ -14,6 +14,7 @@ import '../models/exam.dart';
 import '../providers/doctor_provider.dart';
 import '../services/ai_proxy_client.dart';
 import '../services/ai_service.dart';
+import '../services/doctor_matching.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/doctor_inline_creator.dart';
 import '../widgets/media_source_sheet.dart';
@@ -24,7 +25,8 @@ import 'ai_sheet_shell.dart';
 /// Formulário de exame em passos (pedido → agendamento → realização).
 /// A leitura por IA só PREENCHE — quem revisa e salva é o usuário, igual
 /// ao fluxo de receitas. O exame exige médico solicitante: escolhe do
-/// catálogo ou cadastra ali mesmo (banner com criação inline).
+/// catálogo, cadastra ali mesmo (banner com criação inline) ou aceita o
+/// convite de cadastro quando a leitura identifica médico fora do catálogo.
 class ExamFormDialog extends StatefulWidget {
   const ExamFormDialog({super.key, this.initialExam, this.initialScan});
 
@@ -45,6 +47,10 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
   late DateTime _date;
   TimeOfDay? _time;
   String? _selectedDoctorId;
+
+  /// Médico lido da foto do pedido que NÃO casou com o catálogo: vira o
+  /// convite [ScannedDoctorCta] de cadastro — nada criado sem conferência.
+  String? _scannedDoctorName;
   Uint8List? _photoBytes;
   bool _isEditing = false;
   bool _isReading = false;
@@ -95,13 +101,14 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
 
   void _tryMatchDoctorByName(String name) {
     if (_selectedDoctorId != null && _selectedDoctorId!.isNotEmpty) return;
-    final lowered = name.trim().toLowerCase();
-    if (lowered.isEmpty) return;
-    for (final Doctor doctor in context.read<DoctorProvider>().doctors) {
-      if (doctor.name.trim().toLowerCase() == lowered) {
-        setState(() => _selectedDoctorId = doctor.id);
-        return;
-      }
+    // Mesma regra de casamento do resto do app (nome normalizado; CRM+UF
+    // quando existe) — o pedido de exame não cria regra própria.
+    final match = findDoctorInCatalog(
+      context.read<DoctorProvider>().doctors,
+      name: name,
+    );
+    if (match != null) {
+      setState(() => _selectedDoctorId = match.id);
     }
   }
 
@@ -196,6 +203,10 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
         _doctorNameController.text = scan.doctorName;
         // O nome lido pode já existir no catálogo — casa e pré-seleciona.
         _tryMatchDoctorByName(scan.doctorName);
+        // Sem casamento: o médico lido vira CONVITE de cadastro, nunca
+        // criação automática — quem decide é o usuário.
+        _scannedDoctorName =
+            _selectedDoctorId == null ? scan.doctorName : null;
       }
       final parsedDate = _parseScanDate(scan.date);
       if (parsedDate != null) _date = parsedDate;
@@ -487,6 +498,21 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
                 },
               ),
               const SizedBox(height: AppSpacing.md),
+            ] else if (_selectedDoctorId == null &&
+                _scannedDoctorName != null) ...[
+              // A leitura achou um médico que não está no catálogo: convite
+              // de cadastro com o nome lido — um toque resolve sem beco.
+              ScannedDoctorCta(
+                scannedName: _scannedDoctorName!,
+                onDoctorCreated: (created) {
+                  setState(() {
+                    _selectedDoctorId = created.id;
+                    _doctorNameController.text = created.name;
+                    _scannedDoctorName = null;
+                  });
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
             ],
             DropdownButtonFormField<String>(
               initialValue: _selectedDoctorId,
@@ -507,6 +533,8 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
               onChanged: (value) {
                 setState(() {
                   _selectedDoctorId = value;
+                  // Selecionou do catálogo: o convite deixa de fazer sentido.
+                  _scannedDoctorName = null;
                   if (value != null) {
                     final match = doctors.firstWhere(
                       (doctor) => doctor.id == value,

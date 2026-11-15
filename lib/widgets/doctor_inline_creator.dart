@@ -94,3 +94,69 @@ class InlineDoctorBanner extends StatelessWidget {
     );
   }
 }
+
+/// Convite depois de uma leitura por foto (pedido de exame/receita): a IA
+/// identificou um médico que NÃO está no catálogo. Um toque abre o cadastro
+/// pré-preenchido com o nome lido — criar continua sendo decisão do usuário
+/// (padrão do app: preencher não é salvar). Ao salvar, [onDoctorCreated]
+/// entrega o médico já gravado para o formulário selecionar na hora.
+class ScannedDoctorCta extends StatelessWidget {
+  const ScannedDoctorCta({
+    super.key,
+    required this.scannedName,
+    required this.onDoctorCreated,
+  });
+
+  /// Nome lido da foto que não casou com nenhum médico do catálogo.
+  final String scannedName;
+
+  final ValueChanged<Doctor> onDoctorCreated;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.person_search_rounded,
+                color: theme.colorScheme.onSecondaryContainer,
+              ),
+              const SizedBox(width: AppSpacing.sm + 2),
+              Expanded(
+                child: Text(
+                  'A leitura identificou o médico "${scannedName.trim()}", '
+                  'que não está no seu catálogo.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          FilledButton.tonalIcon(
+            onPressed: () async {
+              final created = await createDoctorInline(
+                context,
+                draft: DoctorDraft(name: scannedName),
+              );
+              if (created != null) onDoctorCreated(created);
+            },
+            icon: const Icon(Icons.person_add_alt_1),
+            label: const Text('Cadastrar médico'),
+          ),
+        ],
+      ),
+    );
+  }
+}

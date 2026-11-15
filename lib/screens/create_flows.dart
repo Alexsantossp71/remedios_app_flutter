@@ -24,6 +24,7 @@ import '../providers/user_profile_provider.dart';
 import '../services/ai_proxy_client.dart';
 import '../services/ai_service.dart';
 import '../services/card_reader_service.dart';
+import '../services/doctor_matching.dart';
 import '../services/prescription_reader_service.dart';
 import '../widgets/add_health_plan_sheet.dart';
 import '../widgets/app_snack_bar.dart';
@@ -233,7 +234,10 @@ Future<void> saveTreatmentWithPrescriber(
 /// Médico do registro de receita: reutiliza quem já está no catálogo
 /// (mesmo nome e, quando o usuário digitou CRM, o mesmo CRM); só cria
 /// quando não há correspondente — CRM diferente não vira "atualização
-/// silenciosa" de outro médico, vira registro novo conferido.
+/// silenciosa" de outro médico, vira registro novo conferido. A regra de
+/// casamento é a compartilhada em [findDoctorInCatalog] (CRM+UF forte e
+/// nome normalizado) — a mesma usada pela foto da receita e pelo pedido
+/// de exame.
 Future<Doctor> _findOrCreatePrescriberDoctor(
   BuildContext context,
   Treatment treatment,
@@ -241,10 +245,13 @@ Future<Doctor> _findOrCreatePrescriberDoctor(
   final provider = context.read<DoctorProvider>();
   final name = treatment.prescriberName.trim();
   final crm = treatment.prescriberCrm.trim();
-  for (final doctor in provider.doctors) {
-    if (doctor.name.trim().toLowerCase() != name.toLowerCase()) continue;
-    if (crm.isEmpty || doctor.crm.trim() == crm) return doctor;
-  }
+  final existing = findDoctorInCatalog(
+    provider.doctors,
+    name: name,
+    crm: crm,
+    crmState: treatment.prescriberCrmState,
+  );
+  if (existing != null) return existing;
   final created = Doctor(
     id: const Uuid().v4(),
     name: name,
@@ -616,9 +623,10 @@ Future<void> createDoctorManually(BuildContext context) async {
   );
 }
 
-/// Foto da receita: identifica o médico emissor (nome + CRM) por OCR e
-/// abre o formulário preenchido para conferência — a leitura só preenche,
-/// quem salva é o usuário.
+/// Foto da receita: identifica o médico emissor (nome + CRM) por OCR.
+/// Quem o catálogo já confirma (CRM+UF ou nome) volta a abrir para
+/// CONFERIR E COMPLETAR — não duplica; quem é novo abre preenchido para
+/// conferência. A leitura só preenche, quem salva é o usuário.
 Future<void> createDoctorFromPrescription(BuildContext context) async {
   final consented = await ensureImageReadingConsent(
     context,
@@ -670,6 +678,39 @@ Future<void> createDoctorFromPrescription(BuildContext context) async {
   final provider = context.read<DoctorProvider>();
   // Variável final: a promoção de nulos sobrevive à captura do builder.
   final medicoDraft = medico;
+
+  // O mesmo médico não vira dois cadastros: quem o CRM (ou o nome) já
+  // confirma reabre para completar o cadastro, nunca para duplicar.
+  final existing = findDoctorInCatalog(
+    provider.doctors,
+    name: medicoDraft.nome,
+    crm: medicoDraft.crm,
+    crmState: medicoDraft.uf,
+  );
+
+  if (existing != null) {
+    final updated = await showSteppedFormSheet<Doctor>(
+      context: context,
+      builder: (_) => DoctorFormDialog(initialDoctor: existing),
+    );
+    if (!context.mounted) return;
+    if (updated != null) {
+      await provider.saveDoctor(updated);
+      if (!context.mounted) return;
+      showAppSnackBar(
+        context,
+        'Dados de ${updated.name} conferidos e salvos.',
+        type: AppSnackType.success,
+      );
+    } else {
+      showAppSnackBar(
+        context,
+        '${existing.name} já está no seu catálogo — nada foi alterado.',
+      );
+    }
+    return;
+  }
+
   final saved = await showSteppedFormSheet<Doctor>(
     context: context,
     builder:
