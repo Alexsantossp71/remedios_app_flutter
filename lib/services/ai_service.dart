@@ -192,7 +192,11 @@ class AiService {
       ],
       model: AiProxyClient.defaultVisionModel,
       hasImages: true,
-      maxTokens: 500,
+      // Modelos de raciocínio (nemotron-super-vl) gastam centenas de
+      // tokens raciocinando antes do JSON final — 500 esgotava o limite
+      // no raciocínio e devolvia content vazio. 2000 = paridade com
+      // extractLabValues.
+      maxTokens: 2000,
       temperature: 0.1,
     );
 
