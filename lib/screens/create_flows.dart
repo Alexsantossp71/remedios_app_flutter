@@ -181,6 +181,11 @@ Future<void> createTreatmentManually(BuildContext context) async {
 /// nome/CRM ou cria) e grava um registro no histórico quando há receita.
 /// Na edição, o registro só nasce quando a receita mudou (renovação) —
 /// salvar sem mexer não multiplica registros idênticos.
+///
+/// Ordem importa: o tratamento é gravado **antes** do registro de receita —
+/// `treatment_prescriptions` tem foreign key para `treatments` e o banco
+/// roda com `PRAGMA foreign_keys = ON`; registrar a receita antes de o
+/// tratamento existir viola a constraint (code 787) e perde o cadastro.
 Future<void> saveTreatmentWithPrescriber(
   BuildContext context,
   Treatment treatment, {
@@ -193,14 +198,26 @@ Future<void> saveTreatmentWithPrescriber(
   if (treatment.hasPrescriber) {
     final doctor = await _findOrCreatePrescriberDoctor(context, treatment);
     finalTreatment = treatment.copyWith(prescriberDoctorId: doctor.id);
+  }
+
+  // 1. Tratamento primeiro — o registro de receita referencia o seu id.
+  if (previous == null) {
+    await therapy.addTreatment(finalTreatment);
+  } else {
+    await therapy.updateTreatment(finalTreatment);
+  }
+
+  // 2. Registro no histórico, quando há receita (e mudou, na edição).
+  if (finalTreatment.hasPrescriber) {
     final unchanged =
-        previous != null && Treatment.samePrescription(previous, treatment);
+        previous != null &&
+        Treatment.samePrescription(previous, finalTreatment);
     if (!unchanged) {
       await therapy.recordPrescription(
         PrescriptionRecord(
           id: const Uuid().v4(),
           treatmentId: finalTreatment.id,
-          doctorId: doctor.id,
+          doctorId: finalTreatment.prescriberDoctorId,
           doctorName: finalTreatment.prescriberName,
           doctorCrm: finalTreatment.prescriberCrm,
           doctorCrmState: finalTreatment.prescriberCrmState,
@@ -210,12 +227,6 @@ Future<void> saveTreatmentWithPrescriber(
         ),
       );
     }
-  }
-
-  if (previous == null) {
-    await therapy.addTreatment(finalTreatment);
-  } else {
-    await therapy.updateTreatment(finalTreatment);
   }
 }
 
