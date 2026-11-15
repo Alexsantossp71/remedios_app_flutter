@@ -599,24 +599,12 @@ Future<void> _leavePlanReviewForManual(
 
 // ── Médicos ────────────────────────────────────────────────────────────────
 
-/// Cadastro manual de médico. [knownSpecialties] alimenta o autocomplete de
-/// especialidade com o que já existe no catálogo.
-Future<void> createDoctorManually(
-  BuildContext context, {
-  List<String>? knownSpecialties,
-}) async {
+/// Cadastro manual de médico.
+Future<void> createDoctorManually(BuildContext context) async {
   final provider = context.read<DoctorProvider>();
   final result = await showSteppedFormSheet<Doctor>(
     context: context,
-    builder:
-        (_) => DoctorFormDialog(
-          knownSpecialties:
-              knownSpecialties ??
-              provider.doctors
-                  .map((item) => item.specialty)
-                  .where((specialty) => specialty.trim().isNotEmpty)
-                  .toList(),
-        ),
+    builder: (_) => const DoctorFormDialog(),
   );
   if (result == null || !context.mounted) return;
   await provider.saveDoctor(result);
@@ -691,11 +679,6 @@ Future<void> createDoctorFromPrescription(BuildContext context) async {
             crm: medicoDraft.crm,
             crmState: medicoDraft.uf,
           ),
-          knownSpecialties:
-              provider.doctors
-                  .map((item) => item.specialty)
-                  .where((specialty) => specialty.trim().isNotEmpty)
-                  .toList(),
         ),
   );
   if (saved != null && context.mounted) {

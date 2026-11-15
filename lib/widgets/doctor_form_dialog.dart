@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import '../data/medical_specialties.dart';
@@ -8,36 +9,43 @@ import '../models/doctor.dart';
 import '../models/doctor_draft.dart';
 import '../core/design/app_tokens.dart';
 import '../core/theme/app_theme.dart';
+import '../services/ai_proxy_client.dart';
+import '../services/ai_service.dart';
 import '../services/cep_lookup_service.dart';
 import '../services/crm_lookup_service.dart';
 import '../services/places_search_service.dart';
+import 'ai_sheet_shell.dart';
 import 'br_input_formatters.dart';
+import 'reading_dialog.dart';
 import 'stepped_form_sheet.dart';
 
 /// Cadastro de médico em PASSOS (padrão V4 "jornada"): Quem atende →
-/// Registro (CRM com consulta ao conselho) → Onde atende (endereço com CEP
-/// e busca OSM). Atalhos de preenchimento preservados; a leitura pela
-/// receita preenche e avisa — só o nome é obrigatório.
+/// Registro (CRM com consulta ao conselho e portal do CFM) → Onde atende
+/// (endereço com CEP e busca OSM). Atalhos de preenchimento preservados:
+/// texto colado lido pela IA e leitura da receita preenchem e avisam —
+/// só o nome é obrigatório. Especialidade é lista fixa (CFM).
 class DoctorFormDialog extends StatefulWidget {
   const DoctorFormDialog({
     super.key,
     this.initialDoctor,
-    this.knownSpecialties = const [],
     this.cepLookup,
     this.crmLookup,
     this.placesSearch,
+    this.aiService,
     this.draft,
   });
 
   final Doctor? initialDoctor;
-
-  final Iterable<String> knownSpecialties;
 
   final CepLookupService? cepLookup;
 
   final CrmLookupService? crmLookup;
 
   final PlacesSearchService? placesSearch;
+
+  /// IA que lê o texto colado e sugere o preenchimento. Injetável para
+  /// testes; em produção usa o mesmo proxy do restante do app.
+  final AiService? aiService;
 
   /// Rascunho de leitura automática (médico identificado na receita por
   /// OCR): preenche o formulário de um médico NOVO — nunca usado quando
@@ -52,6 +60,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
   late final CepLookupService _cepLookup;
   late final CrmLookupService _crmLookup;
   late final PlacesSearchService _placesSearch;
+  late final AiService _aiService;
   late final TextEditingController _nameController;
   late final TextEditingController _specialtyController;
   late final TextEditingController _crmController;
@@ -67,12 +76,21 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
   late final TextEditingController _healthPlansController;
   late final TextEditingController _notesController;
 
+  /// Texto colado/digitado que a IA lê para preencher o cadastro.
+  late final TextEditingController _aiPasteController;
+
   String? _crmState;
   String? _addressState;
+
+  /// Especialidade selecionada na LISTA FIXA — o cadastro não aceita
+  /// especialidade fora da lista; o valor atual (legado) entra como
+  /// opção extra para não perder dado antigo ao editar.
+  String? _specialtyValue;
   bool _showAddress = false;
   bool _showExtras = false;
   bool _lookingUpCep = false;
   bool _lookingUpCrm = false;
+  bool _readingAi = false;
 
   /// Deleite V4: check verde que se desenha quando o CRM é confirmado no
   /// conselho — some se o número ou a UF mudarem depois.
@@ -98,9 +116,15 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     _cepLookup = widget.cepLookup ?? CepLookupService();
     _crmLookup = widget.crmLookup ?? CrmLookupService();
     _placesSearch = widget.placesSearch ?? PlacesSearchService();
+    _aiService = widget.aiService ?? AiService();
     final doctor = widget.initialDoctor;
     _nameController = TextEditingController(text: doctor?.name ?? '');
     _specialtyController = TextEditingController(text: doctor?.specialty ?? '');
+    _specialtyValue =
+        _specialtyController.text.trim().isEmpty
+            ? null
+            : _specialtyController.text.trim();
+    _aiPasteController = TextEditingController(text: '');
     _crmController = TextEditingController(text: doctor?.crm ?? '');
     _phoneController = TextEditingController(text: doctor?.phone ?? '');
     _emailController = TextEditingController(text: doctor?.email ?? '');
@@ -168,6 +192,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     _placesDebounce?.cancel();
     _nameController.dispose();
     _specialtyController.dispose();
+    _aiPasteController.dispose();
     _crmController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
@@ -263,11 +288,14 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
         _nameController.text = result.name;
       }
       if (replace && result.specialty.isNotEmpty) {
-        // Fonte da verdade: o controller do estado. O campo do passo 1 é
-        // reconstruído ao voltar (initialValue lê deste controller) — não
-        // guardamos referência ao controller interno do Autocomplete, que
-        // morre quando o PageView desmonta o passo.
-        _specialtyController.text = result.specialty;
+        // Fonte da verdade: o controller do estado. A especialidade só
+        // entra se casar com a lista fixa (mesma regra da IA) — casando,
+        // grava o valor canônico da lista; sem casar, mantém o texto do
+        // conselho como opção extra para o usuário conferir.
+        final matched = matchFixedSpecialty(result.specialty);
+        _specialtyController.text =
+            matched.isNotEmpty ? matched : result.specialty;
+        _specialtyValue = _specialtyController.text;
       }
     });
   }
@@ -304,6 +332,100 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
         _showCrmSnack('Estado ainda não coberto — preencha manualmente');
       case CrmLookupKind.error:
         _showCrmSnack('Falha na consulta. Tente novamente.');
+    }
+  }
+
+  // ── IA: texto colado → preenchimento ─────────────────────────────────
+
+  /// Itens do dropdown de especialidade: a lista fixa do cadastro + o
+  /// valor já gravado (legado) quando estiver fora da lista, para não
+  /// perder dado antigo ao editar. Ordenado alfabeticamente.
+  List<String> get _specialtyItems {
+    final items = List<String>.from(kMedicalSpecialties);
+    final current = _specialtyController.text.trim();
+    if (current.isNotEmpty &&
+        !items.any((item) => item.toLowerCase() == current.toLowerCase())) {
+      items.add(current);
+    }
+    items.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return items;
+  }
+
+  void _setSpecialty(String? value) {
+    setState(() {
+      _specialtyValue = value;
+      _specialtyController.text = value ?? '';
+    });
+  }
+
+  Future<void> _fillWithAi() async {
+    if (_readingAi) return;
+    final raw = _aiPasteController.text.trim();
+    if (raw.isEmpty) {
+      _showCrmSnack('Cole ou digite os dados do médico primeiro');
+      return;
+    }
+
+    final consented = await ensureAiConsent(context);
+    if (!consented || !mounted) return;
+
+    setState(() => _readingAi = true);
+    unawaited(
+      showReadingDialog(
+        context,
+        title: 'Preenchendo com IA…',
+        subtitle: 'A IA extrai os dados do texto colado.',
+      ),
+    );
+
+    DoctorAiData? data;
+    String? error;
+    try {
+      data = await _aiService.extractDoctorData(raw);
+    } on AiException catch (e) {
+      error = e.message;
+    } catch (_) {
+      error = 'Não foi possível preencher com IA. Preencha manualmente.';
+    }
+
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).pop(); // diálogo de leitura
+    setState(() => _readingAi = false);
+
+    // Local final: a promoção de nulos não sobrevive ao bloco try.
+    final result = data;
+    if (result == null) {
+      _showCrmSnack(error!);
+      return;
+    }
+
+    setState(() {
+      if (result.name.isNotEmpty) {
+        _nameController.text = titleCaseName(result.name);
+      }
+      if (result.specialty.isNotEmpty) {
+        _specialtyController.text = result.specialty;
+        _specialtyValue = result.specialty;
+      }
+      if (result.crm.isNotEmpty) _crmController.text = result.crm;
+      if (result.crmState.isNotEmpty) {
+        _crmState = result.crmState;
+        _crmVerified = false;
+      }
+      if (result.phone.isNotEmpty) _phoneController.text = result.phone;
+      _draftMessage = 'Preenchido pela IA — confira antes de salvar.';
+    });
+    _showCrmSnack('Dados aplicados. Confira antes de salvar.');
+  }
+
+  // ── Portal do CFM (consulta manual e gratuita em todas as UF) ─────────
+
+  Future<void> _openCfmPortal() async {
+    const url = 'https://portal.cfm.org.br/busca-medicos/';
+    try {
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      _showCrmSnack('Não foi possível abrir o portal do CFM.');
     }
   }
 
@@ -479,6 +601,27 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                   _validateName(_nameController.text) ??
                   _validatePhone(_phoneController.text),
           children: [
+            // Atalho de preenchimento: colar/digitar e deixar a IA
+            // sugerir. Preencher não é salvar — a conferência é do
+            // usuário, campo a campo.
+            TextFormField(
+              controller: _aiPasteController,
+              maxLines: 3,
+              decoration: _decoration(
+                'Colar ou digitar os dados do médico',
+                hint:
+                    'Ex.: Dra. Ana Silva, CRM 123456-SP, cardiologista, '
+                    '(11) 98888-7777',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            FilledButton.tonalIcon(
+              key: const ValueKey('fillWithAiButton'),
+              onPressed: _readingAi ? null : _fillWithAi,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Preencher com IA'),
+            ),
+            const SizedBox(height: AppSpacing.md),
             TextFormField(
               controller: _nameController,
               textCapitalization: TextCapitalization.words,
@@ -491,37 +634,22 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
               validator: _validateName,
             ),
             const SizedBox(height: AppSpacing.md),
-            Autocomplete<String>(
-              initialValue: TextEditingValue(text: _specialtyController.text),
-              optionsBuilder: (value) {
-                return suggestSpecialties(
-                  value.text,
-                  extra: widget.knownSpecialties,
-                ).take(8);
-              },
-              onSelected: (value) {
-                _specialtyController.text = value;
-              },
-              fieldViewBuilder: (
-                context,
-                controller,
-                focusNode,
-                onFieldSubmitted,
-              ) {
-                return TextFormField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  textCapitalization: TextCapitalization.sentences,
-                  textInputAction: TextInputAction.next,
-                  onChanged: (value) {
-                    _specialtyController.text = value;
-                  },
-                  decoration: _decoration(
-                    'Especialidade',
-                    hint: 'Comece a digitar, ex.: cardio',
-                  ),
-                );
-              },
+            // Especialidade em LISTA FIXA: sem texto livre — a IA e o
+            // conselho também só entram via casamento com esta lista.
+            DropdownButtonFormField<String>(
+              key: const ValueKey('doctorSpecialty'),
+              value: _specialtyValue,
+              isExpanded: true,
+              hint: const Text('Selecione'),
+              decoration: _decoration('Especialidade'),
+              items:
+                  _specialtyItems
+                      .map(
+                        (item) =>
+                            DropdownMenuItem(value: item, child: Text(item)),
+                      )
+                      .toList(),
+              onChanged: _setSpecialty,
             ),
             const SizedBox(height: AppSpacing.md),
             TextFormField(
@@ -540,8 +668,8 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
           validate: () => _validateCrm(_crmController.text),
           children: [
             Text(
-              'Consulte pelo CRM para trazer nome e especialidade do '
-              'conselho.',
+              'A busca automática pelo CRM cobre o conselho de SP; para '
+              'qualquer UF, confira no portal do CFM.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -609,6 +737,17 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                           : const Icon(Icons.search_outlined),
                 ),
               ],
+            ),
+            // Conferência manual e gratuita em todas as UF: abre o portal
+            // do CFM no navegador — a busca automática do app cobre SP.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const ValueKey('cfmPortalLink'),
+                onPressed: _openCfmPortal,
+                icon: const Icon(Icons.open_in_new, size: 18),
+                label: const Text('Conferir no portal do CFM'),
+              ),
             ),
           ],
         ),
