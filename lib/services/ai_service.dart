@@ -246,7 +246,13 @@ class AiService {
       ],
       model: AiProxyClient.defaultVisionModel,
       hasImages: true,
-      maxTokens: 2000,
+      // O nemotron-super-vl raciocina ANTES do JSON e o raciocínio varia
+      // muito com o número de marcadores: um laudo real de 8 itens queimou
+      // 2.624 tokens só pensando (E2E 16/11/2026) — o orçamento antigo de
+      // 2.000 cortava a resposta no meio do JSON (finish=length) e a
+      // leitura falhava sempre. 5.000 cobre raciocínio pesado + até 40
+      // itens (~4.400 tokens no pior caso medido).
+      maxTokens: 5000,
       temperature: 0.1,
     );
 
