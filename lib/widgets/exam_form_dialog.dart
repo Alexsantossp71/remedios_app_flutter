@@ -9,11 +9,13 @@ import 'package:uuid/uuid.dart';
 
 import '../core/design/app_tokens.dart';
 import '../models/doctor.dart';
+import '../models/doctor_draft.dart';
 import '../models/exam.dart';
 import '../providers/doctor_provider.dart';
 import '../services/ai_proxy_client.dart';
 import '../services/ai_service.dart';
 import '../widgets/app_snack_bar.dart';
+import '../widgets/doctor_inline_creator.dart';
 import '../widgets/media_source_sheet.dart';
 import '../widgets/reading_dialog.dart';
 import '../widgets/stepped_form_sheet.dart';
@@ -21,7 +23,8 @@ import 'ai_sheet_shell.dart';
 
 /// Formulário de exame em passos (pedido → agendamento → realização).
 /// A leitura por IA só PREENCHE — quem revisa e salva é o usuário, igual
-/// ao fluxo de receitas.
+/// ao fluxo de receitas. O exame exige médico solicitante: escolhe do
+/// catálogo ou cadastra ali mesmo (banner com criação inline).
 class ExamFormDialog extends StatefulWidget {
   const ExamFormDialog({super.key, this.initialExam, this.initialScan});
 
@@ -75,6 +78,31 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
     _doctorNameController.dispose();
     _resultsController.dispose();
     super.dispose();
+  }
+
+  bool _doctorMatchTried = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Uma única tentativa de casar o nome do médico (registro antigo sem
+    // vínculo) com o catálogo: casa pelo nome e pré-seleciona — o campo
+    // obrigatório não pede de novo quem já é conhecido.
+    if (_doctorMatchTried) return;
+    _doctorMatchTried = true;
+    _tryMatchDoctorByName(_doctorNameController.text);
+  }
+
+  void _tryMatchDoctorByName(String name) {
+    if (_selectedDoctorId != null && _selectedDoctorId!.isNotEmpty) return;
+    final lowered = name.trim().toLowerCase();
+    if (lowered.isEmpty) return;
+    for (final Doctor doctor in context.read<DoctorProvider>().doctors) {
+      if (doctor.name.trim().toLowerCase() == lowered) {
+        setState(() => _selectedDoctorId = doctor.id);
+        return;
+      }
+    }
   }
 
   DateTime? _parseScanDate(String? value) {
@@ -166,6 +194,8 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
       if (scan.place.isNotEmpty) _placeController.text = scan.place;
       if (scan.doctorName.isNotEmpty && _selectedDoctorId == null) {
         _doctorNameController.text = scan.doctorName;
+        // O nome lido pode já existir no catálogo — casa e pré-seleciona.
+        _tryMatchDoctorByName(scan.doctorName);
       }
       final parsedDate = _parseScanDate(scan.date);
       if (parsedDate != null) _date = parsedDate;
@@ -193,12 +223,25 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
   void _save() {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
+    // Exame exige médico (regra do produto): o passo 3 já barrou; a
+    // re-checagem é barata e protege qualquer caminho alternativo.
+    final doctorId = _selectedDoctorId;
+    if (doctorId == null || doctorId.isEmpty) return;
 
     final existing = widget.initialExam;
-    final doctorId = _selectedDoctorId ?? '';
-    // Snapshot do nome: quando um médico do catálogo é escolhido, o campo
-    // pode ter sido editado — o texto atual é o que fica registrado.
-    final doctorName = _doctorNameController.text.trim();
+    // Snapshot do nome: o texto digitado vale quando difere do catálogo
+    // (ex.: abreviação no pedido). Vazio, cai para o nome do médico
+    // selecionado — o exame nunca fica sem médico identificado.
+    final typedName = _doctorNameController.text.trim();
+    String doctorName = typedName;
+    if (doctorName.isEmpty) {
+      for (final Doctor doctor in context.read<DoctorProvider>().doctors) {
+        if (doctor.id == doctorId) {
+          doctorName = doctor.name;
+          break;
+        }
+      }
+    }
 
     final result = Exam(
       id: existing?.id ?? const Uuid().v4(),
@@ -275,7 +318,8 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
     return SteppedFormShell(
       title: _isEditing ? 'Editar exame' : 'Registrar exame',
       intro:
-          'Acompanhe do pedido do médico ao resultado — só o nome é obrigatório.',
+          'Acompanhe do pedido ao resultado — o exame e o médico são '
+          'obrigatórios.',
       saveLabel: _isEditing ? 'Salvar' : 'Registrar exame',
       steps: [
         // ── Passo 1: o que foi pedido ────────────────────────────────────
@@ -421,19 +465,34 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
         // ── Passo 3: médico e resultado ──────────────────────────────────
         FormStep(
           title: 'Médico e resultado',
+          validate:
+              () => (_selectedDoctorId == null || _selectedDoctorId!.isEmpty)
+                  ? 'Selecione ou cadastre o médico solicitante.'
+                  : null,
           children: [
+            if (doctors.isEmpty) ...[
+              // Exame exige médico: com o catálogo vazio, o cadastro
+              // acontece ali mesmo — o nome lido do pedido (OCR) já vai
+              // pré-preenchido para conferir e salvar.
+              InlineDoctorBanner(
+                draft:
+                    _doctorNameController.text.trim().isEmpty
+                        ? null
+                        : DoctorDraft(name: _doctorNameController.text.trim()),
+                onDoctorCreated: (created) {
+                  setState(() {
+                    _selectedDoctorId = created.id;
+                    _doctorNameController.text = created.name;
+                  });
+                },
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
             DropdownButtonFormField<String>(
               initialValue: _selectedDoctorId,
               isExpanded: true,
-              decoration: _decoration(
-                'Médico do catálogo',
-                hint: 'Opcional — vincula ao médico cadastrado',
-              ),
+              decoration: _decoration('Médico', hint: 'Selecione'),
               items: [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('Não cadastrado / não informar'),
-                ),
                 for (final Doctor doctor in doctors)
                   DropdownMenuItem<String>(
                     value: doctor.id,
@@ -456,14 +515,20 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
                   }
                 });
               },
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Selecione ou cadastre o médico solicitante';
+                }
+                return null;
+              },
             ),
             const SizedBox(height: AppSpacing.md),
             TextFormField(
               controller: _doctorNameController,
               textCapitalization: TextCapitalization.words,
               decoration: _decoration(
-                'Médico solicitante',
-                hint: 'Como aparece no pedido',
+                'Nome no pedido (opcional)',
+                hint: 'Se for diferente do nome no catálogo',
               ),
             ),
             const SizedBox(height: AppSpacing.md),

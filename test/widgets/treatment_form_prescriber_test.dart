@@ -55,7 +55,7 @@ void main() {
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Quem receitou (opcional)'), findsOneWidget);
+    expect(find.text('Quem receitou'), findsOneWidget);
     expect(
       find.text('Fica no registro do tratamento: quem prescreveu e em que dia.'),
       findsOneWidget,
@@ -148,7 +148,7 @@ void main() {
     expect(find.text('SP'), findsWidgets);
   });
 
-  testWidgets('CRM sem nome trava o avanço com aviso claro', (tester) async {
+  testWidgets('sem médico trava o salvar com aviso claro', (tester) async {
     await openForm(
       tester,
       draft: const TreatmentDraft(
@@ -167,9 +167,34 @@ void main() {
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 
-    // Não salvou: o passo continua na tela com o aviso.
-    expect(find.text('Informe também o nome de quem receitou.'), findsOneWidget);
+    // Não salvou: o passo continua na tela com o aviso — "quem receitou"
+    // é obrigatório, CRM sozinho não basta.
+    expect(find.text('Informe o médico que receitou.'), findsOneWidget);
     expect(find.text('Salvar'), findsOneWidget);
+  });
+
+  testWidgets('catálogo vazio mostra o cadastro inline de médico',
+      (tester) async {
+    await openForm(
+      tester,
+      draft: const TreatmentDraft(
+        name: 'LOSARTANA',
+        dosage: '50MG',
+        presentation: 'comprimido',
+        doseTimes: [DoseTime(hour: 8, minute: 0)],
+      ),
+    );
+
+    // Sem catálogo, a seção obrigatória não é beco sem saída: traz o
+    // banner com o botão que cadastra o médico ali mesmo.
+    expect(
+      find.text(
+        'Nenhum médico cadastrado. O médico é obrigatório — cadastre aqui '
+        'para continuar.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Cadastrar médico'), findsOneWidget);
   });
 
   testWidgets('médico do catálogo preenche nome e CRM com um toque',

@@ -6,6 +6,7 @@ import '../core/design/app_tokens.dart';
 import '../models/consultation.dart';
 import '../models/doctor.dart';
 import '../providers/doctor_provider.dart';
+import 'doctor_inline_creator.dart';
 import 'stepped_form_sheet.dart';
 
 /// Agendamento de consulta em PASSOS (padrão V4 "jornada"): Quem atende →
@@ -189,7 +190,6 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final doctorProvider = context.watch<DoctorProvider>();
     final doctors = doctorProvider.doctors;
 
@@ -208,31 +208,13 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
                       : null,
           children: [
             if (doctors.isEmpty) ...[
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer.withValues(
-                    alpha: 0.5,
-                  ),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      color: theme.colorScheme.error,
-                    ),
-                    const SizedBox(width: AppSpacing.sm + 2),
-                    Expanded(
-                      child: Text(
-                        'Nenhum médico cadastrado. Cadastre um médico antes de agendar.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onErrorContainer,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              // Consulta exige médico: em vez de um aviso sem saída, o
+              // cadastro acontece ali mesmo e o médico novo já entra
+              // selecionado — o usuário não perde o que já preencheu.
+              InlineDoctorBanner(
+                onDoctorCreated: (created) {
+                  setState(() => _selectedDoctorId = created.id);
+                },
               ),
               const SizedBox(height: AppSpacing.md),
             ],
