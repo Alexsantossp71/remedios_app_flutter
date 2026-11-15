@@ -86,8 +86,10 @@ void main() {
       );
       final body = jsonDecode(chat.body) as Map<String, dynamic>;
       expect(body['model'], AiProxyClient.defaultVisionModel);
-      expect(body['max_tokens'], 2000,
-          reason: 'laudo longo pede mais tokens que o pedido de exame');
+      expect(body['max_tokens'], 5000,
+          reason: 'laudo real de 8 itens queimou 2.624 tokens de raciocínio '
+              '(E2E): o orçamento de 2.000 truncava o JSON no meio e a '
+              'leitura falhava sempre');
     });
 
     test('conteúdo com partes text/image é normalizado', () async {
