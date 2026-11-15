@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../core/lab_values.dart';
 import '../models/consultation.dart';
@@ -11,8 +12,8 @@ import '../models/doctor.dart';
 import '../models/doctor_draft.dart';
 import '../models/exam.dart';
 import '../models/health_plan.dart';
+import '../models/prescription_record.dart';
 import '../models/treatment.dart';
-import '../models/treatment_draft.dart';
 import '../providers/consultation_provider.dart';
 import '../providers/doctor_provider.dart';
 import '../providers/exam_provider.dart';
@@ -154,15 +155,18 @@ void closeReadingDialog(BuildContext context) {
 
 // ── Medicamentos ───────────────────────────────────────────────────────────
 
-/// Cadastro manual de tratamento: formulário em passos e salvamento.
+/// Cadastro manual de tratamento: formulário em passos e salvamento. O
+/// catálogo de médicos acompanha o formulário para a seção "Quem receitou".
 Future<void> createTreatmentManually(BuildContext context) async {
   final result = await showSteppedFormSheet<Treatment>(
     context: context,
-    builder: (_) => const TreatmentFormDialog(),
+    builder: (_) => TreatmentFormDialog(
+      doctorCatalog: context.read<DoctorProvider>().doctors.toList(),
+    ),
   );
   if (result == null || !context.mounted) return;
 
-  await context.read<TherapyProvider>().addTreatment(result);
+  await saveTreatmentWithPrescriber(context, result);
   unawaited(HapticFeedback.mediumImpact());
   if (!context.mounted) return;
   showAppSnackBar(
@@ -170,6 +174,74 @@ Future<void> createTreatmentManually(BuildContext context) async {
     'Tratamento salvo. Bom começo!',
     type: AppSnackType.success,
   );
+}
+
+/// Salva o tratamento (novo ou edição) e mantém o registro de "quem
+/// receitou e em que dia": vincula ao catálogo de médicos (encontra pelo
+/// nome/CRM ou cria) e grava um registro no histórico quando há receita.
+/// Na edição, o registro só nasce quando a receita mudou (renovação) —
+/// salvar sem mexer não multiplica registros idênticos.
+Future<void> saveTreatmentWithPrescriber(
+  BuildContext context,
+  Treatment treatment, {
+  Treatment? previous,
+  PrescriptionSource source = PrescriptionSource.manual,
+}) async {
+  final therapy = context.read<TherapyProvider>();
+  var finalTreatment = treatment;
+
+  if (treatment.hasPrescriber) {
+    final doctor = await _findOrCreatePrescriberDoctor(context, treatment);
+    finalTreatment = treatment.copyWith(prescriberDoctorId: doctor.id);
+    final unchanged =
+        previous != null && Treatment.samePrescription(previous, treatment);
+    if (!unchanged) {
+      await therapy.recordPrescription(
+        PrescriptionRecord(
+          id: const Uuid().v4(),
+          treatmentId: finalTreatment.id,
+          doctorId: doctor.id,
+          doctorName: finalTreatment.prescriberName,
+          doctorCrm: finalTreatment.prescriberCrm,
+          doctorCrmState: finalTreatment.prescriberCrmState,
+          prescribedOn: finalTreatment.prescribedOn ?? DateTime.now(),
+          source: source,
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
+  }
+
+  if (previous == null) {
+    await therapy.addTreatment(finalTreatment);
+  } else {
+    await therapy.updateTreatment(finalTreatment);
+  }
+}
+
+/// Médico do registro de receita: reutiliza quem já está no catálogo
+/// (mesmo nome e, quando o usuário digitou CRM, o mesmo CRM); só cria
+/// quando não há correspondente — CRM diferente não vira "atualização
+/// silenciosa" de outro médico, vira registro novo conferido.
+Future<Doctor> _findOrCreatePrescriberDoctor(
+  BuildContext context,
+  Treatment treatment,
+) async {
+  final provider = context.read<DoctorProvider>();
+  final name = treatment.prescriberName.trim();
+  final crm = treatment.prescriberCrm.trim();
+  for (final doctor in provider.doctors) {
+    if (doctor.name.trim().toLowerCase() != name.toLowerCase()) continue;
+    if (crm.isEmpty || doctor.crm.trim() == crm) return doctor;
+  }
+  final created = Doctor(
+    id: const Uuid().v4(),
+    name: name,
+    crm: crm,
+    crmState: treatment.prescriberCrmState.trim().toUpperCase(),
+  );
+  await provider.saveDoctor(created);
+  return created;
 }
 
 /// Texto LGPD do fluxo de receita (compartilhado por medicamentos e médicos).
@@ -226,23 +298,30 @@ Future<void> createTreatmentFromPrescription(BuildContext context) async {
     return;
   }
 
-  final drafts = await Navigator.of(context).push<List<TreatmentDraft>>(
+  final drafts = await Navigator.of(context).push<PrescriptionReviewOutcome>(
     MaterialPageRoute(
       builder: (_) => PrescriptionReviewScreen(result: result!),
     ),
   );
-  if (drafts == null || drafts.isEmpty || !context.mounted) return;
+  if (drafts == null || drafts.drafts.isEmpty || !context.mounted) return;
 
-  final provider = context.read<TherapyProvider>();
-  for (final draft in drafts) {
+  final doctorCatalog = context.read<DoctorProvider>().doctors.toList();
+  for (final draft in drafts.drafts) {
     if (!context.mounted) return;
     final saved = await showSteppedFormSheet<Treatment>(
       context: context,
-      builder: (_) => TreatmentFormDialog(draft: draft),
+      builder: (_) => TreatmentFormDialog(
+        draft: draft,
+        prescriptionDoctor: drafts.medico,
+        doctorCatalog: doctorCatalog,
+      ),
     );
-    if (saved != null) {
-      await provider.addTreatment(saved);
-    }
+    if (saved == null || !context.mounted) continue;
+    await saveTreatmentWithPrescriber(
+      context,
+      saved,
+      source: PrescriptionSource.prescriptionPhoto,
+    );
   }
 }
 

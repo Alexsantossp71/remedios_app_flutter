@@ -1,24 +1,48 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 import '../core/design/app_tokens.dart';
 import '../data/medicine_data.dart';
+import '../models/doctor.dart';
 import '../models/medicine.dart';
+import '../models/prescription_record.dart';
 import '../models/treatment.dart';
 import '../models/treatment_draft.dart';
 import '../screens/barcode_scan_screen.dart';
 import '../services/dose_schedule_presets.dart';
+import '../services/prescription_reader_service.dart';
 import 'stepped_form_sheet.dart';
 
 class TreatmentFormDialog extends StatefulWidget {
-  const TreatmentFormDialog({super.key, this.initialTreatment, this.draft});
+  const TreatmentFormDialog({
+    super.key,
+    this.initialTreatment,
+    this.draft,
+    this.prescriptionDoctor,
+    this.doctorCatalog = const [],
+    this.prescriptionHistory = const [],
+  });
 
   final Treatment? initialTreatment;
 
   /// Rascunho de leitura automática (receita por OCR): preenche o formulário
   /// de um tratamento NOVO — nunca usado quando [initialTreatment] existe.
   final TreatmentDraft? draft;
+
+  /// Médico lido da receita pelo OCR: pré-preenche "Quem receitou" para o
+  /// usuário conferir — preencher não é salvar.
+  final PrescriptionDoctor? prescriptionDoctor;
+
+  /// Catálogo de médicos para o seletor "Do catálogo" (o formulário não
+  /// acessa provider — o chamador entrega a lista).
+  final List<Doctor> doctorCatalog;
+
+  /// Histórico de receitas anteriores do tratamento (só na edição):
+  /// quem receitou e em que dia, para ficar à disposição do usuário.
+  final List<PrescriptionRecord> prescriptionHistory;
 
   @override
   State<TreatmentFormDialog> createState() => _TreatmentFormDialogState();
@@ -31,6 +55,9 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   final _instructionsController = TextEditingController();
   final _stockController = TextEditingController();
   final _thresholdController = TextEditingController();
+  final _prescriberNameController = TextEditingController();
+  final _prescriberCrmController = TextEditingController();
+  final _prescriberUfController = TextEditingController();
   final List<DoseTime> _doseTimes = [];
 
   late final Future<List<Medicine>> _medicineCatalogFuture;
@@ -42,6 +69,14 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   final Set<int> _weekdays = {};
   DateTime _startDate = DateTime.now();
   DateTime? _endDate;
+
+  /// Data da receita ("em que dia") — nasce hoje e o usuário corrige se a
+  /// receita for mais antiga. Só é gravada quando há alguém receitando.
+  DateTime _prescribedOn = DateTime.now();
+
+  /// Médico selecionado no seletor "Do catálogo" — preenche os campos, que
+  /// seguem editáveis; a identidade final é o que o usuário digitar.
+  Doctor? _selectedCatalogDoctor;
 
   /// Rótulos curtos dos dias para os chips — mesma ordem de DateTime.weekday.
   static const List<String> _weekdayLabels = [
@@ -82,9 +117,13 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
         if (draft.frequency == TreatmentFrequency.weekly) {
           _weekdays.addAll(draft.weekdays);
         }
+        // Médico lido da receita também abre preenchido — conferência
+        // primeiro: quem assinou só entra no registro se o usuário salvar.
+        _prefillPrescriberFromDoctor(widget.prescriptionDoctor);
         return;
       }
       _doseTimes.add(const DoseTime(hour: 8, minute: 0));
+      _prefillPrescriberFromDoctor(widget.prescriptionDoctor);
       return;
     }
     _nameController.text = treatment.name;
@@ -100,6 +139,22 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
     _weekdays.addAll(treatment.weekdays);
     _startDate = treatment.startDate;
     _endDate = treatment.endDate;
+    _prescriberNameController.text = treatment.prescriberName;
+    _prescriberCrmController.text = treatment.prescriberCrm;
+    _prescriberUfController.text = treatment.prescriberCrmState;
+    if (treatment.prescribedOn != null) {
+      _prescribedOn = treatment.prescribedOn!;
+    }
+  }
+
+  /// Preenche "Quem receitou" com o médico lido da receita (OCR).
+  void _prefillPrescriberFromDoctor(PrescriptionDoctor? doctor) {
+    if (doctor == null || !doctor.hasAnything) return;
+    if (doctor.hasName) _prescriberNameController.text = doctor.nome.trim();
+    if (doctor.hasCrm) _prescriberCrmController.text = doctor.crm.trim();
+    if (doctor.uf.trim().isNotEmpty) {
+      _prescriberUfController.text = doctor.uf.trim();
+    }
   }
 
   @override
@@ -110,7 +165,21 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
     _instructionsController.dispose();
     _stockController.dispose();
     _thresholdController.dispose();
+    _prescriberNameController.dispose();
+    _prescriberCrmController.dispose();
+    _prescriberUfController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPrescribedOn() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _prescribedOn,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+      helpText: 'Data da receita',
+    );
+    if (picked != null) setState(() => _prescribedOn = picked);
   }
 
   Future<void> _pickStartDate() async {
@@ -356,11 +425,14 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
         _validNumber(_thresholdController.text) != null) {
       return;
     }
+    if (_validatePrescriber() != null) return;
 
     int? parseOptionalInt(String value) =>
         value.trim().isEmpty ? null : int.tryParse(value.trim());
 
     final existing = widget.initialTreatment;
+    final prescriberName = _prescriberNameController.text.trim();
+    final hasPrescriber = prescriberName.isNotEmpty;
     final treatment = Treatment(
       id: existing?.id ?? const Uuid().v4(),
       name: _nameController.text.trim(),
@@ -378,6 +450,18 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       stock: parseOptionalInt(_stockController.text),
       refillThreshold: parseOptionalInt(_thresholdController.text),
       isArchived: existing?.isArchived ?? false,
+      // Quem receitou: só entra quando há nome — CRM e UF acompanham o
+      // que foi digitado, e a data da receita fica à disposição.
+      prescriberDoctorId:
+          hasPrescriber ? existing?.prescriberDoctorId : null,
+      prescriberName: prescriberName,
+      prescriberCrm:
+          hasPrescriber ? _prescriberCrmController.text.trim() : '',
+      prescriberCrmState:
+          hasPrescriber
+              ? _prescriberUfController.text.trim().toUpperCase()
+              : '',
+      prescribedOn: hasPrescriber ? _prescribedOn : null,
     );
     Navigator.of(context).pop(treatment);
   }
@@ -386,7 +470,9 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   Widget build(BuildContext context) {
     return SteppedFormShell(
       title: _isEditing ? 'Editar tratamento' : 'Novo tratamento',
-      intro: 'Três passos rápidos: o remédio, os horários e por quanto tempo.',
+      intro:
+          'Três passos rápidos: o remédio, os horários e por quanto tempo. '
+          'No fim, opcional, registre quem receitou.',
       saveLabel: 'Salvar',
       steps: [
         // ── Passo 1: o medicamento ─────────────────────────────────────────
@@ -536,13 +622,14 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
             _buildUpcomingPreview(),
           ],
         ),
-        // ── Passo 3: duração, estoque e notas ──────────────────────────────
+        // ── Passo 3: duração, estoque e quem receitou ──────────────────────
         FormStep(
-          title: 'Duração, estoque e notas',
+          title: 'Duração, estoque e receita',
           validate:
               () =>
                   _validNumber(_stockController.text) ??
-                  _validNumber(_thresholdController.text),
+                  _validNumber(_thresholdController.text) ??
+                  _validatePrescriber(),
           children: [
             Row(
               children: [
@@ -608,11 +695,181 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
                 hintText: 'Ex.: após o almoço',
               ),
             ),
+            // ── Quem receitou (opcional) ───────────────────────────────────
+            const SizedBox(height: AppSpacing.lg),
+            const Divider(),
+            _buildPrescriberSection(),
           ],
         ),
       ],
       onSave: _save,
     );
+  }
+
+  /// Validação do trecho "Quem receitou": CRM/UF sem nome é convite ao
+  /// registro pela metade — se vai registrar, registra quem assinou.
+  String? _validatePrescriber() {
+    final name = _prescriberNameController.text.trim();
+    final crm = _prescriberCrmController.text.trim();
+    final uf = _prescriberUfController.text.trim();
+    if ((crm.isNotEmpty || uf.isNotEmpty) && name.isEmpty) {
+      return 'Informe também o nome de quem receitou.';
+    }
+    return null;
+  }
+
+  String get _prescribedOnLabel =>
+      '${_prescribedOn.day.toString().padLeft(2, '0')}/'
+      '${_prescribedOn.month.toString().padLeft(2, '0')}/'
+      '${_prescribedOn.year}';
+
+  /// Seção "Quem receitou (opcional)": escolhe do catálogo ou digita, com a
+  /// data da receita; na edição, o histórico fica à disposição aqui.
+  Widget _buildPrescriberSection() {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Quem receitou (opcional)',
+          style: theme.textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Fica no registro do tratamento: quem prescreveu e em que dia.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (widget.doctorCatalog.isNotEmpty) ...[
+          DropdownButtonFormField<Doctor>(
+            initialValue: _selectedCatalogDoctor,
+            decoration: const InputDecoration(
+              labelText: 'Do catálogo',
+              hintText: 'Escolher médico já cadastrado',
+            ),
+            items: [
+              for (final doctor in widget.doctorCatalog)
+                DropdownMenuItem(
+                  value: doctor,
+                  child: Text(
+                    doctor.crmLabel.isEmpty
+                        ? doctor.name
+                        : '${doctor.name} · ${doctor.crmLabel}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+            onChanged: (doctor) {
+              if (doctor == null) return;
+              setState(() {
+                _selectedCatalogDoctor = doctor;
+                _prescriberNameController.text = doctor.name;
+                _prescriberCrmController.text = doctor.crm;
+                _prescriberUfController.text = doctor.crmState;
+              });
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        TextFormField(
+          controller: _prescriberNameController,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Médico que receitou',
+            hintText: 'Ex.: Dr. Carlos Almeida',
+          ),
+          onChanged: (_) {
+            // Digitar por cima do catálogo desvincula a seleção: o que
+            // vale é o texto conferido pelo usuário.
+            if (_selectedCatalogDoctor != null) {
+              setState(() => _selectedCatalogDoctor = null);
+            }
+          },
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: TextFormField(
+                controller: _prescriberCrmController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  labelText: 'CRM (opcional)',
+                  hintText: '123456',
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              flex: 2,
+              child: TextFormField(
+                controller: _prescriberUfController,
+                textCapitalization: TextCapitalization.characters,
+                maxLength: 2,
+                decoration: const InputDecoration(
+                  labelText: 'UF',
+                  hintText: 'SP',
+                  counterText: '',
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            onPressed: _pickPrescribedOn,
+            icon: const Icon(Icons.history_edu_outlined),
+            label: Text('Receita emitida em $_prescribedOnLabel'),
+          ),
+        ),
+        ..._buildPrescriptionHistory(theme),
+      ],
+    );
+  }
+
+  /// Histórico de receitas anteriores — só na edição e quando existe
+  /// registro: quem receitou e em que dia, sempre à disposição.
+  List<Widget> _buildPrescriptionHistory(ThemeData theme) {
+    if (widget.prescriptionHistory.isEmpty) return const [];
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    return [
+      const SizedBox(height: AppSpacing.sm),
+      ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: 8),
+        title: Text(
+          'Histórico de receitas (${widget.prescriptionHistory.length})',
+          style: theme.textTheme.labelLarge,
+        ),
+        subtitle: const Text('Receitas anteriores deste tratamento'),
+        children: [
+          for (final record in widget.prescriptionHistory)
+            ListTile(
+              dense: true,
+              leading: const Icon(Icons.history_edu_outlined, size: 22),
+              title: Text(
+                record.crmLabel.isEmpty
+                    ? record.doctorName
+                    : '${record.doctorName} · ${record.crmLabel}',
+              ),
+              subtitle: Text(
+                'Receita em ${dateFormat.format(record.prescribedOn)}'
+                ' · ${record.source.label}',
+              ),
+            ),
+        ],
+      ),
+    ];
   }
 
   /// Mostra as próximas doses reais antes de salvar — o feedback que tira a

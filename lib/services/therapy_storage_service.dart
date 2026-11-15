@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 import '../models/dose_event.dart';
+import '../models/prescription_record.dart';
 import '../models/treatment.dart';
 import 'database_service.dart';
 
@@ -46,6 +47,13 @@ class TherapyStorageService {
         stock: row['stock'] as int?,
         refillThreshold: row['refill_threshold'] as int?,
         isArchived: (row['is_archived'] as int? ?? 0) == 1,
+        prescriberDoctorId: row['prescriber_doctor_id'] as String?,
+        prescriberName: row['prescriber_name'] as String? ?? '',
+        prescriberCrm: row['prescriber_crm'] as String? ?? '',
+        prescriberCrmState: row['prescriber_crm_state'] as String? ?? '',
+        prescribedOn: row['prescribed_on'] == null
+            ? null
+            : DateTime.parse(row['prescribed_on'] as String).toLocal(),
       );
     }).toList();
   }
@@ -96,6 +104,16 @@ class TherapyStorageService {
         'stock': treatment.stock,
         'refill_threshold': treatment.refillThreshold,
         'is_archived': treatment.isArchived ? 1 : 0,
+        'prescriber_doctor_id': treatment.prescriberDoctorId,
+        'prescriber_name':
+            treatment.prescriberName.isEmpty ? null : treatment.prescriberName,
+        'prescriber_crm':
+            treatment.prescriberCrm.isEmpty ? null : treatment.prescriberCrm,
+        'prescriber_crm_state': treatment.prescriberCrmState.isEmpty
+            ? null
+            : treatment.prescriberCrmState,
+        'prescribed_on':
+            treatment.prescribedOn?.toUtc().toIso8601String(),
         'created_at': nowIso,
         'updated_at': nowIso,
       },
@@ -129,6 +147,18 @@ class TherapyStorageService {
           'stock': treatment.stock,
           'refill_threshold': treatment.refillThreshold,
           'is_archived': treatment.isArchived ? 1 : 0,
+          'prescriber_doctor_id': treatment.prescriberDoctorId,
+          'prescriber_name':
+              treatment.prescriberName.isEmpty
+                  ? null
+                  : treatment.prescriberName,
+          'prescriber_crm':
+              treatment.prescriberCrm.isEmpty ? null : treatment.prescriberCrm,
+          'prescriber_crm_state': treatment.prescriberCrmState.isEmpty
+              ? null
+              : treatment.prescriberCrmState,
+          'prescribed_on':
+              treatment.prescribedOn?.toUtc().toIso8601String(),
           'created_at': nowIso,
           'updated_at': nowIso,
         },
@@ -176,6 +206,56 @@ class TherapyStorageService {
       );
     }
     await batch.commit(noResult: true);
+  }
+
+  /// Histórico de "quem receitou e em que dia". Sem [treatmentId], devolve
+  /// todos os registros; com, só os daquele tratamento (mais recente
+  /// primeiro — a receita atual vem antes das antigas).
+  Future<List<PrescriptionRecord>> loadPrescriptionRecords({
+    String? treatmentId,
+  }) async {
+    final db = await _dbService.database;
+    final rows = await db.query(
+      'treatment_prescriptions',
+      where: treatmentId == null ? null : 'treatment_id = ?',
+      whereArgs: treatmentId == null ? null : [treatmentId],
+      orderBy: 'prescribed_on DESC, created_at DESC',
+    );
+
+    return rows.map((row) {
+      return PrescriptionRecord(
+        id: row['id'] as String,
+        treatmentId: row['treatment_id'] as String,
+        doctorId: row['doctor_id'] as String?,
+        doctorName: row['doctor_name'] as String? ?? '',
+        doctorCrm: row['doctor_crm'] as String? ?? '',
+        doctorCrmState: row['doctor_crm_state'] as String? ?? '',
+        prescribedOn:
+            DateTime.parse(row['prescribed_on'] as String).toLocal(),
+        source: PrescriptionSource.fromName(row['source'] as String?),
+        createdAt:
+            DateTime.parse(row['created_at'] as String).toLocal(),
+      );
+    }).toList();
+  }
+
+  /// Grava um novo registro de receita. NUNCA usa replace: cada chamada é
+  /// uma renovação e o histórico é só-append — sobrescrever apagaria a
+  /// memória de quem receitou antes.
+  Future<void> insertPrescriptionRecord(PrescriptionRecord record) async {
+    final db = await _dbService.database;
+    await db.insert('treatment_prescriptions', {
+      'id': record.id,
+      'treatment_id': record.treatmentId,
+      'doctor_id': record.doctorId,
+      'doctor_name': record.doctorName,
+      'doctor_crm': record.doctorCrm.isEmpty ? null : record.doctorCrm,
+      'doctor_crm_state':
+          record.doctorCrmState.isEmpty ? null : record.doctorCrmState,
+      'prescribed_on': record.prescribedOn.toUtc().toIso8601String(),
+      'source': record.source.name,
+      'created_at': record.createdAt.toUtc().toIso8601String(),
+    });
   }
 
   }

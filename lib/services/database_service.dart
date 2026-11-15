@@ -17,7 +17,7 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._();
 
   static const String _databaseName = 'remedios_app.db';
-  static const int _databaseVersion = 10;
+  static const int _databaseVersion = 11;
 
   Database? _db;
   bool _isInitialized = false;
@@ -37,6 +37,13 @@ class DatabaseService {
     }
     _db = db;
     _isInitialized = true;
+  }
+
+  /// Executa as migrações reais num banco aberto em versão anterior —
+  /// teste da trilha v10 → v11 sem duplicar o SQL do [_onUpgrade].
+  @visibleForTesting
+  Future<void> applyUpgradesForTesting(Database db, int oldVersion) {
+    return _onUpgrade(db, oldVersion, _databaseVersion);
   }
 
   /// Initialize an in-memory database for testing.
@@ -126,6 +133,11 @@ class DatabaseService {
         stock INTEGER,
         refill_threshold INTEGER,
         is_archived INTEGER NOT NULL DEFAULT 0,
+        prescriber_doctor_id TEXT,
+        prescriber_name TEXT,
+        prescriber_crm TEXT,
+        prescriber_crm_state TEXT,
+        prescribed_on TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -272,7 +284,29 @@ class DatabaseService {
       )
     ''');
 
-    // 9. Lab results table (laudos de laboratório com valores por marcador)
+    // 9. Treatment prescriptions table (histórico de "quem receitou e em
+    // que dia" — um registro por renovação de receita, nunca sobrescrito)
+    await db.execute('''
+      CREATE TABLE treatment_prescriptions (
+        id TEXT PRIMARY KEY,
+        treatment_id TEXT NOT NULL,
+        doctor_id TEXT,
+        doctor_name TEXT NOT NULL,
+        doctor_crm TEXT,
+        doctor_crm_state TEXT,
+        prescribed_on TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT 'manual',
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (treatment_id) REFERENCES treatments(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute(
+      'CREATE INDEX idx_treatment_prescriptions_treatment '
+      'ON treatment_prescriptions(treatment_id)',
+    );
+
+    // 10. Lab results table (laudos de laboratório com valores por marcador)
     await db.execute('''
       CREATE TABLE lab_results (
         id TEXT PRIMARY KEY,
@@ -403,6 +437,40 @@ class DatabaseService {
           updated_at TEXT NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 11) {
+      // Version 11: quem receitou — snapshot no tratamento (médico, CRM e
+      // data da receita para o card/formulário) + histórico completo em
+      // treatment_prescriptions (um registro por renovação, nunca sobrescrito).
+      await db.execute(
+        'ALTER TABLE treatments ADD COLUMN prescriber_doctor_id TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE treatments ADD COLUMN prescriber_name TEXT',
+      );
+      await db.execute('ALTER TABLE treatments ADD COLUMN prescriber_crm TEXT');
+      await db.execute(
+        'ALTER TABLE treatments ADD COLUMN prescriber_crm_state TEXT',
+      );
+      await db.execute('ALTER TABLE treatments ADD COLUMN prescribed_on TEXT');
+      await db.execute('''
+        CREATE TABLE treatment_prescriptions (
+          id TEXT PRIMARY KEY,
+          treatment_id TEXT NOT NULL,
+          doctor_id TEXT,
+          doctor_name TEXT NOT NULL,
+          doctor_crm TEXT,
+          doctor_crm_state TEXT,
+          prescribed_on TEXT NOT NULL,
+          source TEXT NOT NULL DEFAULT 'manual',
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (treatment_id) REFERENCES treatments(id) ON DELETE CASCADE
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX idx_treatment_prescriptions_treatment '
+        'ON treatment_prescriptions(treatment_id)',
+      );
     }
   }
 

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/treatment.dart';
+import '../providers/doctor_provider.dart';
 import '../providers/therapy_provider.dart';
 import '../core/design/app_tokens.dart';
 import '../core/design/brand_colors.dart';
@@ -28,14 +29,23 @@ class TreatmentsScreen extends StatelessWidget {
   /// Edição de um tratamento existente. O cadastro (manual ou pela foto da
   /// receita) vive em [createTreatmentManually] e
   /// [createTreatmentFromPrescription] — usados pela tela e pelo menu central.
+  /// O histórico de "quem receitou" acompanha o formulário para ficar à
+  /// disposição do usuário; o salvamento passa pelo registro de receita.
   Future<void> _editTreatment(BuildContext context, Treatment treatment) async {
     final result = await showSteppedFormSheet<Treatment>(
       context: context,
-      builder: (_) => TreatmentFormDialog(initialTreatment: treatment),
+      builder: (_) => TreatmentFormDialog(
+        initialTreatment: treatment,
+        doctorCatalog: context.read<DoctorProvider>().doctors.toList(),
+        prescriptionHistory:
+            context.read<TherapyProvider>().prescriptionRecordsFor(
+                  treatment.id,
+                ),
+      ),
     );
     if (result == null || !context.mounted) return;
 
-    await context.read<TherapyProvider>().updateTreatment(result);
+    await saveTreatmentWithPrescriber(context, result, previous: treatment);
     if (!context.mounted) return;
     showAppSnackBar(
       context,
@@ -390,6 +400,13 @@ class TreatmentCard extends StatelessWidget {
                         label: '${treatment.stock} un.',
                         isWarning: treatment.needsRefill,
                       ),
+                    // Quem receitou e em que dia — sempre à disposição no
+                    // card, não só dentro do formulário.
+                    if (treatment.hasPrescriber)
+                      InfoChip(
+                        icon: Icons.history_edu_outlined,
+                        label: _prescriberLabel(treatment),
+                      ),
                   ],
                 ),
                 if (treatment.instructions.isNotEmpty) ...[
@@ -409,6 +426,16 @@ class TreatmentCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  /// "Receita: Dr. Carlos · 15/11/2026" — nome e dia são o que importa na
+  /// lista; o CRM completo fica no formulário e no histórico.
+  static String _prescriberLabel(Treatment treatment) {
+    final date = treatment.prescribedOn;
+    return [
+      'Receita: ${treatment.prescriberName}',
+      if (date != null) DateFormat('dd/MM/yyyy').format(date),
+    ].join(' · ');
   }
 
   static IconData _presentationIcon(String presentation) {
