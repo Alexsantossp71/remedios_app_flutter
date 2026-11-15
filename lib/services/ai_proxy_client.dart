@@ -41,7 +41,14 @@ class AiProxyClient {
       'https://alexsantossp71-lgtm.github.io';
 
   static const String defaultTextModel = 'z-ai/glm-5.3-flash';
-  static const String defaultVisionModel = 'meta/llama-3.2-90b-vision-instruct';
+
+  /// Modelo de visão padrão. O nemotron-3.5-super-vl é o único VL da
+  /// allowlist com resposta estável e rápida hoje (~3-5 s); é também um
+  /// modelo de raciocínio — as ferramentas de imagem precisam de
+  /// max_tokens alto o bastante para o raciocínio + a resposta (o valor
+  /// 500 antigo esgotava tudo no raciocínio e devolvia content vazio).
+  static const String defaultVisionModel =
+      'nvidia/nemotron-3.5-super-vl-120b-a12b';
 
   /// Lista curada de modelos NVIDIA com endpoint gratuito, na ordem de
   /// preferência para tarefas de texto (igual ao cliente do PWA).
@@ -53,12 +60,15 @@ class AiProxyClient {
     'nvidia/nemotron-3.5-lightning-30b-a3b',
   ];
 
+  /// Ordem de preferência para tarefas com imagem. Os modelos de texto
+  /// ficam por último: recebem a mesma mensagem, não conseguem ver a
+  /// imagem e respondem sem conteúdo — viram erro amigável na UI.
   static const List<String> visionFallbacks = [
+    'nvidia/nemotron-3.5-super-vl-120b-a12b',
     'meta/llama-3.2-90b-vision-instruct',
     'meta/muse-glimmer-30b',
     'stepfun-ai/step-5-preview',
     'z-ai/glm-5.3-flash',
-    'nvidia/nemotron-3.5-super-vl-120b-a12b',
   ];
 
   static const Duration defaultRequestTimeout = Duration(seconds: 12);

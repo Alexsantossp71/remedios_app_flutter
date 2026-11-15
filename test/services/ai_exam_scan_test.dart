@@ -179,5 +179,51 @@ void main() {
         )),
       );
     });
+
+    test('pedido de visão usa max_tokens alto (raciocínio do VL não esgota o limite)', () async {
+      // Regressão: com max_tokens 500, o nemotron-super-vl gastava tudo no
+      // raciocínio e devolvia content vazio — a leitura falhava sempre.
+      final requests = <http.Request>[];
+      final client = FakeClient((request) async {
+        requests.add(request);
+        return _catalogAndChat(
+          '{"name":"Hemograma completo","category":"Laboratório",'
+          '"doctorName":"","place":"","date":""}',
+        )(request);
+      });
+      final service = AiService(
+        proxyClient: AiProxyClient(client: client, isWebOverride: false),
+      );
+      await service.scanExamRequest(
+        imageBytes: Uint8List.fromList([1]),
+        mimeType: 'image/jpeg',
+      );
+
+      final chat = requests.firstWhere(
+        (r) => r.method == 'POST' && r.url.path.endsWith('/chat/completions'),
+      );
+      final body = jsonDecode(chat.body) as Map<String, dynamic>;
+      expect(body['max_tokens'] as int, greaterThanOrEqualTo(2000));
+    });
+
+    test('modelo de visão padrão e fallbacks começam com modelos de visão', () {
+      // O padrão precisa ser um VL de verdade e rápido; os candidatos de
+      // texto só podem aparecer no fim — não veem a imagem e respondem vazio.
+      expect(
+        AiProxyClient.defaultVisionModel,
+        contains('vl'),
+        reason: 'modelo padrão de visão deve ser vision-language',
+      );
+      expect(AiProxyClient.visionFallbacks.first,
+          AiProxyClient.defaultVisionModel);
+      expect(
+        AiProxyClient.visionFallbacks
+            .take(2)
+            .where((m) => m.contains('vision') || m.contains('vl'))
+            .length,
+        2,
+        reason: 'os dois primeiros candidatos devem aceitar imagem',
+      );
+    });
   });
 }
