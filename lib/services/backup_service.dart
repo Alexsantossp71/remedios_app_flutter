@@ -28,13 +28,15 @@ class BackupService {
   /// Marcador de origem: arquivos de outros apps/JSONs soltos são rejeitados.
   static const String appMarker = 'remedios-app';
 
-  /// Espelha `DatabaseService._databaseVersion` (v7). Backups com schema
-  /// mais novo que o app não podem ser restaurados com segurança.
-  static const int maxSchemaVersion = 7;
+  /// Espelha o formato do backup (não a versão do banco): subiu para 8
+  /// quando o export ganhou a tabela treatment_prescriptions. Backups com
+  /// formato mais novo que o app não podem ser restaurados com segurança.
+  static const int maxSchemaVersion = 8;
 
   /// Ordem de INSERÇÃO (pais antes de filhos, para respeitar foreign keys).
   static const List<String> _tableOrder = [
     'treatments',
+    'treatment_prescriptions',
     'dose_events',
     'doctors',
     'consultations',
@@ -46,6 +48,7 @@ class BackupService {
   /// Ordem de EXCLUSÃO (filhos antes de pais).
   static const List<String> _deleteOrder = [
     'dose_events',
+    'treatment_prescriptions',
     'consultations',
     'emergency_contacts',
     'user_profile',
@@ -57,6 +60,7 @@ class BackupService {
   /// Chaves obrigatórias por tabela (PKs e FKs que dão integridade mínima).
   static const Map<String, List<String>> _requiredKeys = {
     'treatments': ['id'],
+    'treatment_prescriptions': ['id', 'treatment_id'],
     'dose_events': ['id', 'treatment_id'],
     'doctors': ['id'],
     'consultations': ['id', 'doctor_id'],

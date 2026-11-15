@@ -56,6 +56,16 @@ class Treatment {
   final int? refillThreshold;
   final bool isArchived;
 
+  /// Quem receitou — snapshot de exibição do registro de receita atual.
+  /// [prescriberDoctorId] aponta para o catálogo de médicos quando o médico
+  /// foi vinculado; nome/CRM ficam gravados junto para o registro sobreviver
+  /// a um médico apagado do catálogo. [prescribedOn] é a data da receita.
+  final String? prescriberDoctorId;
+  final String prescriberName;
+  final String prescriberCrm;
+  final String prescriberCrmState;
+  final DateTime? prescribedOn;
+
   Treatment({
     required this.id,
     required this.name,
@@ -70,6 +80,11 @@ class Treatment {
     required this.stock,
     required this.refillThreshold,
     this.isArchived = false,
+    this.prescriberDoctorId,
+    this.prescriberName = '',
+    this.prescriberCrm = '',
+    this.prescriberCrmState = '',
+    this.prescribedOn,
   }) : assert(id.isNotEmpty, 'id must not be empty'),
        assert(name.isNotEmpty, 'name must not be empty'),
        assert(dosage.isNotEmpty, 'dosage must not be empty'),
@@ -114,7 +129,41 @@ class Treatment {
       stock: json['stock'] as int?,
       refillThreshold: json['refillThreshold'] as int?,
       isArchived: json['isArchived'] as bool? ?? false,
+      prescriberDoctorId: json['prescriberDoctorId'] as String?,
+      prescriberName: json['prescriberName'] as String? ?? '',
+      prescriberCrm: json['prescriberCrm'] as String? ?? '',
+      prescriberCrmState: json['prescriberCrmState'] as String? ?? '',
+      prescribedOn: json['prescribedOn'] == null
+          ? null
+          : DateTime.parse(json['prescribedOn'] as String),
     );
+  }
+
+  /// Há registro de receita? Nome OU vínculo com médico do catálogo.
+  bool get hasPrescriber =>
+      prescriberName.trim().isNotEmpty ||
+      (prescriberDoctorId?.trim().isNotEmpty ?? false);
+
+  /// Rótulo de CRM igual ao do catálogo (Doctor.crmLabel): "CRM 123456/SP".
+  String get prescriberCrmLabel => [
+        if (prescriberCrm.trim().isNotEmpty) 'CRM ${prescriberCrm.trim()}',
+        if (prescriberCrmState.trim().isNotEmpty)
+          prescriberCrmState.trim().toUpperCase(),
+      ].join('/');
+
+  /// Comparação de identidade do prescritor entre duas versões do
+  /// tratamento — muda nome, CRM ou data da receita => renovação nova.
+  static bool samePrescription(Treatment first, Treatment second) =>
+      first.prescriberName.trim().toLowerCase() ==
+          second.prescriberName.trim().toLowerCase() &&
+      first.prescriberCrm.trim() == second.prescriberCrm.trim() &&
+      _sameDay(first.prescribedOn, second.prescribedOn);
+
+  static bool _sameDay(DateTime? first, DateTime? second) {
+    if (first == null || second == null) return first == second;
+    return first.year == second.year &&
+        first.month == second.month &&
+        first.day == second.day;
   }
 
   Treatment copyWith({
@@ -133,6 +182,14 @@ class Treatment {
     int? refillThreshold,
     bool clearRefillThreshold = false,
     bool? isArchived,
+    String? prescriberDoctorId,
+    bool clearPrescriberDoctorId = false,
+    String? prescriberName,
+    bool clearPrescriber = false,
+    String? prescriberCrm,
+    String? prescriberCrmState,
+    DateTime? prescribedOn,
+    bool clearPrescribedOn = false,
   }) {
     return Treatment(
       id: id,
@@ -150,6 +207,23 @@ class Treatment {
           ? null
           : refillThreshold ?? this.refillThreshold,
       isArchived: isArchived ?? this.isArchived,
+      // clearPrescriber apaga o registro inteiro (vínculo + snapshot):
+      // "sem receita" é um estado, não três campos soltos.
+      prescriberDoctorId: clearPrescriber || clearPrescriberDoctorId
+          ? null
+          : prescriberDoctorId ?? this.prescriberDoctorId,
+      prescriberName: clearPrescriber
+          ? ''
+          : prescriberName ?? this.prescriberName,
+      prescriberCrm: clearPrescriber
+          ? ''
+          : prescriberCrm ?? this.prescriberCrm,
+      prescriberCrmState: clearPrescriber
+          ? ''
+          : prescriberCrmState ?? this.prescriberCrmState,
+      prescribedOn: clearPrescribedOn
+          ? null
+          : prescribedOn ?? this.prescribedOn,
     );
   }
 
@@ -167,6 +241,11 @@ class Treatment {
         'stock': stock,
         'refillThreshold': refillThreshold,
         'isArchived': isArchived,
+        'prescriberDoctorId': prescriberDoctorId,
+        'prescriberName': prescriberName,
+        'prescriberCrm': prescriberCrm,
+        'prescriberCrmState': prescriberCrmState,
+        'prescribedOn': prescribedOn?.toIso8601String(),
       };
 
   bool isScheduledOn(DateTime date) {

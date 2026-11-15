@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../data/medicine_data.dart';
 import '../models/medicine.dart';
@@ -14,8 +15,9 @@ import '../services/prescription_reader_service.dart';
 /// excluir o que o parser inventou. O catálogo da ANVISA dá o veredicto de
 /// reconhecimento — ✓ no catálogo segue marcado; itens não encontrados
 /// começam desmarcados e avisados, porque virar tratamento é decisão do
-/// usuário. "Continuar" devolve um [TreatmentDraft] por medicamento
-/// selecionado — o formulário de tratamento continua sendo a última palavra.
+/// usuário. "Continuar" devolve um [PrescriptionReviewOutcome] — os rascunhos
+/// por medicamento e o médico que assinou (quando o usuário confirmar
+/// registrá-lo); o formulário de tratamento continua sendo a última palavra.
 class PrescriptionReviewScreen extends StatefulWidget {
   const PrescriptionReviewScreen({
     super.key,
@@ -32,6 +34,52 @@ class PrescriptionReviewScreen extends StatefulWidget {
   @override
   State<PrescriptionReviewScreen> createState() =>
       _PrescriptionReviewScreenState();
+}
+
+/// O que a conferência devolve ao chamador: os rascunhos de tratamento por
+/// medicamento selecionado e o médico que receitou (nome + CRM conferidos
+/// pelo usuário) — nulo quando não havia médico na leitura ou o usuário
+/// optou por não registrá-lo.
+class PrescriptionReviewOutcome {
+  const PrescriptionReviewOutcome({
+    required this.drafts,
+    this.medico,
+  });
+
+  final List<TreatmentDraft> drafts;
+
+  /// Médico confirmado para registro: vai para o catálogo e para o registro
+  /// de "quem receitou" de cada tratamento salvo nesta receita.
+  final PrescriptionDoctor? medico;
+}
+
+/// Os campos do médico lido, editáveis na conferência.
+class _EditableDoctor {
+  _EditableDoctor(PrescriptionDoctor original)
+    : name = TextEditingController(text: original.nome),
+      crm = TextEditingController(text: original.crm),
+      uf = TextEditingController(text: original.uf),
+      include = true;
+
+  final TextEditingController name;
+  final TextEditingController crm;
+  final TextEditingController uf;
+
+  /// Marcado por padrão: se a leitura identificou quem assinou, registrar
+  /// é o caminho fácil — desmarcar é a exceção, um toque.
+  bool include;
+
+  void dispose() {
+    name.dispose();
+    crm.dispose();
+    uf.dispose();
+  }
+
+  PrescriptionDoctor toDoctor() => PrescriptionDoctor(
+        nome: name.text.trim(),
+        crm: crm.text.trim().replaceAll(RegExp(r'\D'), ''),
+        uf: uf.text.trim().toUpperCase(),
+      );
 }
 
 class _EditableMed {
@@ -95,6 +143,10 @@ class _EditableMed {
 class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
   late final List<_EditableMed> _meds;
 
+  /// Médico lido da receita, quando houver — editável e com opção de não
+  /// registrar (o usuário decide; nada é salvo sem conferência).
+  _EditableDoctor? _doctor;
+
   /// Catálogo carregado uma vez; vazio/nulo = sem veredicto (fail-open:
   /// tudo marcado, sem badge — nunca desmarcar por falta de dados).
   List<Medicine>? _catalog;
@@ -103,6 +155,9 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
   void initState() {
     super.initState();
     _meds = widget.result.medicamentos.map(_EditableMed.new).toList();
+    if (widget.result.medico?.hasAnything ?? false) {
+      _doctor = _EditableDoctor(widget.result.medico!);
+    }
     _loadCatalog();
   }
 
@@ -138,7 +193,17 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
     for (final med in _meds) {
       med.dispose();
     }
+    _doctor?.dispose();
     super.dispose();
+  }
+
+  /// Médico confirmado para registro — nulo quando não havia médico, o
+  /// usuário desmarcou ou apagou tudo que foi lido.
+  PrescriptionDoctor? get _confirmedDoctor {
+    final doctor = _doctor;
+    if (doctor == null || !doctor.include) return null;
+    final confirmed = doctor.toDoctor();
+    return confirmed.hasAnything ? confirmed : null;
   }
 
   bool _hasTime(_EditableMed med, DoseTime time) => med.times.any(
@@ -278,6 +343,7 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
             ),
           ],
           const SizedBox(height: 12),
+          if (_doctor != null) _doctorCard(_doctor!, theme),
           for (final med in _meds) _medCard(med, theme),
           ExpansionTile(
             title: const Text('Texto lido da receita'),
@@ -305,10 +371,95 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: FilledButton.icon(
-            onPressed: () => Navigator.of(context).pop(_buildDrafts()),
+            onPressed: () => Navigator.of(context).pop(
+              PrescriptionReviewOutcome(
+                drafts: _buildDrafts(),
+                medico: _confirmedDoctor,
+              ),
+            ),
             icon: const Icon(Icons.check),
             label: Text('Continuar com ${_buildDrafts().length} tratamento(s)'),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Card do médico lido da receita: checkbox para registrar (marcado por
+  /// padrão) + nome/CRM/UF editáveis. A conferência é a última palavra —
+  /// nada entra no catálogo nem no registro do tratamento sem o usuário.
+  Widget _doctorCard(_EditableDoctor doctor, ThemeData theme) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Checkbox(
+                  value: doctor.include,
+                  onChanged: (value) =>
+                      setState(() => doctor.include = value ?? false),
+                ),
+                Expanded(
+                  child: Text(
+                    'Registrar quem receitou',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            TextFormField(
+              controller: doctor.name,
+              decoration: const InputDecoration(
+                labelText: 'Médico que receitou',
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: TextFormField(
+                    controller: doctor.crm,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    decoration: const InputDecoration(
+                      labelText: 'CRM (opcional)',
+                      hintText: '123456',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    controller: doctor.uf,
+                    textCapitalization: TextCapitalization.characters,
+                    maxLength: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'UF',
+                      hintText: 'SP',
+                      counterText: '',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Vai para o catálogo de médicos e para o registro '
+              '"quem receitou e em que dia" de cada tratamento salvo aqui.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
         ),
       ),
     );

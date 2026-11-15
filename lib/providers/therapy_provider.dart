@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/dose_event.dart';
+import '../models/prescription_record.dart';
 import '../models/treatment.dart';
 import '../services/dose_notification_planner.dart';
 import '../services/notification_service.dart';
@@ -22,12 +23,17 @@ class TherapyProvider extends ChangeNotifier {
 
   List<Treatment> _treatments = [];
   List<DoseEvent> _doseEvents = [];
+  List<PrescriptionRecord> _prescriptionRecords = [];
   bool _isLoading = true;
 
   UnmodifiableListView<Treatment> get treatments =>
       UnmodifiableListView(_treatments);
   UnmodifiableListView<Treatment> get activeTreatments =>
       UnmodifiableListView(_treatments.where((treatment) => !treatment.isArchived));
+
+  /// Histórico de "quem receitou e em que dia", mais recente primeiro.
+  UnmodifiableListView<PrescriptionRecord> get prescriptionRecords =>
+      UnmodifiableListView(_prescriptionRecords);
   bool get isLoading => _isLoading;
 
   Future<void> initialize() async {
@@ -36,6 +42,7 @@ class TherapyProvider extends ChangeNotifier {
 
     _treatments = await _storage.loadTreatments();
     _doseEvents = await _storage.loadDoseEvents();
+    _prescriptionRecords = await _storage.loadPrescriptionRecords();
     await ensureDoseEventsFor(DateTime.now(), notify: false);
     await _syncDoseNotifications();
 
@@ -55,6 +62,22 @@ class TherapyProvider extends ChangeNotifier {
       if (treatment.id == treatmentId) return treatment;
     }
     return null;
+  }
+
+  /// Registros de receita de um tratamento (mais recente primeiro).
+  List<PrescriptionRecord> prescriptionRecordsFor(String treatmentId) =>
+      _prescriptionRecords
+          .where((record) => record.treatmentId == treatmentId)
+          .toList()
+        ..sort((first, second) => second.prescribedOn
+            .compareTo(first.prescribedOn));
+
+  /// Registra uma receita no histórico do tratamento ("quem receitou e em
+  /// que dia"). Só-append: cada renovação vira um registro novo.
+  Future<void> recordPrescription(PrescriptionRecord record) async {
+    _prescriptionRecords = [..._prescriptionRecords, record];
+    await _storage.insertPrescriptionRecord(record);
+    notifyListeners();
   }
 
   Future<void> addTreatment(Treatment treatment) async {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:remedios_app_flutter/models/treatment.dart';
-import 'package:remedios_app_flutter/models/treatment_draft.dart';
 import 'package:remedios_app_flutter/screens/prescription_review_screen.dart';
 import 'package:remedios_app_flutter/services/prescription_reader_service.dart';
 
@@ -121,14 +120,15 @@ void main() {
 
   testWidgets('"dia sim, dia não" lido da receita segue no rascunho',
       (tester) async {
-    final popped = <List<TreatmentDraft>>[];
+    final popped = <PrescriptionReviewOutcome>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () async {
-              final drafts = await Navigator.of(context).push<List<TreatmentDraft>>(
-                MaterialPageRoute<List<TreatmentDraft>>(
+              final outcome = await Navigator.of(context)
+                  .push<PrescriptionReviewOutcome>(
+                MaterialPageRoute<PrescriptionReviewOutcome>(
                   builder: (_) => Scaffold(
                     body: PrescriptionReviewScreen(
                       result: const PrescriptionReadResult(
@@ -146,7 +146,7 @@ void main() {
                   ),
                 ),
               );
-              if (drafts != null) popped.add(drafts);
+              if (outcome != null) popped.add(outcome);
             },
             child: const Text('abrir'),
           ),
@@ -161,21 +161,22 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(popped, hasLength(1));
-    final draft = popped.single.single;
+    final draft = popped.single.drafts.single;
     expect(draft.name, 'CALCITRIOL');
     expect(draft.frequency, TreatmentFrequency.everyOtherDay);
   });
 
   testWidgets('receita sem frequência especial deixa o rascunho sem palpite',
       (tester) async {
-    final popped = <List<TreatmentDraft>>[];
+    final popped = <PrescriptionReviewOutcome>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () async {
-              final drafts = await Navigator.of(context).push<List<TreatmentDraft>>(
-                MaterialPageRoute<List<TreatmentDraft>>(
+              final outcome = await Navigator.of(context)
+                  .push<PrescriptionReviewOutcome>(
+                MaterialPageRoute<PrescriptionReviewOutcome>(
                   builder: (_) => Scaffold(
                     body: PrescriptionReviewScreen(
                       result: const PrescriptionReadResult(
@@ -193,7 +194,7 @@ void main() {
                   ),
                 ),
               );
-              if (drafts != null) popped.add(drafts);
+              if (outcome != null) popped.add(outcome);
             },
             child: const Text('abrir'),
           ),
@@ -207,18 +208,19 @@ void main() {
     await tester.tap(find.text('Continuar com 1 tratamento(s)'));
     await tester.pumpAndSettle();
 
-    expect(popped.single.single.frequency, isNull);
+    expect(popped.single.drafts.single.frequency, isNull);
   });
   testWidgets('"1x por semana" lido da receita segue no rascunho com o dia',
       (tester) async {
-    final popped = <List<TreatmentDraft>>[];
+    final popped = <PrescriptionReviewOutcome>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () async {
-              final drafts = await Navigator.of(context).push<List<TreatmentDraft>>(
-                MaterialPageRoute<List<TreatmentDraft>>(
+              final outcome = await Navigator.of(context)
+                  .push<PrescriptionReviewOutcome>(
+                MaterialPageRoute<PrescriptionReviewOutcome>(
                   builder: (_) => Scaffold(
                     body: PrescriptionReviewScreen(
                       result: const PrescriptionReadResult(
@@ -237,7 +239,7 @@ void main() {
                   ),
                 ),
               );
-              if (drafts != null) popped.add(drafts);
+              if (outcome != null) popped.add(outcome);
             },
             child: const Text('abrir'),
           ),
@@ -255,7 +257,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(popped, hasLength(1));
-    final draft = popped.single.single;
+    final draft = popped.single.drafts.single;
     expect(draft.name, 'METOTREXATO');
     expect(draft.frequency, TreatmentFrequency.weekly);
     expect(draft.weekdays, [DateTime.saturday]);
