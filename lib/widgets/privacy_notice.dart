@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-/// Aviso de privacidade (LGPD) com finalidade, base legal, controlador,
-/// armazenamento e direitos do titular.
+/// Aviso de privacidade (LGPD) com finalidade, fluxos de compartilhamento,
+/// armazenamento, limites de segurança e direitos do titular.
 class PrivacyNoticeCard extends StatelessWidget {
   const PrivacyNoticeCard({super.key});
 
@@ -62,34 +62,52 @@ class PrivacyNoticeCard extends StatelessWidget {
           const SizedBox(height: 10),
           row(
             'Finalidade',
-            'guardar e exibir seus dados de saúde neste dispositivo '
-                '(lembretes e cartão de emergência).',
+            'organizar tratamentos, doses, consultas, exames e informações '
+                'de saúde para exibição, histórico e lembretes. O app não '
+                'substitui orientação de médico ou farmacêutico.',
           ),
           row(
             'Base legal',
-            'seu consentimento — dados sensíveis de saúde exigem '
-                'consentimento específico (art. 11 da LGPD).',
+            'o uso de dados sensíveis depende da hipótese legal aplicável '
+                'e de consentimento específico quando solicitado pelo app. '
+                'Este aviso não substitui uma avaliação jurídica da operação.',
           ),
           row(
-            'Controlador',
-            'Remédio na Hora (Alexsantossp71), contato pelo repositório '
-                'GitHub do projeto.',
+            'Controlador e contato',
+            'Remédio na Hora (Alexsantossp71). Para solicitações sobre dados, '
+                'utilize os canais de contato publicados no repositório do projeto.',
           ),
           row(
-            'Armazenamento',
-            'os dados ficam salvos somente neste dispositivo (banco de '
-                'dados local). Nada é enviado a servidores, exceto quando '
-                'você opta por enviar a imagem do cartão do plano: nessa '
-                'opção a foto é enviada ao servidor do app, onde é lida por '
-                'um mecanismo de reconhecimento de texto (OCR) e descartada '
-                'logo após a leitura. O cartão não é repassado a nenhum '
-                'fornecedor ou serviço de terceiros.',
+            'Armazenamento local',
+            'os registros são mantidos no armazenamento do dispositivo ou '
+                'navegador. Isso não equivale a armazenamento criptografado: '
+                'proteja o aparelho, a sessão e os arquivos exportados.',
+          ),
+          row(
+            'Recursos conectados',
+            'quando você escolhe recursos de IA, os dados necessários à '
+                'solicitação — que podem incluir medicamentos, doses, '
+                'instruções e imagens de documentos de saúde — são enviados '
+                'pela internet ao proxy do projeto e ao provedor de IA '
+                'configurado (atualmente NVIDIA). Não envie informações que '
+                'não sejam necessárias. As políticas desses serviços também '
+                'se aplicam. A leitura de cartão por OCR envia a imagem ao '
+                'servidor do projeto para processamento; confira os dados '
+                'reconhecidos antes de salvá-los.',
+          ),
+          row(
+            'Backup e compartilhamento',
+            'os backups são arquivos JSON legíveis e não criptografados pelo '
+                'app. Guarde-os em local protegido e não os compartilhe. '
+                'O cartão de emergência pode conter dados pessoais quando '
+                'você escolhe compartilhá-lo.',
           ),
           row(
             'Seus direitos',
-            'acesso, correção, eliminação e revogação do consentimento '
-                '(art. 18 da LGPD). Para apagar tudo, use “Apagar meus '
-                'dados” na seção Dados e privacidade.',
+            'você pode solicitar acesso, correção, eliminação e informações '
+                'sobre o tratamento. Use “Apagar meus dados” na seção Dados '
+                'e privacidade para remover os registros locais; isso não '
+                'apaga cópias que você já exportou ou dados enviados a serviços externos.',
           ),
         ],
       ),
@@ -109,13 +127,8 @@ class ConsentCheckbox extends StatelessWidget {
     this.grantedAt,
   });
 
-  /// Estado atual do checkbox.
   final bool value;
-
-  /// Chamado quando o usuário marca/desmarca (null quando desabilitado).
   final ValueChanged<bool?>? onChanged;
-
-  /// Data/hora em que o consentimento foi registrado (se já foi).
   final DateTime? grantedAt;
 
   @override
@@ -133,9 +146,6 @@ class ConsentCheckbox extends StatelessWidget {
           width: 1.5,
         ),
       ),
-      // Material transparente: o ListTile precisa de um ancestral Material
-      // próprio para pintar fundo e ink splash — o Container decorado acima
-      // esconde esses efeitos e dispara assertion no Flutter 3.47+.
       child: Material(
         type: MaterialType.transparency,
         child: CheckboxListTile(
@@ -156,20 +166,19 @@ class ConsentCheckbox extends StatelessWidget {
               height: 1.4,
             ),
           ),
-          subtitle:
-              locked
-                  ? Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      'Consentimento registrado em '
-                      '${DateFormat('dd/MM/yyyy HH:mm').format(grantedAt!.toLocal())}. '
-                      'Para revogar, use “Apagar meus dados”.',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onPrimaryContainer,
-                      ),
+          subtitle: locked
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'Consentimento registrado em '
+                    '${DateFormat('dd/MM/yyyy HH:mm').format(grantedAt!.toLocal())}. '
+                    'Para revogar, use “Apagar meus dados”.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onPrimaryContainer,
                     ),
-                  )
-                  : null,
+                  ),
+                )
+              : null,
         ),
       ),
     );
