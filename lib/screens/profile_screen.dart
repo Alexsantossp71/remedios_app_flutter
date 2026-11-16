@@ -22,6 +22,7 @@ import '../screens/lab_results_screen.dart';
 import '../screens/health_plans_screen.dart';
 import '../screens/progress_screen.dart';
 import '../services/backup_file.dart';
+import '../services/backup_crypto_service.dart';
 import '../services/backup_service.dart';
 import '../services/emergency_card_share_service.dart';
 import '../services/web_reminder_service.dart';
@@ -225,24 +226,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  /// Exporta todos os dados para um arquivo .json (download na web,
-  /// Documents do app no mobile).
+  /// Solicita uma senha que nunca é armazenada pelo aplicativo.
+  Future<String?> _askBackupPassword({required bool confirm}) async {
+    final password = TextEditingController();
+    final confirmation = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(confirm ? 'Proteger backup' : 'Desbloquear backup'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: password,
+                obscureText: true,
+                autofocus: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: const InputDecoration(
+                  labelText: 'Senha do backup',
+                  helperText: 'Use pelo menos 12 caracteres.',
+                ),
+                validator: (value) => (value ?? '').length < 12
+                    ? 'A senha precisa ter ao menos 12 caracteres.'
+                    : null,
+              ),
+              if (confirm) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: confirmation,
+                  obscureText: true,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Confirme a senha',
+                  ),
+                  validator: (value) => value != password.text
+                      ? 'As senhas não coincidem.'
+                      : null,
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (formKey.currentState!.validate()) {
+                Navigator.of(dialogContext).pop(password.text);
+              }
+            },
+            child: Text(confirm ? 'Criptografar' : 'Desbloquear'),
+          ),
+        ],
+      ),
+    );
+    password.dispose();
+    confirmation.dispose();
+    return result;
+  }
+
+  /// Exporta todos os dados em um envelope criptografado com senha.
   Future<void> _exportBackup() async {
+    final password = await _askBackupPassword(confirm: true);
+    if (password == null || !mounted) return;
     setState(() => _backupBusy = true);
     try {
-      final json = jsonEncode(await BackupService.instance.exportAll());
-      final savedAs = await saveBackupJson(json);
+      final data = await BackupService.instance.exportAll();
+      final encrypted = await BackupCryptoService.instance.encrypt(
+        data,
+        password,
+      );
+      final savedAs = await saveBackupJson(jsonEncode(encrypted));
       if (!mounted) return;
       showAppSnackBar(
         context,
-        'Backup salvo: $savedAs',
+        'Backup criptografado salvo: $savedAs. Guarde a senha em local seguro.',
         type: AppSnackType.success,
       );
+    } on BackupCryptoException catch (e) {
+      if (!mounted) return;
+      showAppSnackBar(context, e.message, type: AppSnackType.error);
     } catch (_) {
       if (!mounted) return;
       showAppSnackBar(
         context,
-        'Não foi possível gerar o backup. Tente novamente.',
+        'Não foi possível gerar o backup criptografado. Tente novamente.',
         type: AppSnackType.error,
       );
     } finally {
@@ -294,9 +370,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _backupBusy = true);
     try {
-      final backup = jsonDecode(text);
-      if (backup is! Map<String, dynamic>) {
+      final decoded = jsonDecode(text);
+      if (decoded is! Map<String, dynamic>) {
         throw const BackupFormatException('O arquivo não contém um backup.');
+      }
+      final Map<String, dynamic> backup;
+      if (BackupCryptoService.instance.isEncrypted(decoded)) {
+        final password = await _askBackupPassword(confirm: false);
+        if (password == null || !mounted) return;
+        backup = await BackupCryptoService.instance.decrypt(decoded, password);
+      } else {
+        // Compatibilidade: backups JSON antigos continuam restauráveis.
+        backup = decoded;
       }
       final summary = await BackupService.instance.restore(backup);
       if (!mounted) return;
@@ -329,6 +414,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           'Arquivo inválido: ${e.message}',
           type: AppSnackType.error,
         );
+      }
+    } on BackupCryptoException catch (e) {
+      if (mounted) {
+        showAppSnackBar(context, e.message, type: AppSnackType.error);
       }
     } catch (_) {
       if (mounted) {
@@ -868,9 +957,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'Seus dados ficam apenas neste dispositivo. Exporte um '
-                      'arquivo .json para guardar ou levar para outro '
-                      'aparelho — e restaure quando precisar.',
+                      'Exporte um backup criptografado com senha para guardar ou levar '
+                      'para outro aparelho. A senha não é salva pelo app; '
+                      'sem ela, não será possível restaurar o arquivo. '
+                      'Backups JSON antigos também podem ser restaurados.',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
