@@ -121,6 +121,32 @@ void main() {
       parentesco: 'Esposa',
       telefone: '(11) 98888-7777',
     ));
+
+    final db = await dbService.database;
+    final now = DateTime.utc(2026, 11, 16).toIso8601String();
+    await db.insert('exams', {
+      'id': 'exam-1',
+      'name': 'Hemograma completo',
+      'category': 'Laboratório',
+      'status': 'requested',
+      'date': now,
+      'doctor_id': 'doc-1',
+      'doctor_name': 'Dra. Ana Prado',
+      'place': '',
+      'results': '',
+      'created_at': now,
+      'updated_at': now,
+    });
+    await db.insert('lab_results', {
+      'id': 'lab-1',
+      'date': now,
+      'lab_name': 'Laboratório Central',
+      'photo': null,
+      'values_json': '[]',
+      'notes': 'Registro de teste',
+      'created_at': now,
+      'updated_at': now,
+    });
   }
 
   /// Limpa todas as tabelas (simula "perder o dispositivo").
