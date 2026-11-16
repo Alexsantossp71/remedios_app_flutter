@@ -28,9 +28,8 @@ class BackupService {
   /// Marcador de origem: arquivos de outros apps/JSONs soltos são rejeitados.
   static const String appMarker = 'remedios-app';
 
-  /// Espelha o formato do backup (não a versão do banco): subiu para 8
-  /// quando o export ganhou a tabela treatment_prescriptions. Backups com
-  /// formato mais novo que o app não podem ser restaurados com segurança.
+  /// Versão do schema de dados incluído no backup. Acompanha a versão
+  /// atual do banco; versões antigas continuam aceitas na restauração.
   static const int maxSchemaVersion = 11;
 
   /// Ordem de INSERÇÃO (pais antes de filhos, para respeitar foreign keys).
