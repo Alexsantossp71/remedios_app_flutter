@@ -1,0 +1,44 @@
+name: SQLite3MC proof of concept
+
+on:
+  pull_request:
+    paths:
+      - 'tool/sqlite3mc_poc/**'
+      - '.github/workflows/sqlite3mc-poc.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'tool/sqlite3mc_poc/**'
+      - '.github/workflows/sqlite3mc-poc.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  native-poc:
+    name: Native encryption tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: tool/sqlite3mc_poc
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Dart
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Install dependencies and native assets
+        run: dart pub get
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Run encrypted SQLite tests
+        run: dart test
