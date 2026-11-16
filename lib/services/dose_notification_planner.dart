@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../models/treatment.dart';
 
 /// Projects upcoming doses straight from the treatment rules.
@@ -74,14 +76,21 @@ class DoseNotificationPlanner {
     return planned;
   }
 
-  /// Deterministic int32 id for (treatment, instant). Whole minutes since
-  /// epoch XOR a per-treatment hash: the same treatment at the same minute
-  /// always yields the same id (so re-scheduling overwrites instead of
-  /// duplicating), and two instants of the same treatment can never collide
-  /// (different minutes imply different XOR results).
+  /// Stable positive int32 id for a treatment and scheduled instant.
+  ///
+  /// Do not use [String.hashCode] here: its value is not a persistence
+  /// contract across app launches. This small polynomial hash is explicitly
+  /// deterministic on VM and web and stays within JavaScript's exact integer
+  /// range at every multiplication. As with any 31-bit notification id,
+  /// collisions are possible and are kept under test for the normal schedule.
   static int stableId(String treatmentId, DateTime scheduledAt) {
-    final minutes = scheduledAt.millisecondsSinceEpoch ~/ 60000;
-    return (treatmentId.hashCode ^ minutes) & 0x7fffffff;
+    final minute = scheduledAt.toUtc().millisecondsSinceEpoch ~/ 60000;
+    final bytes = utf8.encode('$treatmentId|$minute');
+    var hash = 0;
+    for (final byte in bytes) {
+      hash = (hash * 31 + byte) & 0x7fffffff;
+    }
+    return hash;
   }
 }
 
