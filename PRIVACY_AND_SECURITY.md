@@ -45,8 +45,10 @@ revisar o conteúdo antes do envio e conferir os campos extraídos antes de salv
 
 ## Próximas etapas técnicas
 
-- Avaliar criptografia em repouso para SQLite, armazenamento web e backups,
-  incluindo gestão segura de chaves e migração sem perda de dados.
+- Validar uma prova de conceito multiplataforma com SQLite3MultipleCiphers
+  (`sqlite3mc`) via FFI e WebAssembly, incluindo compatibilidade do WASM/worker,
+  gestão segura de chaves, desbloqueio/recuperação e migração sem perda de dados.
+  A opção é apenas uma direção técnica: ainda não está integrada nem validada no app.
 - Implementar controles explícitos de consentimento por categoria de envio,
   revogação e registro auditável.
 - Definir política de retenção e exclusão no proxy, OCR e provedor de IA.
