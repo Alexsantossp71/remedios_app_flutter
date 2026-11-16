@@ -134,6 +134,8 @@ void main() {
         'user_profile',
         'health_plans',
         'doctors',
+        'exams',
+        'lab_results',
         'treatments',
       ]) {
         await txn.delete(table);
@@ -161,6 +163,8 @@ void main() {
         'health_plans',
         'user_profile',
         'emergency_contacts',
+        'exams',
+        'lab_results',
       ]));
       expect(tables['treatments'], hasLength(2));
       expect(tables['dose_events'], hasLength(1));
@@ -169,6 +173,8 @@ void main() {
       expect(tables['health_plans'], hasLength(1));
       expect(tables['user_profile'], hasLength(1));
       expect(tables['emergency_contacts'], hasLength(1));
+      expect(tables['exams'], isEmpty);
+      expect(tables['lab_results'], isEmpty);
     });
 
     test('restore recria tudo após limpar o banco (round-trip)', () async {
@@ -188,6 +194,9 @@ void main() {
       expect(summary.healthPlans, 1);
       expect(summary.hasUserProfile, isTrue);
       expect(summary.emergencyContacts, 1);
+      expect(summary.exams, 0);
+      expect(summary.labResults, 0);
+      expect(summary.prescriptionRecords, 0);
       expect(summary.describe(),
           '2 tratamentos, 1 doses, 1 médicos, 1 consultas, 1 planos, perfil, '
           '1 contatos de emergência');
