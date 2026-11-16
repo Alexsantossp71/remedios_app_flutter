@@ -13,7 +13,7 @@ Aplicativo Flutter para organizar medicamentos, tratamentos, lembretes e informa
 ## Privacidade e segurança
 Os dados de rotina são armazenados localmente no dispositivo/navegador. Recursos
 conectados de IA e OCR podem enviar os dados ou imagens necessários ao serviço
-remoto correspondente. Backups são exportados em JSON sem criptografia do app.
+remoto correspondente. Backups novos são exportados em envelope JSON com AES-256-GCM e senha definida pelo usuário. Backups antigos em JSON simples continuam importáveis.
 Leia [PRIVACY_AND_SECURITY.md](PRIVACY_AND_SECURITY.md) antes de usar esses
 recursos com informações reais.
 

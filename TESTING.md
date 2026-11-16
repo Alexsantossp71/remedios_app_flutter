@@ -27,8 +27,8 @@ Android/iOS nem valida notificações reais do sistema.
 
 ## Segurança e privacidade
 - Não use dados reais de pacientes em testes, issues, logs ou screenshots.
-- Backups exportados atualmente são JSON sem criptografia do aplicativo.
-  Use somente dados fictícios nos testes automatizados e proteja os arquivos.
+- Novos backups são criptografados com AES-256-GCM e senha do usuário; teste senha correta/incorreta, alteração de ciphertext, salt/nonce únicos e round-trip. Backups JSON antigos continuam importáveis e não são criptografados.
+- A criptografia de backups não protege o banco SQLite/IndexedDB ativo, que permanece pendente de migração. Use somente dados fictícios nos testes automatizados e proteja todos os arquivos.
 - Recursos de IA e OCR podem transmitir dados e imagens de saúde a serviços
   externos; revise o aviso de privacidade antes de habilitá-los em produção.
 - Não considere a análise da IA como diagnóstico, prescrição ou validação
