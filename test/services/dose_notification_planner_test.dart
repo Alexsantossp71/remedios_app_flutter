@@ -112,22 +112,21 @@ void main() {
     expect(planned.map((dose) => dose.scheduledAt.day), [3, 5, 7, 9]);
   });
 
-  test('id é estável para o mesmo tratamento+horário e muda entre horários', () {
-    final idA = DoseNotificationPlanner.stableId(
-      't1',
-      DateTime(2026, 11, 3, 8, 0),
-    );
-    final idB = DoseNotificationPlanner.stableId(
-      't1',
-      DateTime(2026, 11, 3, 8, 0),
-    );
+  test('id é estável entre execuções e muda entre horários', () {
+    final scheduledAt = DateTime.utc(2026, 11, 3, 8, 0);
+    final idA = DoseNotificationPlanner.stableId('t1', scheduledAt);
+    final idB = DoseNotificationPlanner.stableId('t1', scheduledAt);
     final idC = DoseNotificationPlanner.stableId(
       't1',
-      DateTime(2026, 11, 3, 20, 0),
+      DateTime.utc(2026, 11, 3, 20, 0),
     );
+
+    // Valor fixo protege contra regressão para String.hashCode, que não é
+    // uma garantia de estabilidade entre processos do aplicativo.
+    expect(idA, 2128509667);
     expect(idA, idB);
     expect(idA, isNot(idC));
-    expect(idA, lessThanOrEqualTo(0x7fffffff));
+    expect(idA, inInclusiveRange(0, 0x7fffffff));
   });
 
   test('resultado vem ordenado e respeita o teto de alarmes', () {

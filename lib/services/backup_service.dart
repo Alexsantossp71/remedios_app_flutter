@@ -7,7 +7,7 @@ import 'database_service.dart';
 /// O app é offline-first: tudo vive no SQLite do dispositivo (IndexedDB na
 /// web). Sem backup, limpar os dados do navegador ou trocar de aparelho
 /// significa perder todo o histórico de medicação — para dados de saúde,
-/// isso é inaceitável. Este serviço exporta as 7 tabelas cruas (round-trip
+/// isso é inaceitável. Este serviço exporta todas as tabelas de dados do app (round-trip
 /// exato: linha de volta para linha) e as restaura numa única transação.
 ///
 /// O formato é independente de modelo: exporta as linhas do banco como
@@ -28,10 +28,9 @@ class BackupService {
   /// Marcador de origem: arquivos de outros apps/JSONs soltos são rejeitados.
   static const String appMarker = 'remedios-app';
 
-  /// Espelha o formato do backup (não a versão do banco): subiu para 8
-  /// quando o export ganhou a tabela treatment_prescriptions. Backups com
-  /// formato mais novo que o app não podem ser restaurados com segurança.
-  static const int maxSchemaVersion = 8;
+  /// Versão do schema de dados incluído no backup. Acompanha a versão
+  /// atual do banco; versões antigas continuam aceitas na restauração.
+  static const int maxSchemaVersion = 11;
 
   /// Ordem de INSERÇÃO (pais antes de filhos, para respeitar foreign keys).
   static const List<String> _tableOrder = [
@@ -43,6 +42,8 @@ class BackupService {
     'health_plans',
     'user_profile',
     'emergency_contacts',
+    'exams',
+    'lab_results',
   ];
 
   /// Ordem de EXCLUSÃO (filhos antes de pais).
@@ -51,6 +52,8 @@ class BackupService {
     'treatment_prescriptions',
     'consultations',
     'emergency_contacts',
+    'exams',
+    'lab_results',
     'user_profile',
     'health_plans',
     'doctors',
@@ -67,6 +70,8 @@ class BackupService {
     'health_plans': ['id'],
     'user_profile': ['id'],
     'emergency_contacts': ['id'],
+    'exams': ['id'],
+    'lab_results': ['id'],
   };
 
   /// Nome de arquivo padrão do backup exportado.
@@ -159,6 +164,9 @@ class BackupService {
       healthPlans: rowsByTable['health_plans']!.length,
       hasUserProfile: rowsByTable['user_profile']!.isNotEmpty,
       emergencyContacts: rowsByTable['emergency_contacts']!.length,
+      exams: rowsByTable['exams']!.length,
+      labResults: rowsByTable['lab_results']!.length,
+      prescriptionRecords: rowsByTable['treatment_prescriptions']!.length,
     );
   }
 
@@ -196,6 +204,9 @@ class RestoreSummary {
     required this.healthPlans,
     required this.hasUserProfile,
     required this.emergencyContacts,
+    this.exams = 0,
+    this.labResults = 0,
+    this.prescriptionRecords = 0,
   });
 
   final int treatments;
@@ -205,6 +216,9 @@ class RestoreSummary {
   final int healthPlans;
   final bool hasUserProfile;
   final int emergencyContacts;
+  final int exams;
+  final int labResults;
+  final int prescriptionRecords;
 
   /// Texto curto em pt-BR com os contadores não nulos, ex.:
   /// "3 tratamentos, 45 doses, 2 médicos".
@@ -216,6 +230,11 @@ class RestoreSummary {
     if (consultations > 0) parts.add('$consultations consultas');
     if (healthPlans > 0) parts.add('$healthPlans planos');
     if (hasUserProfile) parts.add('perfil');
+    if (prescriptionRecords > 0) {
+      parts.add('$prescriptionRecords registros de receita');
+    }
+    if (exams > 0) parts.add('$exams exames');
+    if (labResults > 0) parts.add('$labResults laudos');
     if (emergencyContacts > 0) {
       parts.add('$emergencyContacts contatos de emergência');
     }

@@ -105,7 +105,8 @@ class PrivacyNoticeCard extends StatelessWidget {
           row(
             'Seus direitos',
             'você pode solicitar acesso, correção, eliminação e informações '
-                'sobre o tratamento. Use “Apagar meus dados” na seção Dados '
+                'sobre o tratamento, nos termos do art. 18 da LGPD e conforme aplicável. '
+                'Use “Apagar meus dados” na seção Dados '
                 'e privacidade para remover os registros locais; isso não '
                 'apaga cópias que você já exportou ou dados enviados a serviços externos.',
           ),

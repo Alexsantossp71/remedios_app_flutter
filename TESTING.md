@@ -35,7 +35,9 @@ Android/iOS nem valida notificações reais do sistema.
   de interação medicamentosa.
 
 ## CI
-O workflow `.github/workflows/flutter-ci.yml` executa formatação, análise,
+O workflow `.github/workflows/flutter-ci.yml` informa divergências de
+formatação sem bloquear a execução, roda `flutter analyze --no-fatal-infos`
+(avisos informativos são tolerados; warnings e erros continuam bloqueando),
 testes e build web em pull requests e pushes para `master`/ `main`.
 O resultado do CI deve ser verificado antes do merge.
 
