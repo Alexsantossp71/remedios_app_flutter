@@ -129,6 +129,7 @@ void main() {
     await db.transaction((txn) async {
       for (final table in [
         'dose_events',
+        'treatment_prescriptions',
         'consultations',
         'emergency_contacts',
         'user_profile',
@@ -173,8 +174,8 @@ void main() {
       expect(tables['health_plans'], hasLength(1));
       expect(tables['user_profile'], hasLength(1));
       expect(tables['emergency_contacts'], hasLength(1));
-      expect(tables['exams'], isEmpty);
-      expect(tables['lab_results'], isEmpty);
+      expect(tables['exams'], hasLength(1));
+      expect(tables['lab_results'], hasLength(1));
     });
 
     test('restore recria tudo após limpar o banco (round-trip)', () async {
@@ -194,12 +195,12 @@ void main() {
       expect(summary.healthPlans, 1);
       expect(summary.hasUserProfile, isTrue);
       expect(summary.emergencyContacts, 1);
-      expect(summary.exams, 0);
-      expect(summary.labResults, 0);
+      expect(summary.exams, 1);
+      expect(summary.labResults, 1);
       expect(summary.prescriptionRecords, 0);
       expect(summary.describe(),
           '2 tratamentos, 1 doses, 1 médicos, 1 consultas, 1 planos, perfil, '
-          '1 contatos de emergência');
+          '1 exames, 1 laudos, 1 contatos de emergência');
 
       // Tudo volta, incluindo a parte mais delicada: o semanal.
       final treatments = await therapyService.loadTreatments();
