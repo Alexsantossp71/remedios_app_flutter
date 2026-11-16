@@ -14,10 +14,7 @@ class EncryptedDatabasePoc {
     return base64Url.encode(bytes).replaceAll('=', '');
   }
 
-  static Database open({
-    required String path,
-    required String key,
-  }) {
+  static Database open({required String path, required String key}) {
     if (key.length < 32) {
       throw ArgumentError.value(key.length, 'key.length', 'Key is too short');
     }
