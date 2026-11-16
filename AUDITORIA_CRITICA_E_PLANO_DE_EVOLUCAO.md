@@ -20,7 +20,7 @@ Também foi corrigida a divergência entre o teste do aviso de privacidade e o t
 | **P1 — privacidade** | IA/OCR | Dados clínicos e imagens podem ser transmitidos ao proxy e a provedores externos. O código cliente não comprova retenção, região de processamento, controles de acesso ou exclusão no operador. | Limites documentados; auditoria do backend/contratos necessária |
 | **P1 — segurança clínica** | Posologia | O modelo atual representa frequência diária, dias úteis, dias alternados e dias específicos da semana; não representa explicitamente SOS/PRN, intervalos variáveis, titulação, dose por peso ou unidades estruturadas. | Não ampliar automaticamente sem especificação clínica |
 | **P1 — lembretes** | Notificações | O agendamento móvel depende de permissões, política de alarmes, economia de bateria, reinício e comportamento de cada fabricante. A execução CI não valida alarmes reais. | Teste físico Android/iOS necessário |
-| **P1 — confiabilidade** | IDs de alarmes | O identificador usa `String.hashCode`; não há garantia contratual de estabilidade entre processos/execuções. Isso merece substituição por hash determinístico e teste de regressão antes de depender dele para alarmes persistidos. | Pendente |
+| **P1 — confiabilidade** | IDs de alarmes | O identificador usava `String.hashCode`, sem garantia contratual de estabilidade entre processos/execuções. | **Corrigido** com hash determinístico e teste de valor fixo |
 | **P2 — qualidade** | Formatação/análise | Havia divergência de formatação em 112 arquivos e 87 diagnósticos informativos do analyzer. O CI foi ajustado para reportar a formatação, tolerar infos e continuar bloqueando warnings/erros. | Ajustado; limpeza de estilo gradual recomendada |
 | **P2 — cobertura** | Testes | A suíte cobre modelos, serviços e widgets, mas não substitui integração em aparelhos, cenários de fuso horário, permissões revogadas, reinicialização e restauração em instalação limpa. | Ampliar em ciclos |
 | **P2 — acessibilidade** | Interface | Acessibilidade com leitor de tela, contraste, escala de texto, foco/teclado e alvos de toque precisa de validação sistemática em dispositivos. | Auditoria manual pendente |
@@ -31,10 +31,11 @@ Também foi corrigida a divergência entre o teste do aviso de privacidade e o t
 1. Incluídas as tabelas `exams` e `lab_results` na exportação e na restauração transacional.
 2. Incluídas as chaves mínimas de validação dessas tabelas.
 3. Incluídos contadores de exames, laudos e registros de receita no resumo da restauração.
-4. Alinhada a versão de schema do backup à versão atual do banco de dados (11); backups antigos com schema inferior continuam aceitos.
-5. Ampliados os testes para semear um exame e um laudo, exportar, restaurar e conferir os dados.
-6. Atualizado o texto do aviso de privacidade com referência ao art. 18 da LGPD.
-7. Atualizada a documentação do CI para refletir as verificações realmente executadas.
+4. Substituído `String.hashCode` dos alarmes por hash determinístico independente de processo, com teste de regressão de valor fixo.
+5. Alinhada a versão de schema do backup à versão atual do banco de dados (11); backups antigos com schema inferior continuam aceitos.
+6. Ampliados os testes para semear um exame e um laudo, exportar, restaurar e conferir os dados.
+7. Atualizado o texto do aviso de privacidade com referência ao art. 18 da LGPD.
+8. Atualizada a documentação do CI para refletir as verificações realmente executadas.
 
 ## Plano de evolução recomendado
 
