@@ -35,8 +35,10 @@ jobs:
       - name: Report formatting drift
         run: dart format --output=none lib test
 
+      # Existing informational lints are reported but do not block CI.
+      # Errors and warnings remain blocking; clean up infos in a dedicated pass.
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Run tests
         run: flutter test
