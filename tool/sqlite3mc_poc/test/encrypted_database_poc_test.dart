@@ -57,8 +57,10 @@ void main() {
     ).map((value) => value.toRadixString(16).padLeft(2, '0')).join();
 
     expect(
-      () => EncryptedDatabasePoc.open(path: databasePath, key: wrongKey)
-          .select('SELECT * FROM sample'),
+      () => EncryptedDatabasePoc.open(
+        path: databasePath,
+        key: wrongKey,
+      ).select('SELECT * FROM sample'),
       throwsA(anything),
     );
   });
