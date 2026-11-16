@@ -18,7 +18,7 @@ class BackupCryptoService {
   static const int _iterations = 310000;
   static const String _aad = 'remedios-app-backup-envelope-v1';
 
-  static const Pbkdf2 _kdf = Pbkdf2(
+  static final Pbkdf2 _kdf = Pbkdf2(
     macAlgorithm: Hmac.sha256(),
     iterations: _iterations,
     bits: 256,
