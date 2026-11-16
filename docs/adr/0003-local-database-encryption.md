@@ -1,34 +1,50 @@
 # ADR 0003 — Criptografia do banco local em repouso
 
-- Status: proposta aprovada para implementação em etapas; nenhuma criptografia do banco ativo é ativada por este ADR.
+- Status: decisão de arquitetura em validação; nenhuma criptografia do banco ativo é ativada por este ADR.
 - Data: 2026-11-16
 - Contexto: PR #48 protege arquivos de backup exportados, mas não o banco local.
 
 ## Contexto observado no código
 
 - `DatabaseService` abre `remedios_app.db` com schema versão 11 e executa migrações incrementais.
-- O banco é usado por serviços de tratamentos, médicos, consultas, exames, resultados laboratoriais, planos de saúde e perfil.
+- O banco contém tratamentos, eventos de doses, médicos, consultas, exames, resultados laboratoriais, planos de saúde e perfil.
 - No navegador, `database_factory_web.dart` usa `sqflite_common_ffi_web`, que persiste SQLite via IndexedDB/WASM.
 - Em Windows/Linux, `database_factory_io.dart` usa SQLite via FFI.
 - Android/iOS usam a implementação nativa sqflite.
 - A dependência `cryptography` já existe para os backups, mas não há atualmente um armazenamento seguro de chave dedicado no projeto.
 - A migração existente de SharedPreferences para SQLite precisa continuar funcionando; a nova migração não pode marcar flags nem apagar a origem antes de confirmar a cópia e a reabertura do banco de destino.
 
-## Decisão
+## Decisão e direção técnica
 
-Não ativar criptografia do banco por uma simples alteração de dependência ou por guardar uma senha fixa no código. A solução deve ser específica por plataforma, com uma interface única de abertura do banco e testes de migração independentes.
+Não ativar criptografia do banco por uma simples alteração de dependência ou por guardar uma senha fixa no código. A solução deve manter a API de banco usada pelo app, ter uma interface única de abertura e passar por testes independentes por plataforma.
 
-### Matriz de implementação
+A opção multiplataforma prioritária para uma prova de conceito é **SQLite3MultipleCiphers (sqlite3mc) por meio do pacote `sqlite3`**, em vez de adotar apenas `sqflite_sqlcipher`:
 
-| Plataforma | Estratégia necessária | Situação |
+- O pacote `sqlite3` oferece uma configuração de build (`hooks.user_defines.sqlite3.source: sqlite3mc`) para substituir a biblioteca SQLite nativa por SQLite3MultipleCiphers.
+- A documentação do `sqlite3` declara suporte de SQLite3MultipleCiphers também para WebAssembly.
+- O backend `sqflite_common_ffi` usa `sqlite3` e documenta suporte a Windows, Linux, macOS, iOS e Android.
+- O backend `sqflite_common_ffi_web` usa SQLite/WASM e exige um arquivo `sqlite3.wasm` compatível e seu worker.
+
+Essa combinação é **uma hipótese de integração, não uma implementação validada**. Antes de adotá-la, uma prova de conceito deve confirmar que a versão de `sqflite_common_ffi_web` usada consegue carregar o artefato WASM do sqlite3mc com a ABI esperada, que os PRAGMAs de chave são executados antes de qualquer leitura do schema e que a biblioteca correta é usada em todos os builds nativos. O simples hook do pacote `sqlite3` não prova, sozinho, que o worker Web existente será compatível.
+
+O pacote `sqflite_sqlcipher` documenta suporte nativo a Android/iOS/macOS, mas não resolve Windows/Linux/Web. Não deve ser usado como solução única para a matriz do aplicativo.
+
+## Matriz de implementação
+
+| Plataforma | Direção a validar | Situação |
 | --- | --- | --- |
-| Android | SQLCipher + chave aleatória guardada no Android Keystore por plugin de armazenamento seguro | Pendente |
-| iOS | SQLCipher + chave aleatória guardada no Keychain | Pendente |
-| macOS | SQLCipher + Keychain, se o alvo for oficialmente suportado | Pendente |
-| Windows/Linux | Avaliar SQLite com extensão de criptografia compatível com FFI e distribuição/licenciamento verificáveis; não usar banco plaintext como fallback silencioso | Pendente |
-| Web | Criptografia autenticada dos dados antes da persistência em IndexedDB, chave derivada de segredo do usuário ou chave protegida pelo navegador; definir UX de desbloqueio e recuperação | Pendente |
+| Android | SQLite3MultipleCiphers via FFI ou backend nativo compatível; chave protegida pelo Android Keystore | Pendente |
+| iOS | SQLite3MultipleCiphers via FFI ou backend nativo compatível; chave protegida pelo Keychain | Pendente |
+| macOS | Mesma biblioteca FFI e Keychain, se o alvo for oficialmente suportado | Pendente |
+| Windows/Linux | SQLite3MultipleCiphers via FFI; chave protegida pelo mecanismo seguro do sistema operacional | Pendente |
+| Web | WASM do sqlite3mc compatível com o worker sqflite; chave via segredo de desbloqueio ou mecanismo WebCrypto validado | Pendente |
 
-O pacote `sqflite_sqlcipher` publicado documenta suporte nativo a Android/iOS/macOS, não a Windows/Linux/Web. Ele é um fork do sqflite e exige análise de compatibilidade de dependências e imports antes de ser adotado. Portanto, não resolve sozinho a matriz multiplataforma.
+## Gestão de chaves e desbloqueio
+
+- Gerar chave aleatória de alta entropia; nunca embutir, registrar em log, sincronizar em texto claro ou guardar em SharedPreferences.
+- Em Android/iOS/macOS/Windows/Linux, avaliar `flutter_secure_storage` e verificar o mecanismo efetivo de cada sistema operacional.
+- No Web, não presumir que secure storage equivale ao Keychain/Keystore. Definir fluxo explícito de desbloqueio e recuperação; avaliar as limitações de WebCrypto, origem HTTPS, perfil/navegador e perda de dados do navegador.
+- Não criar um banco vazio nem redefinir a chave quando o segredo estiver ausente ou incorreto. Mostrar erro recuperável e preservar o banco original.
 
 ## Requisitos obrigatórios antes de ativar
 
@@ -44,12 +60,13 @@ O pacote `sqflite_sqlcipher` publicado documenta suporte nativo a Android/iOS/ma
 
 ## Plano de entrega
 
-1. Extrair uma interface de provedor de chave e uma abstração de abertura do banco, sem alterar ainda o formato persistido.
-2. Implementar e testar a migração criptografada nativa em uma PR isolada, mantendo compatibilidade com bancos legados.
-3. Implementar a estratégia Windows/Linux em PR separada, sem fallback plaintext.
-4. Implementar o armazenamento Web/IndexedDB criptografado em PR separada, incluindo UX de desbloqueio e recuperação.
-5. Adicionar auditoria de anexos, arquivos temporários, logs e cópias residuais.
-6. Só após todos os alvos suportados passarem nos testes, atualizar a documentação para afirmar criptografia local.
+1. Criar prova de conceito isolada de sqlite3mc com `sqflite_common_ffi` e testes de chave, leitura, escrita, integridade e reabertura.
+2. Validar a mesma integração no Web com o WASM/worker compatível; não substituir `web/sqlite3.wasm` por um artefato de origem diferente sem confirmar ABI, versão e checksum.
+3. Definir o provedor de chaves e o fluxo de desbloqueio/recuperação para cada plataforma.
+4. Integrar a abertura criptografada ao `DatabaseService` mantendo o schema v11 e as migrações existentes.
+5. Implementar migração segura dos bancos legados, com cópia, validação e recuperação após interrupção.
+6. Adicionar testes de integração e validar builds por plataforma antes de ativar por padrão.
+7. Auditar anexos, arquivos temporários, logs e cópias residuais.
 
 ## Critério de conclusão
 
@@ -57,4 +74,4 @@ A criptografia local só poderá ser declarada concluída quando todas as plataf
 
 ## Consequência
 
-A proteção de backups da PR #48 permanece válida e independente. Este ADR não muda o formato do banco nem os dados existentes; evita uma migração arriscada e define os critérios verificáveis para a implementação.
+A proteção de backups da PR #48 permanece válida e independente. Este ADR não muda o formato do banco nem os dados existentes; define uma rota técnica multiplataforma a ser comprovada antes de alterar o armazenamento em produção.
