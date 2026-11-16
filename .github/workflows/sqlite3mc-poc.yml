@@ -37,9 +37,6 @@ jobs:
       - name: Install dependencies and native assets
         run: dart pub get
 
-      - name: Show formatter output for review
-        run: dart format --output=show lib test
-
       - name: Format
         run: dart format --output=none --set-exit-if-changed lib test
 
