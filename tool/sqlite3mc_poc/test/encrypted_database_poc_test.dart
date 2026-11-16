@@ -23,7 +23,9 @@ void main() {
 
   test('encrypts the file and reopens with the same key', () {
     final db = EncryptedDatabasePoc.open(path: databasePath, key: key);
-    db.execute('CREATE TABLE sample (id INTEGER PRIMARY KEY, value TEXT NOT NULL)');
+    db.execute(
+      'CREATE TABLE sample (id INTEGER PRIMARY KEY, value TEXT NOT NULL)',
+    );
     db.execute("INSERT INTO sample(value) VALUES ('fictional test record')");
     db.dispose();
 
@@ -36,8 +38,10 @@ void main() {
     );
 
     final reopened = EncryptedDatabasePoc.open(path: databasePath, key: key);
-    expect(reopened.select('SELECT value FROM sample').single['value'],
-        'fictional test record');
+    expect(
+      reopened.select('SELECT value FROM sample').single['value'],
+      'fictional test record',
+    );
     reopened.dispose();
   });
 
@@ -47,9 +51,10 @@ void main() {
     db.execute("INSERT INTO sample(secret) VALUES ('not for plaintext')");
     db.dispose();
 
-    final wrongKey = List<int>.generate(32, (_) => Random.secure().nextInt(256))
-        .map((value) => value.toRadixString(16).padLeft(2, '0'))
-        .join();
+    final wrongKey = List<int>.generate(
+      32,
+      (_) => Random.secure().nextInt(256),
+    ).map((value) => value.toRadixString(16).padLeft(2, '0')).join();
 
     expect(
       () => EncryptedDatabasePoc.open(path: databasePath, key: wrongKey)
