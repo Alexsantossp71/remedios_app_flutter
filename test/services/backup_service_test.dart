@@ -185,6 +185,7 @@ void main() {
       expect(tables.keys, containsAll([
         'treatments',
         'dose_events',
+        'treatment_prescriptions',
         'doctors',
         'consultations',
         'health_plans',
@@ -224,6 +225,13 @@ void main() {
       expect(summary.exams, 1);
       expect(summary.labResults, 1);
       expect(summary.prescriptionRecords, 0);
+      final restoredDb = await dbService.database;
+      expect(await restoredDb.query('exams'), hasLength(1));
+      expect(await restoredDb.query('lab_results'), hasLength(1));
+      expect((await restoredDb.query('exams')).single['name'],
+          'Hemograma completo');
+      expect((await restoredDb.query('lab_results')).single['lab_name'],
+          'Laboratório Central');
       expect(summary.describe(),
           '2 tratamentos, 1 doses, 1 médicos, 1 consultas, 1 planos, perfil, '
           '1 exames, 1 laudos, 1 contatos de emergência');
