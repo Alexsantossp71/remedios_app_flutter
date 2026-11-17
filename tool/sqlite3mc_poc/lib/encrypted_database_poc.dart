@@ -28,8 +28,7 @@ class EncryptedDatabasePoc {
     final db = sqlite3.open(path);
     try {
       // Keep cipher and legacy format identical to the Web POC.
-      db.execute("PRAGMA cipher = 'sqlcipher'");
-      db.execute('PRAGMA legacy = 4');
+      db.execute("PRAGMA cipher = 'chacha20'");
       db.execute('''PRAGMA key = "x'$key'"''');
       // Force key verification immediately, before returning the handle.
       db.select('SELECT count(*) FROM sqlite_master');
