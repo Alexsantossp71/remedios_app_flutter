@@ -8,10 +8,8 @@ const _databasePath = '/browser-poc.db';
 const _testKey = 'only-a-public-fictional-browser-poc-key';
 
 void _setKey(CommonDatabase db, String key) {
-  final keyHex = _toHex(utf8.encode(key));
-  // The published sqlite3mc.wasm build uses ChaCha20 (sqleet) by default.
-  db.execute("PRAGMA cipher = 'chacha20'");
-  db.execute('PRAGMA key = "x\'$keyHex\'"');
+  // Match the official package README example: a UTF-8 passphrase.
+  db.execute("PRAGMA key = '$key'");
   // Force authentication now, rather than on the first application query.
   db.select('SELECT count(*) FROM sqlite_master');
 }
