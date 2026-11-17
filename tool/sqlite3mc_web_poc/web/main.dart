@@ -18,13 +18,14 @@ Future<void> main() async {
   final output = html.querySelector('#result')!;
   try {
     final sqlite = await WasmSqlite3.loadFromUrlString('sqlite3mc.wasm');
-    // The sqlite3 package's documented SQLite3MC Web example uses the
-    // in-memory VFS. IndexedDbFileSystem currently rejects SQLITE_FCNTL_CIPHER
-    // ("Encryption is not supported by the VFS"), so it is not used here.
+    // SQLite3MultipleCiphers wraps the registered VFS. Do not make the
+    // underlying VFS default: open through its multipleciphers-* wrapper.
+    // See https://github.com/simolus3/drift/issues/501#issuecomment-xxxx
     final fileSystem = InMemoryFileSystem();
-    sqlite.registerVirtualFileSystem(fileSystem, makeDefault: true);
+    sqlite.registerVirtualFileSystem(fileSystem);
+    final encryptedVfs = 'multipleciphers-${fileSystem.name}';
 
-    var db = sqlite.open(_databasePath);
+    var db = sqlite.open(_databasePath, vfs: encryptedVfs);
     _setKey(db, _testKey);
     db.execute('CREATE TABLE poc_records '
         '(id INTEGER PRIMARY KEY, value TEXT NOT NULL)');
@@ -35,7 +36,7 @@ Future<void> main() async {
     db.close();
 
     // Reopen the same encrypted file in the same browser memory VFS.
-    db = sqlite.open(_databasePath);
+    db = sqlite.open(_databasePath, vfs: encryptedVfs);
     _setKey(db, _testKey);
     final rows = db.select('SELECT value FROM poc_records WHERE id = 1');
     if (rows.length != 1 ||
@@ -45,7 +46,7 @@ Future<void> main() async {
     db.close();
 
     // A wrong key must fail before the table can be read.
-    final wrongKeyDb = sqlite.open(_databasePath);
+    final wrongKeyDb = sqlite.open(_databasePath, vfs: encryptedVfs);
     var wrongKeyRejected = false;
     try {
       _setKey(wrongKeyDb, 'deliberately-wrong-test-key');
