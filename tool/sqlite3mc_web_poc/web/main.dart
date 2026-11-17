@@ -20,7 +20,8 @@ Future<void> main() async {
     final sqlite = await WasmSqlite3.loadFromUrlString('sqlite3mc.wasm');
     // SQLite3MultipleCiphers wraps the registered VFS. Do not make the
     // underlying VFS default: open through its multipleciphers-* wrapper.
-    // See https://github.com/simolus3/drift/issues/501#issuecomment-xxxx
+    // SQLite3MC requires the multipleciphers-<vfs-name> wrapper; simply
+    // registering the underlying VFS as default bypasses encryption.
     final fileSystem = InMemoryFileSystem();
     sqlite.registerVirtualFileSystem(fileSystem);
     final encryptedVfs = 'multipleciphers-${fileSystem.name}';
