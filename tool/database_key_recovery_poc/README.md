@@ -17,7 +17,20 @@ O padrão de iterações usado por padrão nesta POC é provisório. Deve ser me
 
 `DatabaseKeyStore` define leitura, gravação e exclusão da DEK de 32 bytes. A leitura retorna cópia defensiva; ausência é representada por `null` e nunca deve disparar geração silenciosa de outra chave.
 
-`InMemoryDatabaseKeyStore` é um fake de testes, não é criptograficamente seguro e não deve ser usado no aplicativo. Ainda não existem adaptadores nativos ou Web nesta etapa.
+`InMemoryDatabaseKeyStore` é um fake de testes, não é criptograficamente seguro e não deve ser usado no aplicativo. A prova Android isolada está em `android/app/src/main/kotlin/com/example/remedios_app_flutter/security/AndroidDatabaseKeyStorePoc.kt`; ela não está ligada ao app. Ainda não existem adaptadores aprovados para iOS/macOS, Windows, Linux ou Web.
+
+## Prova Android isolada (não integrada)
+
+Foi adicionada uma implementação experimental em Kotlin que:
+- usa uma chave AES-256 não exportável no Android Keystore para proteger a DEK;
+- grava apenas o envelope cifrado em `noBackupFilesDir`, usando `AtomicFile`;
+- combina um lock JVM por caminho com `FileChannel.lock()` para serializar instâncias e processos cooperantes;
+- falha de forma fechada quando o envelope cifrado ou a chave Keystore existe isoladamente, ou quando a autenticação GCM falha;
+- não gera chave substituta durante leitura e não está registrada em nenhum canal Flutter nem conectada ao banco.
+
+Os testes instrumentados no emulador cobrem ausência, primeira criação, preservação da chave, concorrência entre instâncias/threads e estados incompletos do cofre.
+
+**Limites conhecidos:** a suíte ainda não dispara concorrência em processos Android separados, não testa falha abrupta do processo em cada ponto da gravação, não testa backup/restore/reinstalação/dispositivos físicos nem comprova uso de hardware-backed/TEE. O intervalo entre criar a chave no Keystore e persistir o envelope pode deixar uma chave órfã após interrupção; o comportamento deliberado é bloquear e exigir recuperação, nunca sobrescrever. Ainda falta implementar e testar restauração explícita do envelope, política de rotação/exclusão, e revisão independente. A POC Android não é adaptador de produção.
 
 ## Executar
 
