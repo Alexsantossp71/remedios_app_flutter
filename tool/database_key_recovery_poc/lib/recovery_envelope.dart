@@ -83,13 +83,8 @@ class RecoveryEnvelope {
       throw const FormatException('Invalid recovery envelope lengths.');
     }
 
-    final wrappingKey =
-        await _deriveKey(recoveryPassword, salt, iterations);
-    final box = SecretBox(
-      ciphertext,
-      nonce: nonce,
-      mac: Mac(mac),
-    );
+    final wrappingKey = await _deriveKey(recoveryPassword, salt, iterations);
+    final box = SecretBox(ciphertext, nonce: nonce, mac: Mac(mac));
     return AesGcm.with256bits().decrypt(
       box,
       secretKey: wrappingKey,
@@ -98,14 +93,14 @@ class RecoveryEnvelope {
   }
 
   Map<String, Object> toJson() => {
-        'version': version,
-        'kdf': kdf,
-        'iterations': iterations,
-        'salt': base64Encode(salt),
-        'nonce': base64Encode(nonce),
-        'ciphertext': base64Encode(ciphertext),
-        'mac': base64Encode(mac),
-      };
+    'version': version,
+    'kdf': kdf,
+    'iterations': iterations,
+    'salt': base64Encode(salt),
+    'nonce': base64Encode(nonce),
+    'ciphertext': base64Encode(ciphertext),
+    'mac': base64Encode(mac),
+  };
 
   factory RecoveryEnvelope.fromJson(Map<String, Object?> json) {
     try {
@@ -120,7 +115,9 @@ class RecoveryEnvelope {
       );
       if (envelope.version != currentVersion ||
           envelope.kdf != 'pbkdf2-hmac-sha256') {
-        throw const FormatException('Unsupported recovery envelope version or KDF.');
+        throw const FormatException(
+          'Unsupported recovery envelope version or KDF.',
+        );
       }
       _validateIterations(envelope.iterations);
       if (envelope.salt.length != _saltLength ||
@@ -154,9 +151,9 @@ class RecoveryEnvelope {
   }
 
   static List<int> _aad(int iterations, List<int> salt) => utf8.encode(
-        'remedio-na-hora-db-key-envelope:v1:pbkdf2-hmac-sha256:'
-        '$iterations:${base64Encode(salt)}',
-      );
+    'remedio-na-hora-db-key-envelope:v1:pbkdf2-hmac-sha256:'
+    '$iterations:${base64Encode(salt)}',
+  );
 
   static void _validatePassword(String password) {
     if (password.length < 12) {
@@ -168,7 +165,9 @@ class RecoveryEnvelope {
 
   static void _validateIterations(int value) {
     if (value < minimumIterations || value > maximumIterations) {
-      throw const FormatException('KDF iteration count is outside safe bounds.');
+      throw const FormatException(
+        'KDF iteration count is outside safe bounds.',
+      );
     }
   }
 }
