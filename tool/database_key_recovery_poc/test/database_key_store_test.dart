@@ -12,21 +12,16 @@ void main() {
 
     test('stores and returns a defensive copy', () async {
       final store = InMemoryDatabaseKeyStore();
-      final input = List<int>.generate(32, (index) => index);
+      final expected = List<int>.generate(32, (index) => index);
+      final input = List<int>.of(expected);
       await store.writeKey(input);
       input[0] = 255;
 
       final firstRead = await store.readKey();
-      expect(
-        firstRead,
-        List<int>.generate(32, (index) => index),
-      );
+      expect(firstRead, expected);
       firstRead![1] = 255;
 
-      expect(
-        await store.readKey(),
-        List<int>.generate(32, (index) => index),
-      );
+      expect(await store.readKey(), expected);
     });
 
     test('rejects keys that are not exactly 32 bytes', () async {
