@@ -1,6 +1,6 @@
-# Prova isolada — envelope de recuperação da chave
+# Prova isolada — envelope de recuperação e contrato de armazenamento
 
-Este pacote testa apenas o formato criptográfico para proteger uma chave aleatória do banco com uma senha de recuperação.
+Este pacote testa o formato criptográfico para proteger uma chave aleatória do banco com uma senha de recuperação e define o contrato mínimo para futuros adaptadores de armazenamento.
 
 ## Formato da POC
 
@@ -12,6 +12,12 @@ Este pacote testa apenas o formato criptográfico para proteger uma chave aleat�
 - Limites de KDF são verificados antes de derivar a chave para evitar custos arbitrários em envelopes importados.
 
 O padrão de iterações usado por padrão nesta POC é provisório. Deve ser medido em dispositivos de entrada e navegadores antes de qualquer adoção.
+
+## Contrato de armazenamento
+
+`DatabaseKeyStore` define leitura, gravação e exclusão da DEK de 32 bytes. A leitura retorna cópia defensiva; ausência é representada por `null` e nunca deve disparar geração silenciosa de outra chave.
+
+`InMemoryDatabaseKeyStore` é um fake de testes, não é criptograficamente seguro e não deve ser usado no aplicativo. Ainda não existem adaptadores nativos ou Web nesta etapa.
 
 ## Executar
 
@@ -29,6 +35,7 @@ dart test
 - Rejeitar senha incorreta e ciphertext alterado.
 - Confirmar salt e nonce novos a cada envelope.
 - Rejeitar versão/KDF não suportadas, custo KDF fora dos limites, chave com tamanho inválido e senha curta.
+- Contrato: ausência explícita, cópias defensivas, validação de tamanho, persistência durante o ciclo de vida do fake e exclusão.
 
 ## Limites
 
@@ -38,4 +45,4 @@ dart test
 - Não exporta nem restaura dados clínicos.
 - Não foi revisada independentemente e não está aprovada para produção.
 
-A POC não deve ser usada para proteger dados reais. Ela serve para validar o envelope e os testes negativos antes de implementar adaptadores de armazenamento seguro por plataforma.
+A POC não deve ser usada para proteger dados reais. Ela valida o envelope e o contrato antes de implementar adaptadores de armazenamento seguro por plataforma.
