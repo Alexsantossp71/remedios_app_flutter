@@ -1,0 +1,31 @@
+name: Database key recovery envelope POC
+
+on:
+  pull_request:
+    paths:
+      - 'tool/database_key_recovery_poc/**'
+      - '.github/workflows/database-key-recovery-poc.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  envelope-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: tool/database_key_recovery_poc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Install dependencies
+        run: dart pub get
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Analyze
+        run: dart analyze
+      - name: Run recovery envelope tests
+        run: dart test
