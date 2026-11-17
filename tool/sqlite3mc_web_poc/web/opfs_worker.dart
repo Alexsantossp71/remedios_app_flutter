@@ -50,7 +50,6 @@ Future<String> _run(String command) async {
       );
       db.close();
       db = null;
-      fileSystem.close();
       return 'PASS: encrypted record written to OPFS';
     }
 
@@ -64,7 +63,6 @@ Future<String> _run(String command) async {
       }
       db.close();
       db = null;
-      fileSystem.close();
       return 'PASS: encrypted OPFS record recovered in a fresh worker';
     }
 
@@ -79,7 +77,6 @@ Future<String> _run(String command) async {
       }
       db.close();
       db = null;
-      fileSystem.close();
       if (!rejected) {
         throw StateError('SQLite3MC accepted an incorrect key.');
       }
