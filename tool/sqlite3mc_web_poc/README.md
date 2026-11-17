@@ -74,9 +74,10 @@ alteração funcional é abrir cada banco pelo VFS wrapper
 `multipleciphers-${fs.name}`. O teste abre, grava, fecha, reabre em uma nova
 página e tenta uma chave errada.
 
-O teste Playwright precisa passar para considerar essa adaptação validada.
-Mesmo assim, isso ainda não comprova compatibilidade Firefox/Safari nem
-integração no aplicativo Flutter publicado.
+O teste Playwright passou em Chromium, validando escrita, fechamento da página,
+reabertura em uma nova página, leitura do registro e rejeição de chave incorreta.
+Isso ainda não comprova compatibilidade Firefox/Safari nem integração no
+aplicativo Flutter publicado.
 
 ## Limites
 
