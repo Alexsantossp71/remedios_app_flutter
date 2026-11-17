@@ -50,7 +50,11 @@ void main() {
 
         expect(results.where((created) => created).length, 1);
         final stored = await store.readKey();
-        expect(candidates, contains(stored));
+        expect(stored, isNotNull);
+        final winningCandidate = candidates.singleWhere(
+          (candidate) => candidate.first == stored!.first,
+        );
+        expect(stored, orderedEquals(winningCandidate));
         expect(
           results.where((created) => !created).length,
           candidates.length - 1,
