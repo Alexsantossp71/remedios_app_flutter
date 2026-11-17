@@ -6,6 +6,7 @@ on:
       - 'android/app/src/main/kotlin/com/example/remedios_app_flutter/security/**'
       - 'android/app/src/androidTest/**'
       - 'android/app/build.gradle.kts'
+      - 'android/settings.gradle.kts'
       - '.github/workflows/android-key-store-poc.yml'
 
 permissions:
