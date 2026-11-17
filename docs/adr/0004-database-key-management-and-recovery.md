@@ -18,6 +18,7 @@ Separar a chave do banco (DEK) da senha de recuperação (KEK) e nunca codificar
 ## Regras de segurança obrigatórias
 
 - Não iniciar nem migrar banco se a chave estiver ausente, inválida ou não puder ser recuperada; nunca gerar silenciosamente uma chave nova para abrir um banco existente.
+- A inicialização de primeira utilização deve ser atômica e não sobrescrever uma chave existente. A interface da POC usa `createKeyIfAbsent`: devolve sucesso somente quando cria a chave; se já houver uma, mantém a chave original. Rotação/substituição de chave exige operação separada, explícita e recuperável.
 - Verificar a chave com operação autenticada/consulta de integridade antes de liberar acesso às tabelas.
 - A senha de recuperação deve ser validada com política clara e confirmação; não registrar senha, DEK, KEK, envelope em logs ou telemetria.
 - KDF, parâmetros, formato do envelope e versão devem ser explícitos e migráveis. Parâmetros de custo só serão fixados após benchmark nos aparelhos suportados; rejeitar parâmetros fora de limites seguros.
@@ -46,4 +47,4 @@ Separar a chave do banco (DEK) da senha de recuperação (KEK) e nunca codificar
 
 ## Consequências
 
-Esta ADR define um desenho para prototipagem, não uma implementação. Não adiciona dependências, não altera `DatabaseService`, não ativa criptografia e não modifica dados. A implementação só pode avançar após os testes do plano associado e revisão do desenho.
+Esta ADR define um desenho para prototipagem, não uma implementação. A alteração atual endurece somente o contrato e o fake de testes da POC: não adiciona armazenamento seguro real, não altera `DatabaseService`, não ativa criptografia e não modifica dados. A implementação só pode avançar após os testes do plano associado e revisão do desenho.
