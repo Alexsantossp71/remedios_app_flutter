@@ -1,0 +1,38 @@
+name: sqflite API with SQLite3MC native POC
+
+on:
+  pull_request:
+    paths:
+      - 'tool/sqflite_sqlite3mc_poc/**'
+      - '.github/workflows/sqflite-sqlite3mc-poc.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'tool/sqflite_sqlite3mc_poc/**'
+      - '.github/workflows/sqflite-sqlite3mc-poc.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sqflite-native-poc:
+    name: sqflite FFI encryption tests (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: tool/sqflite_sqlite3mc_poc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Install dependencies and native assets
+        run: dart pub get
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed test
+      - name: Run sqflite API encryption tests
+        run: dart test
