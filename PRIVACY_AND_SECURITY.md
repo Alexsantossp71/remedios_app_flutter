@@ -45,10 +45,8 @@ revisar o conteúdo antes do envio e conferir os campos extraídos antes de salv
 
 ## Próximas etapas técnicas
 
-- Validar uma prova de conceito multiplataforma com SQLite3MultipleCiphers
-  (`sqlite3mc`) via FFI e WebAssembly, incluindo compatibilidade do WASM/worker,
-  gestão segura de chaves, desbloqueio/recuperação e migração sem perda de dados.
-  A opção é apenas uma direção técnica: ainda não está integrada nem validada no app.
+- Concluir a validação de gestão e recuperação de chaves conforme ADR 0004 e o plano em `docs/security/database-key-management-test-plan.md`; a proposta ainda não está implementada.
+- Validar criptografia em repouso para SQLite e armazenamento Web, incluindo migração recuperável sem perda de dados.
 - Implementar controles explícitos de consentimento por categoria de envio,
   revogação e registro auditável.
 - Definir política de retenção e exclusão no proxy, OCR e provedor de IA.
