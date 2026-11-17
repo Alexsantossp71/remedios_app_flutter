@@ -17,7 +17,10 @@ void main() {
       input[0] = 255;
 
       final firstRead = await store.readKey();
-      expect(firstRead, List<int>.generate(32, (index) => index));
+      expect(
+        firstRead,
+        List<int>.generate(32, (index) => index),
+      );
       firstRead![1] = 255;
 
       expect(
