@@ -51,7 +51,9 @@ void main() {
     }
   });
 
-  test('sqflite FFI creates, writes and reopens an encrypted database', () async {
+  test(
+    'sqflite FFI creates, writes and reopens an encrypted database',
+    () async {
     final db = await openEncrypted(path, key);
     await db.insert('poc_records', {'value': 'synthetic test record'});
     await db.close();
@@ -67,7 +69,8 @@ void main() {
     final rows = await reopened.query('poc_records');
     expect(rows.single['value'], 'synthetic test record');
     await reopened.close();
-  });
+    },
+  );
 
   test('sqflite FFI rejects a wrong key during onConfigure', () async {
     final db = await openEncrypted(path, key);
