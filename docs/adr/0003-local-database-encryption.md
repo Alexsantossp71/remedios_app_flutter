@@ -86,3 +86,23 @@ A criptografia local só poderá ser declarada concluída quando todas as plataf
 ## Consequência
 
 A proteção de backups da PR #48 permanece válida e independente. Este ADR não muda o formato do banco nem os dados existentes; define uma rota técnica multiplataforma a ser comprovada antes de alterar o armazenamento em produção.
+
+
+## Alinhamento de dependências do aplicativo — em revisão
+
+A prova de conceito da PR #56 usa `sqlite3 3.9.1`, `sqflite_common 2.5.17`,
+`sqflite_common_ffi 2.4.7` e `sqflite_common_ffi_web 1.2.2`. O aplicativo
+ainda estava resolvendo `sqlite3 2.9.4`, `sqflite_common_ffi 2.3.7+1` e
+`sqflite_common_ffi_web 1.0.2`, portanto não reproduzia a combinação testada.
+
+A PR de alinhamento fixa as quatro versões usadas na prova de conceito e eleva
+o Dart mínimo declarado para 3.12, exigido pela versão Web validada. A CI
+regenera os artefatos SQLite Web para que o worker e o WASM correspondam às
+dependências resolvidas.
+
+**Este alinhamento não ativa SQLite3MC, não adiciona PRAGMA de chave, não troca
+a factory usada pelo banco ativo, não implementa cofre de chaves e não migra
+dados.** O banco do aplicativo permanece sem criptografia em repouso até que a
+integração de chave, abertura cifrada e migração recuperável seja entregue e
+validada. A elevação do Dart mínimo também precisa ser considerada na política
+de compatibilidade de versões do aplicativo.
