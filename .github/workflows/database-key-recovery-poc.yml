@@ -12,6 +12,7 @@ permissions:
 jobs:
   envelope-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: tool/database_key_recovery_poc
