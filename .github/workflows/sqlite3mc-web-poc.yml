@@ -6,7 +6,7 @@ on:
       - 'tool/sqlite3mc_web_poc/**'
       - '.github/workflows/sqlite3mc-web-poc.yml'
   push:
-    branches: [master, main, security/sqlite3mc-proof-of-concept]
+    branches: [master, main]
     paths:
       - 'tool/sqlite3mc_web_poc/**'
       - '.github/workflows/sqlite3mc-web-poc.yml'
