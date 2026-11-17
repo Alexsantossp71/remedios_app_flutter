@@ -47,7 +47,7 @@ class AndroidDatabaseKeyStorePocTest {
 
         assertTrue(store.createKeyIfAbsent(original))
         assertFalse(store.createKeyIfAbsent(replacement))
-        assertArrayEquals(original, store.readKey())
+        assertArrayEquals(original, store.readKey()!!)
     }
 
     @Test
@@ -67,7 +67,7 @@ class AndroidDatabaseKeyStorePocTest {
             assertEquals(1, results.count { it })
             assertEquals(candidates.size - 1, results.count { !it })
 
-            val stored = store.readKey()
+            val stored = store.readKey() ?: throw AssertionError("Stored key was unexpectedly absent.")
             assertTrue(candidates.any { it.contentEquals(stored) })
         } finally {
             executor.shutdownNow()
