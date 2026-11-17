@@ -1,0 +1,67 @@
+name: SQLite3MC browser proof of concept
+
+on:
+  pull_request:
+    paths:
+      - 'tool/sqlite3mc_web_poc/**'
+      - '.github/workflows/sqlite3mc-web-poc.yml'
+  push:
+    branches: [master, main]
+    paths:
+      - 'tool/sqlite3mc_web_poc/**'
+      - '.github/workflows/sqlite3mc-web-poc.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-web-poc:
+    name: Encrypted SQLite in Chromium
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tool/sqlite3mc_web_poc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dart dependencies
+        run: dart pub get
+
+      - name: Compile browser application
+        run: dart compile js -O2 -o web/main.dart.js web/main.dart
+
+      - name: Download and verify pinned SQLite3MC WebAssembly
+        run: |
+          curl --fail --silent --show-error --location \
+            https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.9.1/sqlite3mc.wasm \
+            --output web/sqlite3mc.wasm
+          echo "408a1d9bf8071bfb6e91aba005e6c8e2072c240784e1d199bbd7eb441dd5ea94  web/sqlite3mc.wasm" | sha256sum --check -
+
+      - name: Install Chromium automation
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Serve browser test page
+        run: |
+          python3 -m http.server 4173 --directory web > /tmp/sqlite3mc-web-server.log 2>&1 &
+          echo $! > /tmp/sqlite3mc-web-server.pid
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/sqlite3mc-web-server.log
+          exit 1
+
+      - name: Verify encryption, persistence, reload and wrong-key rejection
+        run: node test/browser_test.mjs
