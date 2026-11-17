@@ -14,8 +14,9 @@ String _toHex(List<int> bytes) =>
 
 void _setKey(CommonDatabase db, String key) {
   final keyHex = _toHex(utf8.encode(key));
-  db.execute("PRAGMA cipher = 'sqlcipher'");
-  db.execute('PRAGMA legacy = 4');
+  // The published sqlite3mc.wasm build defaults to ChaCha20 (sqleet).
+  // SQLCipher is not the cipher compiled as the WASM default.
+  db.execute("PRAGMA cipher = 'chacha20'");
   db.execute('PRAGMA key = "x\'$keyHex\'"');
   // Force authentication now, rather than on the first application query.
   db.select('SELECT count(*) FROM sqlite_master');
