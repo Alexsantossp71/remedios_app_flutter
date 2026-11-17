@@ -1,0 +1,60 @@
+name: Android Keystore key-store POC
+
+on:
+  pull_request:
+    paths:
+      - 'android/app/src/main/kotlin/com/example/remedios_app_flutter/security/**'
+      - 'android/app/src/androidTest/**'
+      - 'android/app/build.gradle.kts'
+      - '.github/workflows/android-key-store-poc.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-key-store-poc-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-keystore-tests:
+    name: Build and instrument Android Keystore POC
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Configure Flutter SDK for Gradle
+        run: echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+
+      - name: Compile Android debug application
+        run: gradle -p android :app:assembleDebug
+
+      - name: Run Android Keystore instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          script: gradle -p android :app:connectedDebugAndroidTest
