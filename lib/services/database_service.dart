@@ -19,7 +19,6 @@ class DatabaseService {
   static const int _databaseVersion = 11;
 
   Database? _db;
-  bool _isInitialized = false;
 
   /// Returns the singleton [Database] instance.
   Future<Database> get database async {
@@ -35,7 +34,6 @@ class DatabaseService {
       await _db!.close();
     }
     _db = db;
-    _isInitialized = true;
   }
 
   /// Executa as migrações reais num banco aberto em versão anterior —
@@ -110,7 +108,6 @@ class DatabaseService {
     // Intentionally do not import legacy SharedPreferences data. This fresh
     // database starts empty; the previous SQLite file and legacy preference
     // values are left untouched for manual recovery if needed.
-    _isInitialized = true;
     return db;
   }
 
