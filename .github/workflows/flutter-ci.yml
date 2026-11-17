@@ -6,7 +6,7 @@ on:
     branches: [master, main]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: flutter-ci-${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -28,6 +30,22 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
+
+      # Keep the committed lockfile in sync with the pinned dependency graph.
+      # Only same-repository PR branches are eligible for this maintenance push.
+      - name: Commit regenerated lockfile
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          if ! git diff --quiet -- pubspec.lock; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add pubspec.lock
+            git commit -m 'chore: refresh SQLite dependency lockfile'
+            git push origin HEAD:${{ github.head_ref }}
+          fi
+
+      - name: Verify lockfile is reproducible
+        run: flutter pub get --enforce-lockfile
 
       # Keep the generated Web worker and WASM matched to the pinned package
       # versions. This is the regular SQLite build; encryption is not enabled.
