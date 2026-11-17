@@ -23,7 +23,7 @@ revisar o conteúdo antes do envio e conferir os campos extraídos antes de salv
 - O armazenamento local não deve ser tratado como criptografado em repouso.
 - Novos backups exportados pelo app usam AES-256-GCM com chave derivada da senha por PBKDF2-HMAC-SHA256 (310.000 iterações), salt e nonce aleatórios e autenticação de integridade. A senha não é armazenada nem enviada a servidores; sem ela, o backup não pode ser recuperado.
 - Backups JSON antigos, sem criptografia, continuam aceitos para restauração por compatibilidade. Proteja esses arquivos como dados sensíveis e gere um novo backup criptografado.
-- A criptografia do arquivo de backup não cifra o banco SQLite/IndexedDB ativo; a proteção em repouso desse armazenamento permanece pendente de uma migração específica por plataforma.
+- A criptografia do arquivo de backup não cifra o banco SQLite/IndexedDB ativo; a proteção em repouso desse armazenamento permanece pendente de uma migração específica por plataforma. Os requisitos e critérios de segurança estão definidos em [ADR 0003](docs/adr/0003-local-database-encryption.md).
 - O cliente Flutter chama um proxy remoto de IA. Não coloque segredos de
   provedor no aplicativo; credenciais devem permanecer no ambiente do servidor.
 - A política de retenção e processamento do proxy/provedor deve ser confirmada
