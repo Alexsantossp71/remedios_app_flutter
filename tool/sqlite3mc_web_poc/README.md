@@ -57,10 +57,21 @@ node test/browser_test.mjs
 
 ## Compatibilidade do cipher
 
-O artefato WASM oficial usa SQLite3MultipleCiphers. A prova nativa anterior
-usava SQLCipher com modo de compatibilidade. A integração multiplataforma
-precisa fixar e testar o mesmo cipher, parâmetros e formato de arquivo em
-todas as plataformas antes de migrar qualquer banco.
+As provas nativa e Web agora selecionam explicitamente `chacha20`, o cipher
+padrão recomendado pelo projeto SQLite3MultipleCiphers. Ambas usam uma chave
+bruta de 256 bits, codificada em hexadecimal (`x'...'`), para evitar a
+ambiguidade entre senha textual e chave binária. A configuração ainda precisa
+ser confirmada em cada build antes de migrar qualquer banco real.
+
+## Integração com a API sqflite Web
+
+O pacote também contém uma segunda prova que tenta usar
+`sqflite_common_ffi_web` com o artefato `sqlite3mc.wasm` passado ao comando
+`setup --sqlite3-wasm-url`. O teste abre, grava, fecha, reabre em uma nova
+página e tenta uma chave errada. Isso é importante porque o worker padrão do
+sqflite pode selecionar o VFS de forma diferente do worker OPFS manual.
+A compatibilidade dessa combinação só será considerada validada se o teste
+Playwright passar; a prova OPFS isolada não comprova isso.
 
 ## Limites
 
