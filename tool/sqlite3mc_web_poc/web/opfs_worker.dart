@@ -40,8 +40,8 @@ Future<String> _run(String command) async {
   try {
     if (command == 'write') {
       db = sqlite.open('/database', vfs: encryptedVfs);
-      // Match the native POC: SQLCipher-compatible cipher, legacy format 4,
-      // and the same 256-bit raw key encoded as hexadecimal.
+      // Match the native POC: ChaCha20 and the same 256-bit raw key.
+
       db.execute("PRAGMA cipher = 'chacha20'");
       db.execute('''PRAGMA key = "x'$_testKey'"''');
       db.execute('CREATE TABLE IF NOT EXISTS poc_records '
@@ -74,7 +74,7 @@ Future<String> _run(String command) async {
       var rejected = false;
       try {
         db.execute("PRAGMA cipher = 'chacha20'");
-          db.execute('''PRAGMA key = "x'$_wrongKey'"''');
+        db.execute('''PRAGMA key = "x'$_wrongKey'"''');
         db.select('SELECT value FROM poc_records');
       } catch (_) {
         rejected = true;
