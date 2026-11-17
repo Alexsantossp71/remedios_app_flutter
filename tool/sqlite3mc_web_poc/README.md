@@ -1,21 +1,29 @@
 # SQLite3MultipleCiphers — prova de conceito Web
 
-Este pacote isolado testa o artefato oficial `sqlite3mc.wasm` da mesma versão
-do pacote Dart `sqlite3`, executando em Chromium real e persistindo o arquivo
-virtual no IndexedDB.
+Este pacote executa o artefato oficial `sqlite3mc.wasm` da mesma versão do
+pacote Dart `sqlite3` em Chromium real.
 
 ## O que a automação verifica
 
 - Carregamento do WebAssembly de SQLite3MultipleCiphers.
-- Criação de banco com cipher SQLCipher explicitamente selecionado.
-- Persistência no IndexedDB e flush.
-- Reabertura e leitura com a chave correta.
-- Rejeição de chave incorreta antes de liberar a consulta.
-- Segunda visita/reload à mesma origem, comprovando persistência entre cargas
-  completas da página.
+- Criação de banco criptografado com ChaCha20 (cipher padrão do artefato WASM).
+- Fechamento e reabertura do mesmo arquivo virtual com a chave correta.
+- Rejeição de chave incorreta antes de liberar consultas.
 
 O workflow baixa o WASM do release imutável `sqlite3-3.9.1` e valida o SHA-256
-publicado no release antes de executar o navegador.
+publicado no release antes de executar Chromium.
+
+## Resultado importante sobre persistência
+
+A primeira tentativa com `IndexedDbFileSystem` chegou ao navegador, mas a
+operação `PRAGMA key` foi recusada com
+`Encryption is not supported by the VFS`. Portanto, não se deve afirmar que
+a combinação SQLite3MC + IndexedDB está validada. A prova atual usa
+`InMemoryFileSystem`, conforme o exemplo oficial de criptografia Web do
+pacote sqlite3; ela valida o mecanismo de criptografia no navegador, mas não
+a persistência entre reinicializações/reloads. A integração de um VFS
+persistente compatível (possivelmente OPFS/worker ou VFS específico) continua
+sendo uma etapa técnica obrigatória.
 
 ## Executar localmente
 
@@ -32,24 +40,30 @@ npx playwright install chromium
 python3 -m http.server 4173 --directory web
 ```
 
-Em outro terminal, execute:
+Em outro terminal:
 
 ```sh
 node test/browser_test.mjs
 ```
 
-## CI\n\nO workflow `.github/workflows/sqlite3mc-web-poc.yml` executa esta prova em Chromium no GitHub Actions, com o artefato WASM fixado por versão e hash.\n\n## Compatibilidade do cipher\n\nO artefato WASM publicado usa ChaCha20 (sqleet) como cipher padrão; por isso o teste seleciona `chacha20` explicitamente. A prova nativa anterior seleciona SQLCipher. Esses formatos não devem ser considerados intercambiáveis: antes de integrar o banco multiplataforma, a implementação nativa e Web terá de adotar e testar o mesmo cipher e os mesmos parâmetros.\n\n## Limites importantes
+## Compatibilidade do cipher
 
-- A chave fixa é pública e fictícia, exclusiva para teste; não é um modelo de
-  armazenamento seguro.
-- O IndexedDB é usado como VFS de persistência, não como armazenamento de chave.
-- Esta prova usa a API Web direta de `package:sqlite3`; não prova compatibilidade
-  com o worker atual de `sqflite_common_ffi_web`.
-- Não testa Firefox/Safari, WebCrypto, política de backup do navegador ou
-  recuperação de chave perdida.
-- Não modifica `DatabaseService`, factories, dependências/lockfile do app,
-  banco real ou dados existentes.
-- Não substitui a etapa posterior de chave segura, migração recuperável do
-  schema v11 e testes de dispositivos reais.
+O artefato WASM oficial usa ChaCha20 (sqleet) como cipher padrão. A prova
+nativa anterior seleciona SQLCipher. Esses formatos não são intercambiáveis:
+antes de integrar o banco multiplataforma, a implementação nativa e Web terá
+de adotar e testar o mesmo cipher e os mesmos parâmetros.
 
-O teste só usa dados fictícios e não toca no banco do Remédio na Hora.
+## Limites
+
+- A chave é fixa, pública e fictícia, exclusiva para teste.
+- Não testa persistência Web; IndexedDbFileSystem foi rejeitado pela camada VFS
+  para operações de criptografia.
+- Não integra o worker atual de `sqflite_common_ffi_web`.
+- Não implementa armazenamento seguro/recuperação de chaves.
+- Não altera `DatabaseService`, dependências/lockfile do app, banco real ou
+  dados existentes.
+- A API WASM é experimental e não está aprovada para produção.
+- Não substitui testes em Firefox/Safari, HTTPS/origens reais, nem a migração
+  recuperável do schema v11.
+
+O teste usa somente dados fictícios e não toca no banco do Remédio na Hora.
