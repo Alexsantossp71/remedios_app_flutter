@@ -19,6 +19,7 @@ analyzer:
     - tool/sqlite3mc_poc/**
     - tool/sqlite3mc_web_poc/**
     - tool/database_key_recovery_poc/**
+    - tool/sqflite_sqlite3mc_poc/**
 include: package:flutter_lints/flutter.yaml
 
 linter:
