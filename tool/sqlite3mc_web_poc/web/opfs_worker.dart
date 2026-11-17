@@ -3,8 +3,8 @@ import 'dart:js_interop';
 import 'package:sqlite3/common.dart';
 import 'package:sqlite3/wasm.dart';
 
-const _testKey = 'only-a-public-fictional-browser-poc-key';
-const _wrongKey = 'deliberately-wrong-test-key';
+const _testKey = '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff';
+const _wrongKey = 'ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100';
 const _storageDirectory = 'sqlite3mc-browser-poc';
 
 @JS('self.onmessage')
@@ -40,8 +40,11 @@ Future<String> _run(String command) async {
   try {
     if (command == 'write') {
       db = sqlite.open('/database', vfs: encryptedVfs);
-      // PRAGMA key must be the first SQL statement on this connection.
-      db.execute("PRAGMA key = '$_testKey'");
+      // Match the native POC: SQLCipher-compatible cipher, legacy format 4,
+      // and the same 256-bit raw key encoded as hexadecimal.
+      db.execute("PRAGMA cipher = 'sqlcipher'");
+      db.execute('PRAGMA legacy = 4');
+      db.execute('''PRAGMA key = "x'$_testKey'"''');
       db.execute('CREATE TABLE IF NOT EXISTS poc_records '
           '(id INTEGER PRIMARY KEY, value TEXT NOT NULL)');
       db.execute(
@@ -55,7 +58,9 @@ Future<String> _run(String command) async {
 
     if (command == 'verify') {
       db = sqlite.open('/database', vfs: encryptedVfs);
-      db.execute("PRAGMA key = '$_testKey'");
+      db.execute("PRAGMA cipher = 'sqlcipher'");
+      db.execute('PRAGMA legacy = 4');
+      db.execute('''PRAGMA key = "x'$_testKey'"''');
       final rows = db.select('SELECT value FROM poc_records WHERE id = 1');
       if (rows.length != 1 ||
           rows.single['value'] != 'persisted encrypted OPFS record') {
@@ -70,7 +75,9 @@ Future<String> _run(String command) async {
       db = sqlite.open('/database', vfs: encryptedVfs);
       var rejected = false;
       try {
-        db.execute("PRAGMA key = '$_wrongKey'");
+        db.execute("PRAGMA cipher = 'sqlcipher'");
+        db.execute('PRAGMA legacy = 4');
+        db.execute('''PRAGMA key = "x'$_wrongKey'"''');
         db.select('SELECT value FROM poc_records');
       } catch (_) {
         rejected = true;
