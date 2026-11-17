@@ -35,25 +35,28 @@ void main() {
       expect(await store.readKey(), original);
     });
 
-    test('concurrent first-use calls preserve exactly one winning key', () async {
-      final store = InMemoryDatabaseKeyStore();
-      final candidates = List<List<int>>.generate(
-        32,
-        (index) => List<int>.filled(32, index),
-      );
+    test(
+      'concurrent first-use calls preserve exactly one winning key',
+      () async {
+        final store = InMemoryDatabaseKeyStore();
+        final candidates = List<List<int>>.generate(
+          32,
+          (index) => List<int>.filled(32, index),
+        );
 
-      final results = await Future.wait(
-        candidates.map(store.createKeyIfAbsent),
-      );
+        final results = await Future.wait(
+          candidates.map(store.createKeyIfAbsent),
+        );
 
-      expect(results.where((created) => created).length, 1);
-      final stored = await store.readKey();
-      expect(candidates, contains(stored));
-      expect(
-        results.where((created) => !created).length,
-        candidates.length - 1,
-      );
-    });
+        expect(results.where((created) => created).length, 1);
+        final stored = await store.readKey();
+        expect(candidates, contains(stored));
+        expect(
+          results.where((created) => !created).length,
+          candidates.length - 1,
+        );
+      },
+    );
 
     test('rejects keys that are not exactly 32 bytes', () async {
       final store = InMemoryDatabaseKeyStore();
