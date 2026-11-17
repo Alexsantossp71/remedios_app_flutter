@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:html' as html;
 
 import 'package:sqlite3/common.dart';
@@ -7,9 +6,6 @@ import 'package:sqlite3/wasm.dart';
 const _databasePath = '/browser-poc.db';
 // Fictional test-only key. Never reuse this pattern or key in the application.
 const _testKey = 'only-a-public-fictional-browser-poc-key';
-
-String _toHex(List<int> bytes) =>
-    bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
 void _setKey(CommonDatabase db, String key) {
   final keyHex = _toHex(utf8.encode(key));
