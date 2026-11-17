@@ -10,7 +10,8 @@ aplicativo Flutter para não alterar o banco de dados atualmente utilizado.
 - Ausência do cabeçalho SQLite em texto puro no arquivo gravado.
 - Fechamento e reabertura com a mesma chave.
 - Rejeição de uma chave incorreta antes de liberar consultas.
-- Recusa de uma chave obviamente curta.
+- Recusa de uma chave que não tenha exatamente 32 bytes em hexadecimal.
+- Usa explicitamente o cipher ChaCha20, com chave aleatória de 256 bits.
 
 ## Executar
 
@@ -40,6 +41,8 @@ como experimental; portanto, a existência do artefato não comprova a
 compatibilidade com o worker e a camada `sqflite_common_ffi_web` usados pelo
 aplicativo. Essa combinação precisa de uma prova de conceito de navegador
 independente, com persistência e reabertura verificadas.
+
+Uma segunda prova isolada em `tool/sqflite_sqlite3mc_poc` valida a mesma configuração por meio da API `sqflite_common_ffi`, para verificar o callback `onConfigure` usado pelo aplicativo.
 
 ## Limites deliberados
 
