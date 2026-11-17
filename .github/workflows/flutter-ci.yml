@@ -29,6 +29,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Verify lockfile is reproducible
+        run: flutter pub get --enforce-lockfile
+
+      # Keep the generated Web worker and WASM matched to the pinned package
+      # versions. This is the regular SQLite build; encryption is not enabled.
+      - name: Prepare Web SQLite assets
+        run: dart run sqflite_common_ffi_web:setup --force
+
       # The existing repository has formatting drift across many untouched
       # Dart files. Report it without preventing analyzer/tests/build from
       # running; enforce formatting after a dedicated formatting-only cleanup.
