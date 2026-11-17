@@ -40,6 +40,7 @@ jobs:
         run: |
           dart run sqflite_common_ffi_web:setup --sqlite3-wasm-url https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.9.1/sqlite3mc.wasm --force
           echo '408a1d9bf8071bfb6e91aba005e6c8e2072c240784e1d199bbd7eb441dd5ea94  web/sqlite3.wasm' | sha256sum --check -
+          dart compile js -O2 -o web/sqflite_sw.js web/sqlite3mc_shared_worker.dart
       - name: Install Chromium automation
         run: |
           npm install --no-save playwright
