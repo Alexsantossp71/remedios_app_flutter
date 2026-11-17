@@ -8,7 +8,7 @@ async function run(mode) {
   try {
     await page.goto(
       `http://127.0.0.1:4173/sqflite.html?mode=${mode}`,
-      { waitUntil: 'networkidle' },
+      { waitUntil: 'domcontentloaded' },
     );
     await page.waitForFunction(
       () => {
