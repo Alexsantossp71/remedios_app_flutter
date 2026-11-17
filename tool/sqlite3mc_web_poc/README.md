@@ -65,13 +65,18 @@ ser confirmada em cada build antes de migrar qualquer banco real.
 
 ## Integração com a API sqflite Web
 
-O pacote também contém uma segunda prova que tenta usar
-`sqflite_common_ffi_web` com o artefato `sqlite3mc.wasm` passado ao comando
-`setup --sqlite3-wasm-url`. O teste abre, grava, fecha, reabre em uma nova
-página e tenta uma chave errada. Isso é importante porque o worker padrão do
-sqflite pode selecionar o VFS de forma diferente do worker OPFS manual.
-A compatibilidade dessa combinação só será considerada validada se o teste
-Playwright passar; a prova OPFS isolada não comprova isso.
+A segunda prova usa `sqflite_common_ffi_web` com o artefato `sqlite3mc.wasm`.
+O worker padrão do pacote abre o banco pelo VFS base e, por isso, retorna
+`Encryption is not supported by the VFS`. Para testar a API sqflite sem esse
+erro, o pacote inclui um worker derivado do worker compartilhado upstream,
+com licença BSD-2-Clause preservada em `UPSTREAM_SQFLITE_LICENSE`. A única
+alteração funcional é abrir cada banco pelo VFS wrapper
+`multipleciphers-${fs.name}`. O teste abre, grava, fecha, reabre em uma nova
+página e tenta uma chave errada.
+
+O teste Playwright precisa passar para considerar essa adaptação validada.
+Mesmo assim, isso ainda não comprova compatibilidade Firefox/Safari nem
+integração no aplicativo Flutter publicado.
 
 ## Limites
 
