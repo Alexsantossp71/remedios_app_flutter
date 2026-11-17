@@ -38,7 +38,10 @@ void main() {
     test('rejects keys that are not exactly 32 bytes', () async {
       final store = InMemoryDatabaseKeyStore();
 
-      await expectLater(store.createKeyIfAbsent([1, 2, 3]), throwsArgumentError);
+      await expectLater(
+        store.createKeyIfAbsent([1, 2, 3]),
+        throwsArgumentError,
+      );
       expect(await store.readKey(), isNull);
     });
 
