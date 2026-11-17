@@ -10,9 +10,10 @@ class EncryptedDatabasePoc {
   /// Returns a 256-bit test key encoded as 64 lowercase hexadecimal chars.
   static String generateTestKey() {
     final random = Random.secure();
-    return List<int>.generate(32, (_) => random.nextInt(256))
-        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
-        .join();
+    return List<int>.generate(
+      32,
+      (_) => random.nextInt(256),
+    ).map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 
   static Database open({required String path, required String key}) {
