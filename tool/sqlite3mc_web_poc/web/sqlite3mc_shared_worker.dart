@@ -13,7 +13,7 @@ import 'package:sqflite_common_ffi_web/src/web/js_utils.dart';
 import 'package:sqflite_common_ffi_web/src/web/load_sqlite.dart';
 import 'package:web/web.dart' as web;
 
-import 'constants.dart';
+import 'package:sqflite_common_ffi_web/src/sw/constants.dart';
 import 'sqlite3mc_sqflite_handler.dart';
 
 bool get _debug => sqliteFfiWebDebugWebWorker; // devWarning(true); // false
