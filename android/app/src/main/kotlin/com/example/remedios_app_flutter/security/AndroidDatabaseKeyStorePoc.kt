@@ -99,10 +99,6 @@ internal class AndroidDatabaseKeyStorePoc(
         }
     }
 
-    private fun withExclusiveLock(block: () -> ByteArray?): ByteArray? {
-        TODO("placeholder")
-    }
-
     private fun containsWrappingKey(): Boolean = loadKeyStore().containsAlias(keyAlias)
 
     private fun loadKeyStore(): KeyStore =
