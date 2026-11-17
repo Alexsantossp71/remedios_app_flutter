@@ -75,9 +75,9 @@ A PR #56 mantém as experiências isoladas, sem ativar criptografia no aplicativ
 - A prova nativa SQLite3MC usa ChaCha20 e uma chave bruta de 256 bits. A CI anterior confirmou testes de leitura, escrita, reabertura e chave incorreta em Linux, Windows e macOS.
 - Uma segunda prova executa a API compatível com sqflite por meio de sqflite_common_ffi. Os testes anteriores passaram em Linux, Windows e macOS, inclusive aplicando a chave em onConfigure antes da leitura do schema.
 - A prova Web direta usa sqlite3mc.wasm, VFS OPFS e Dedicated Worker; o Chromium confirmou persistência após reiniciar o worker e rejeição de chave incorreta.
-- Uma prova adicional tenta usar sqlite3mc.wasm com sqflite_common_ffi_web e o worker compartilhado padrão. Ela é necessária para demonstrar que o backend Web real do app seleciona o VFS de criptografia corretamente. Seu resultado ainda precisa ser aprovado na CI.
+- Uma prova adicional usa sqlite3mc.wasm com sqflite_common_ffi_web e um worker compartilhado derivado do upstream, ajustado para abrir pelo VFS wrapper `multipleciphers-${fs.name}`. O teste Playwright passou em Chromium: escrita, fechamento da página, reabertura em nova página, leitura do registro e rejeição de chave incorreta. O worker padrão do pacote falha com `Encryption is not supported by the VFS`, por isso a seleção explícita do wrapper é necessária.
 
-As provas nativas e OPFS usam somente dados sintéticos. A prova sqflite Web não substitui validação em Firefox/Safari nem teste HTTPS publicado. O cipher escolhido nas provas é ChaCha20, explicitamente selecionado em todos os alvos para evitar diferenças entre defaults.
+As provas nativas e OPFS usam somente dados sintéticos. A prova sqflite Web ainda não substitui validação em Firefox/Safari, teste HTTPS publicado, integração no app nem migração do schema v11. O cipher escolhido nas provas é ChaCha20, explicitamente selecionado em todos os alvos para evitar diferenças entre defaults.
 
 ## Critério de conclusão
 
