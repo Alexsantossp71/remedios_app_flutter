@@ -11,11 +11,13 @@ final class InMemoryDatabaseKeyStore implements DatabaseKeyStore {
   }
 
   @override
-  Future<void> writeKey(List<int> key) async {
+  Future<bool> createKeyIfAbsent(List<int> key) async {
     if (key.length != 32) {
       throw ArgumentError('Database key must contain exactly 32 bytes.');
     }
+    if (_key != null) return false;
     _key = List<int>.of(key);
+    return true;
   }
 
   @override
