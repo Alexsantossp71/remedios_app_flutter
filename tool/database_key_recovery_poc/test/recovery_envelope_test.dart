@@ -44,8 +44,8 @@ void main() {
         iterations: RecoveryEnvelope.minimumIterations,
       );
 
-      expect(
-        () => envelope.unlock(recoveryPassword: 'another-wrong-password'),
+      await expectLater(
+        envelope.unlock(recoveryPassword: 'another-wrong-password'),
         throwsA(anything),
       );
     });
@@ -62,15 +62,13 @@ void main() {
       json['ciphertext'] = base64Encode(ciphertext);
       final modified = RecoveryEnvelope.fromJson(json);
 
-      expect(
-        () => modified.unlock(recoveryPassword: password),
+      await expectLater(
+        modified.unlock(recoveryPassword: password),
         throwsA(anything),
       );
     });
 
     test('rejects unsupported versions and unsafe KDF costs', () {
-      final envelope = RecoveryEnvelope.create;
-      expect(envelope, isNotNull);
       expect(
         () => RecoveryEnvelope.fromJson({
           'version': 99,
