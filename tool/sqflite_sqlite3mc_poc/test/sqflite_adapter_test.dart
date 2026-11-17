@@ -62,7 +62,7 @@ void main() {
       expect(bytes.length, greaterThan(32));
       expect(
         String.fromCharCodes(bytes.take(16)),
-        isNot(equals('SQLite format 3\\u0000')),
+        isNot(equals('SQLite format 3\u0000')),
       );
 
       final reopened = await openEncrypted(path, key);
