@@ -45,8 +45,8 @@ revisar o conteúdo antes do envio e conferir os campos extraídos antes de salv
 
 ## Próximas etapas técnicas
 
-- Avaliar criptografia em repouso para SQLite, armazenamento web e backups,
-  incluindo gestão segura de chaves e migração sem perda de dados.
+- Concluir a validação de gestão e recuperação de chaves conforme ADR 0004 e o plano em `docs/security/database-key-management-test-plan.md`; a proposta ainda não está implementada.
+- Validar criptografia em repouso para SQLite e armazenamento Web, incluindo migração recuperável sem perda de dados.
 - Implementar controles explícitos de consentimento por categoria de envio,
   revogação e registro auditável.
 - Definir política de retenção e exclusão no proxy, OCR e provedor de IA.
