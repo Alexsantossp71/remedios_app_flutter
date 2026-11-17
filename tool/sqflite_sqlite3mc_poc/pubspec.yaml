@@ -1,0 +1,14 @@
+name: sqflite_sqlite3mc_poc
+description: Isolated proof that the sqflite-compatible FFI API can open SQLite3MC databases.
+publish_to: none
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dependencies:
+  sqlite3: ^3.9.1
+  sqflite_common_ffi: 2.4.7
+dev_dependencies:
+  test: ^1.26.3
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc

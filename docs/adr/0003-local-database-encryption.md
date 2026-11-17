@@ -68,6 +68,17 @@ O pacote `sqflite_sqlcipher` documenta suporte nativo a Android/iOS/macOS, mas n
 6. Adicionar testes de integração e validar builds por plataforma antes de ativar por padrão.
 7. Auditar anexos, arquivos temporários, logs e cópias residuais.
 
+## Estado das provas de conceito — 2026-11-17
+
+A PR #56 mantém as experiências isoladas, sem ativar criptografia no aplicativo:
+
+- A prova nativa SQLite3MC usa ChaCha20 e uma chave bruta de 256 bits. A CI anterior confirmou testes de leitura, escrita, reabertura e chave incorreta em Linux, Windows e macOS.
+- Uma segunda prova executa a API compatível com sqflite por meio de sqflite_common_ffi. Os testes anteriores passaram em Linux, Windows e macOS, inclusive aplicando a chave em onConfigure antes da leitura do schema.
+- A prova Web direta usa sqlite3mc.wasm, VFS OPFS e Dedicated Worker; o Chromium confirmou persistência após reiniciar o worker e rejeição de chave incorreta.
+- Uma prova adicional usa sqlite3mc.wasm com sqflite_common_ffi_web e um worker compartilhado derivado do upstream, ajustado para abrir pelo VFS wrapper `multipleciphers-${fs.name}`. O teste Playwright passou em Chromium: escrita, fechamento da página, reabertura em nova página, leitura do registro e rejeição de chave incorreta. O worker padrão do pacote falha com `Encryption is not supported by the VFS`, por isso a seleção explícita do wrapper é necessária.
+
+As provas nativas e OPFS usam somente dados sintéticos. A prova sqflite Web ainda não substitui validação em Firefox/Safari, teste HTTPS publicado, integração no app nem migração do schema v11. O cipher escolhido nas provas é ChaCha20, explicitamente selecionado em todos os alvos para evitar diferenças entre defaults.
+
 ## Critério de conclusão
 
 A criptografia local só poderá ser declarada concluída quando todas as plataformas oficialmente suportadas tiverem implementação real, chaves protegidas, migração reversível/recuperável, testes de preservação de dados e validação de build/testes por plataforma. Enquanto isso, a documentação deve dizer explicitamente que o banco local não está criptografado em repouso.
