@@ -4,7 +4,6 @@ import 'dart:html' as html;
 import 'package:sqlite3/common.dart';
 import 'package:sqlite3/wasm.dart';
 
-const _databaseName = 'remedios-hora-sqlite3mc-poc';
 const _databasePath = '/browser-poc.db';
 // Fictional test-only key. Never reuse this pattern or key in the application.
 const _testKey = 'only-a-public-fictional-browser-poc-key';
@@ -14,8 +13,7 @@ String _toHex(List<int> bytes) =>
 
 void _setKey(CommonDatabase db, String key) {
   final keyHex = _toHex(utf8.encode(key));
-  // The published sqlite3mc.wasm build defaults to ChaCha20 (sqleet).
-  // SQLCipher is not the cipher compiled as the WASM default.
+  // The published sqlite3mc.wasm build uses ChaCha20 (sqleet) by default.
   db.execute("PRAGMA cipher = 'chacha20'");
   db.execute('PRAGMA key = "x\'$keyHex\'"');
   // Force authentication now, rather than on the first application query.
@@ -26,30 +24,31 @@ Future<void> main() async {
   final output = html.querySelector('#result')!;
   try {
     final sqlite = await WasmSqlite3.loadFromUrlString('sqlite3mc.wasm');
-    final fileSystem = await IndexedDbFileSystem.open(dbName: _databaseName);
+    // The sqlite3 package's documented SQLite3MC Web example uses the
+    // in-memory VFS. IndexedDbFileSystem currently rejects SQLITE_FCNTL_CIPHER
+    // ("Encryption is not supported by the VFS"), so it is not used here.
+    final fileSystem = InMemoryFileSystem();
     sqlite.registerVirtualFileSystem(fileSystem, makeDefault: true);
 
-    // Create/write on the first visit; the same row must survive a full reload.
     var db = sqlite.open(_databasePath);
     _setKey(db, _testKey);
-    db.execute('CREATE TABLE IF NOT EXISTS poc_records '
+    db.execute('CREATE TABLE poc_records '
         '(id INTEGER PRIMARY KEY, value TEXT NOT NULL)');
     db.execute(
-      "INSERT OR IGNORE INTO poc_records(id, value) VALUES "
-      "(1, 'fictional browser persistence record')",
+      "INSERT INTO poc_records(id, value) VALUES "
+      "(1, 'fictional browser encryption record')",
     );
-    db.dispose();
-    await fileSystem.flush();
+    db.close();
 
-    // Reopen the persisted IndexedDB-backed file with the correct key.
+    // Reopen the same encrypted file in the same browser memory VFS.
     db = sqlite.open(_databasePath);
     _setKey(db, _testKey);
     final rows = db.select('SELECT value FROM poc_records WHERE id = 1');
     if (rows.length != 1 ||
-        rows.single['value'] != 'fictional browser persistence record') {
+        rows.single['value'] != 'fictional browser encryption record') {
       throw StateError('Correct-key reopen did not return the test record.');
     }
-    db.dispose();
+    db.close();
 
     // A wrong key must fail before the table can be read.
     final wrongKeyDb = sqlite.open(_databasePath);
@@ -60,17 +59,15 @@ Future<void> main() async {
     } catch (_) {
       wrongKeyRejected = true;
     } finally {
-      wrongKeyDb.dispose();
+      wrongKeyDb.close();
     }
     if (!wrongKeyRejected) {
       throw StateError('The browser accepted an incorrect encryption key.');
     }
 
-    await fileSystem.flush();
-    output.text = 'PASS: encrypted WASM, IndexedDB persistence, correct-key '
-        'reopen and wrong-key rejection';
+    output.text = 'PASS: SQLite3MC WASM encryption, correct-key reopen and '
+        'wrong-key rejection in Chromium';
   } catch (error, stack) {
     output.text = 'FAIL: $error\n$stack';
-    // Keep the failure visible in the page so browser automation can report it.
   }
 }
