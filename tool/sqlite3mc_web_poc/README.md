@@ -38,7 +38,7 @@ Em outro terminal, execute:
 node test/browser_test.mjs
 ```
 
-## Limites importantes
+## CI\n\nO workflow `.github/workflows/sqlite3mc-web-poc.yml` executa esta prova em Chromium no GitHub Actions, com o artefato WASM fixado por versão e hash.\n\n## Limites importantes
 
 - A chave fixa é pública e fictícia, exclusiva para teste; não é um modelo de
   armazenamento seguro.
