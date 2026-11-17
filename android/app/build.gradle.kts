@@ -1,6 +1,6 @@
 plugins {
     id("com.android.application")
-    // AGP 9+ provides built-in Kotlin support; do not apply kotlin-android again.
+    id("org.jetbrains.kotlin.android")
     // The Flutter Gradle Plugin must be applied after the Android plugin.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -18,11 +18,8 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    // AGP 9 built-in Kotlin compiler configuration (legacy kotlinOptions was removed).
-    kotlin {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
     defaultConfig {
