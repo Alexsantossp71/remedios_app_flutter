@@ -71,7 +71,9 @@ class RecoveryEnvelope {
   Future<List<int>> unlock({required String recoveryPassword}) async {
     _validatePassword(recoveryPassword);
     if (version != currentVersion || kdf != 'pbkdf2-hmac-sha256') {
-      throw const FormatException('Unsupported recovery envelope version or KDF.');
+      throw const FormatException(
+        'Unsupported recovery envelope version or KDF.',
+      );
     }
     _validateIterations(iterations);
     if (salt.length != _saltLength ||
@@ -158,7 +160,9 @@ class RecoveryEnvelope {
 
   static void _validatePassword(String password) {
     if (password.length < 12) {
-      throw ArgumentError('Recovery password must contain at least 12 characters.');
+      throw ArgumentError(
+        'Recovery password must contain at least 12 characters.',
+      );
     }
   }
 
