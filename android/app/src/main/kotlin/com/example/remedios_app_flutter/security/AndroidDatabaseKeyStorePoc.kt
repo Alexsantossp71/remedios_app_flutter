@@ -208,6 +208,17 @@ internal class AndroidDatabaseKeyStorePoc(
         }
     }
 
+    /** Test-only corruption helper. Never call this from application flows. */
+    fun deleteEnvelopeForTesting() = withExclusiveLock {
+        atomicFile.delete()
+    }
+
+    /** Test-only corruption helper. Never call this from application flows. */
+    fun deleteWrappingKeyForTesting() = withExclusiveLock {
+        val keyStore = loadKeyStore()
+        if (keyStore.containsAlias(keyAlias)) keyStore.deleteEntry(keyAlias)
+    }
+
     /** Test-only cleanup. Never call this from application flows. */
     fun destroyForTesting() = withExclusiveLock {
         val keyStore = loadKeyStore()
