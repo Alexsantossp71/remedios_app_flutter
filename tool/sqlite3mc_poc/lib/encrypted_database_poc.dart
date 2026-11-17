@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:sqlite3/sqlite3.dart';
@@ -8,27 +7,29 @@ import 'package:sqlite3/sqlite3.dart';
 class EncryptedDatabasePoc {
   EncryptedDatabasePoc._();
 
+  /// Returns a 256-bit test key encoded as 64 lowercase hexadecimal chars.
   static String generateTestKey() {
     final random = Random.secure();
-    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
-    return base64Url.encode(bytes).replaceAll('=', '');
+    return List<int>.generate(32, (_) => random.nextInt(256))
+        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join();
   }
 
   static Database open({required String path, required String key}) {
-    if (key.length < 32) {
-      throw ArgumentError.value(key.length, 'key.length', 'Key is too short');
+    if (!RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(key)) {
+      throw ArgumentError.value(
+        key.length,
+        'key.length',
+        'Key must be exactly 32 bytes encoded as 64 hexadecimal characters',
+      );
     }
 
     final db = sqlite3.open(path);
     try {
-      // SQLite3MultipleCiphers defaults are made explicit so the file format
-      // does not silently depend on a library default changing.
+      // Keep cipher and legacy format identical to the Web POC.
       db.execute("PRAGMA cipher = 'sqlcipher'");
       db.execute('PRAGMA legacy = 4');
-      final keyHex = key.codeUnits
-          .map((unit) => unit.toRadixString(16).padLeft(2, '0'))
-          .join();
-      db.execute("PRAGMA key = \"x'$keyHex'\"");
+      db.execute('''PRAGMA key = "x'$key'"''');
       // Force key verification immediately, before returning the handle.
       db.select('SELECT count(*) FROM sqlite_master');
       return db;
