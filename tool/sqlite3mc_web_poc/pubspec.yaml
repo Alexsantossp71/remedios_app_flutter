@@ -5,3 +5,5 @@ environment:
   sdk: '>=3.10.0 <4.0.0'
 dependencies:
   sqlite3: 3.9.1
+  sqflite_common: ^2.5.17
+  sqflite_common_ffi_web: ^1.2.2
