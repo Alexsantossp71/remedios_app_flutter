@@ -1,0 +1,13 @@
+name: sqlite3mc_poc
+description: Isolated native proof of concept for encrypted SQLite using SQLite3MultipleCiphers.
+publish_to: none
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dependencies:
+  sqlite3: ^3.9.1
+dev_dependencies:
+  test: ^1.26.3
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc
