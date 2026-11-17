@@ -38,7 +38,7 @@ Em outro terminal, execute:
 node test/browser_test.mjs
 ```
 
-## CI\n\nO workflow `.github/workflows/sqlite3mc-web-poc.yml` executa esta prova em Chromium no GitHub Actions, com o artefato WASM fixado por versão e hash.\n\n## Limites importantes
+## CI\n\nO workflow `.github/workflows/sqlite3mc-web-poc.yml` executa esta prova em Chromium no GitHub Actions, com o artefato WASM fixado por versão e hash.\n\n## Compatibilidade do cipher\n\nO artefato WASM publicado usa ChaCha20 (sqleet) como cipher padrão; por isso o teste seleciona `chacha20` explicitamente. A prova nativa anterior seleciona SQLCipher. Esses formatos não devem ser considerados intercambiáveis: antes de integrar o banco multiplataforma, a implementação nativa e Web terá de adotar e testar o mesmo cipher e os mesmos parâmetros.\n\n## Limites importantes
 
 - A chave fixa é pública e fictícia, exclusiva para teste; não é um modelo de
   armazenamento seguro.
