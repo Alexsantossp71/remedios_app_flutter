@@ -1,0 +1,9 @@
+name: database_key_recovery_poc
+description: Isolated proof of concept for an authenticated database-key recovery envelope.
+publish_to: none
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dependencies:
+  cryptography: ^2.9.0
+dev_dependencies:
+  test: ^1.26.3
