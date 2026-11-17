@@ -54,21 +54,21 @@ void main() {
   test(
     'sqflite FFI creates, writes and reopens an encrypted database',
     () async {
-    final db = await openEncrypted(path, key);
-    await db.insert('poc_records', {'value': 'synthetic test record'});
-    await db.close();
+      final db = await openEncrypted(path, key);
+      await db.insert('poc_records', {'value': 'synthetic test record'});
+      await db.close();
 
-    final bytes = File(path).readAsBytesSync();
-    expect(bytes.length, greaterThan(32));
-    expect(
-      String.fromCharCodes(bytes.take(16)),
-      isNot(equals('SQLite format 3\\u0000')),
-    );
+      final bytes = File(path).readAsBytesSync();
+      expect(bytes.length, greaterThan(32));
+      expect(
+        String.fromCharCodes(bytes.take(16)),
+        isNot(equals('SQLite format 3\\u0000')),
+      );
 
-    final reopened = await openEncrypted(path, key);
-    final rows = await reopened.query('poc_records');
-    expect(rows.single['value'], 'synthetic test record');
-    await reopened.close();
+      final reopened = await openEncrypted(path, key);
+      final rows = await reopened.query('poc_records');
+      expect(rows.single['value'], 'synthetic test record');
+      await reopened.close();
     },
   );
 
