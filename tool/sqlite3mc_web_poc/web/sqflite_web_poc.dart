@@ -15,8 +15,7 @@ Future<Database> _openEncrypted(String key) {
     options: OpenDatabaseOptions(
       version: 1,
       onConfigure: (db) async {
-        await db.execute("PRAGMA cipher = 'sqlcipher'");
-        await db.execute('PRAGMA legacy = 4');
+        await db.execute("PRAGMA cipher = 'chacha20'");
         await db.execute('''PRAGMA key = "x'$key'"''');
         await db.rawQuery('SELECT count(*) FROM sqlite_master');
       },
