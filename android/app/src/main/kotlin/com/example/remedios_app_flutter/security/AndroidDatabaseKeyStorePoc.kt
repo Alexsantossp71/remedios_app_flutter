@@ -34,18 +34,17 @@ internal class AndroidDatabaseKeyStorePoc(
     context: Context,
     private val namespace: String,
 ) {
-    private val appContext = context.applicationContext
-    private val directory = File(appContext.noBackupFilesDir, "database-key-poc")
-    private val envelopeFile = File(directory, "$namespace.dek")
-    private val lockFile = File(directory, "$namespace.lock")
-    private val atomicFile = AtomicFile(envelopeFile)
-    private val keyAlias = "remedios-db-key-poc-$namespace"
-
-    init {
-        require(namespace.matches(Regex("[a-zA-Z0-9_-]{1,48}"))) {
+    private val safeNamespace = namespace.also {
+        require(it.matches(Regex("[a-zA-Z0-9_-]{1,48}"))) {
             "Invalid key-store namespace."
         }
     }
+    private val appContext = context.applicationContext
+    private val directory = File(appContext.noBackupFilesDir, "database-key-poc")
+    private val envelopeFile = File(directory, "$safeNamespace.dek")
+    private val lockFile = File(directory, "$safeNamespace.lock")
+    private val atomicFile = AtomicFile(envelopeFile)
+    private val keyAlias = "remedios-db-key-poc-$safeNamespace"
 
     /** Returns null only when both the wrapped DEK and its Keystore key are absent. */
     fun readKey(): ByteArray? = withExclusiveLock {
