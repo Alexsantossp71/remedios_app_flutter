@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:html' as html;
 
+import 'package:sqlite3/common.dart';
 import 'package:sqlite3/wasm.dart';
 
 const _databaseName = 'remedios-hora-sqlite3mc-poc';
