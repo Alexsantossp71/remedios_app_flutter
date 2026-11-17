@@ -26,6 +26,21 @@ dart test
 O build hook configura `sqlite3` para usar `sqlite3mc`. A primeira execução
 pode baixar os artefatos nativos publicados pelo projeto `sqlite3`.
 
+## Situação da validação
+
+- **Nativo:** testes automatizados passaram em Linux, Windows e macOS.
+- **Aplicativo Flutter:** análise estática, testes e build Web release passaram
+  na CI principal após isolar este pacote da análise da raiz.
+- **Web criptografado:** ainda não integrado nem aprovado para produção.
+
+A documentação atual de `package:sqlite3` descreve o uso de
+`WasmSqlite3.loadFromUrlString('sqlite3mc.wasm')` com um sistema de arquivos
+virtual, incluindo `IndexedDbFileSystem`. A própria API WASM é identificada
+como experimental; portanto, a existência do artefato não comprova a
+compatibilidade com o worker e a camada `sqflite_common_ffi_web` usados pelo
+aplicativo. Essa combinação precisa de uma prova de conceito de navegador
+independente, com persistência e reabertura verificadas.
+
 ## Limites deliberados
 
 **Isto não é ainda a criptografia do banco do Remédio na Hora.**
@@ -33,7 +48,8 @@ pode baixar os artefatos nativos publicados pelo projeto `sqlite3`.
 - Não altera `DatabaseService`, factories, dependências ou lockfile do app.
 - Não implementa armazenamento seguro/recuperação de chaves.
 - Não migra o banco v11 existente nem testa interrupção/retomada da migração.
-- Não valida o artefato WebAssembly nem o worker do `sqflite_common_ffi_web`.
+- Não valida o artefato WebAssembly no navegador nem o worker do
+  `sqflite_common_ffi_web`.
 - Não substitui testes de integração em dispositivos reais.
 - A escolha do cipher e parâmetros deve passar por revisão de segurança e
   compatibilidade antes de qualquer migração do banco real.
@@ -43,9 +59,10 @@ cada execução. Não coloque dados reais de saúde nesta prova de conceito.
 
 ## Próximas etapas
 
-1. Passar CI nativo em Linux, Windows e macOS.
-2. Validar a integração WASM/IndexedDB com um artefato sqlite3mc compatível.
-3. Definir armazenamento de chaves por plataforma e UX de desbloqueio/
+1. Criar uma prova de conceito Web isolada usando o artefato
+   `sqlite3mc.wasm` compatível com a versão do pacote e verificar persistência
+   em IndexedDB, reabertura e rejeição de chave incorreta em navegador.
+2. Definir armazenamento de chaves por plataforma e UX de desbloqueio/
    recuperação, inclusive para Web.
-4. Integrar FFI ao app e projetar a migração recuperável do schema v11.
-5. Só então ativar a cifragem no aplicativo e executar testes de regressão.
+3. Integrar FFI ao app e projetar a migração recuperável do schema v11.
+4. Só então ativar a cifragem no aplicativo e executar testes de regressão.
