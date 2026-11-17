@@ -219,3 +219,5 @@ void mainSharedWorker(List<String> args) {
     _log('$_shw main done ($_debugVersion)');
   }
 }
+
+void main(List<String> args) => mainSharedWorker(args);
