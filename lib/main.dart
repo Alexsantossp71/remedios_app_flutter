@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -14,6 +15,7 @@ import 'providers/user_profile_provider.dart';
 import 'screens/main_shell.dart';
 import 'services/notification_service.dart';
 import 'services/web_reminder_service.dart';
+import 'widgets/database_unlock_gate.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +26,36 @@ Future<void> main() async {
   final notifications = NotificationService.instance;
   await notifications.init();
 
+  // Web: the encrypted database requires explicit unlock before any
+  // provider touches the database. The gate handles setup, unlock and
+  // recovery-envelope restoration; the app boots only after it succeeds.
+  // Android/desktop resolve the key transparently (Keystore) and skip the
+  // gate entirely.
+  if (kIsWeb) {
+    runApp(
+      MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        locale: const Locale('pt', 'BR'),
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('pt', 'BR'), Locale('en', 'US')],
+        home: DatabaseUnlockGate(
+          onDatabaseReady: () {
+            bootstrapApp(notifications);
+          },
+        ),
+      ),
+    );
+    return;
+  }
+  await bootstrapApp(notifications);
+}
+
+Future<void> bootstrapApp(NotificationService notifications) async {
   final therapyProvider = TherapyProvider(notifications: notifications);
   final doctorProvider = DoctorProvider();
   final consultationProvider = ConsultationProvider();

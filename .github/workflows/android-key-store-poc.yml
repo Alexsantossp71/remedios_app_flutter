@@ -1,0 +1,66 @@
+name: Android database key store (production)
+
+on:
+  pull_request:
+    paths:
+      - 'android/app/src/main/kotlin/com/example/remedios_app_flutter/security/**'
+      - 'android/app/src/androidTest/**'
+      - 'android/app/build.gradle.kts'
+      - 'android/settings.gradle.kts'
+      - '.github/workflows/android-key-store-poc.yml'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'android/gradle/wrapper/gradle-wrapper.properties'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-key-store-poc-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-keystore-tests:
+    name: Build and instrument Android database key store
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.9'
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.12'
+
+      - name: Configure Flutter SDK for Gradle
+        run: echo "flutter.sdk=$FLUTTER_ROOT" > android/local.properties
+
+      - name: Compile Android debug application
+        run: gradle -p android :app:assembleDebug
+
+      - name: Run Android Keystore instrumented tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: gradle -p android :app:connectedDebugAndroidTest

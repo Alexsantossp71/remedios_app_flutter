@@ -4,27 +4,53 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 // Import the correct database factory based on platform.
-// On web: uses sqflite_common_ffi_web (IndexedDB + WASM).
-// On mobile/desktop: uses sqflite's default implementation.
-import 'database_factory_web.dart' if (dart.library.io) 'database_factory_io.dart';
+// On web: uses sqflite_common_ffi_web with the SQLite3MC worker.
+// On Android/desktop: uses sqflite_common_ffi with the SQLite3MC build.
+import 'database_factory_web.dart'
+    if (dart.library.io) 'database_factory_io.dart';
+
+import 'database_encryption/database_encryption_service.dart';
+import 'database_encryption/database_encryption_service_web.dart'
+    if (dart.library.io) 'database_encryption/database_encryption_service_io.dart';
+import 'database_encryption/encrypted_database_opener_stub.dart'
+    if (dart.library.io) 'database_encryption/encrypted_database_opener.dart';
+import 'database_key/database_key_service.dart';
 
 /// Database service for managing SQLite database instance, schemas, and migrations.
 class DatabaseService {
+  /// Test-only override of the encryption orchestration. When set, `_initDatabase`
+  /// uses it instead of the platform default, enabling end-to-end tests with
+  /// injected key stores and directories.
+  @visibleForTesting
+  static DatabaseEncryptionService? encryptionServiceOverride;
+
   DatabaseService._();
   static final DatabaseService instance = DatabaseService._();
 
-  // Fresh database namespace: the previous v11 database remains untouched
-  // and can be recovered by restoring the previous database name.
-  static const String _databaseName = 'remedios_app_fresh_v1.db';
+  // Keep the established database name so existing v11 data remains visible.
+  // The ACTIVE database for Android/Web is the encrypted database created
+  // next to it (see DatabaseEncryptionService); the legacy file is preserved
+  // untouched as the pre-migration original.
+  static const String _databaseName = 'remedios_app.db';
   static const int _databaseVersion = 11;
 
   Database? _db;
 
+  /// Failure of the last [database] open attempt, exposed for the unlock/
+  /// recovery UI. Null when the database opened successfully.
+  Object? lastOpenError;
+
   /// Returns the singleton [Database] instance.
   Future<Database> get database async {
     if (_db != null && _db!.isOpen) return _db!;
-    _db = await _initDatabase();
-    return _db!;
+    try {
+      _db = await _initDatabase();
+      lastOpenError = null;
+      return _db!;
+    } catch (error) {
+      lastOpenError = error;
+      rethrow;
+    }
   }
 
   /// Optional override for tests.
@@ -41,6 +67,13 @@ class DatabaseService {
   @visibleForTesting
   Future<void> applyUpgradesForTesting(Database db, int oldVersion) {
     return _onUpgrade(db, oldVersion, _databaseVersion);
+  }
+
+  /// Cria o schema completo v11 com o mesmo SQL de produção — usado pelos
+  /// testes de migração para construir bancos legados realistas.
+  @visibleForTesting
+  Future<void> createSchemaForTesting(Database db) {
+    return _onCreate(db, _databaseVersion);
   }
 
   /// Initialize an in-memory database for testing.
@@ -67,26 +100,71 @@ class DatabaseService {
     // Initialize the correct database factory for the current platform.
     initializeDatabaseFactory();
 
+    // Encrypted path (Android + Web, the scope of this delivery):
+    // 1. resolve the key BEFORE any file operation;
+    // 2. run the legacy → encrypted migration when needed (backup, copy,
+    //    validate, atomic swap — the original file is never modified);
+    // 3. open the encrypted database with the key PRAGMAs applied and
+    //    validated in onConfigure, BEFORE any schema read.
+    // Out-of-scope native platforms (iOS/macOS) keep the legacy plaintext
+    // behavior below, unchanged.
+    final service =
+        encryptionServiceOverride ??
+        createDatabaseEncryptionService(DatabaseKeyService.instance);
+    final plan = await service.prepare();
+    if (plan != null) {
+      lastOpenError = null;
+      return _openEncryptedDatabase(plan);
+    }
+
+    return _openLegacyPlaintextDatabase();
+  }
+
+  Future<Database> _openEncryptedDatabase(EncryptionOpenPlan plan) async {
+    if (kIsWeb) {
+      return databaseFactoryWeb.openDatabase(
+        plan.databaseName,
+        options: OpenDatabaseOptions(
+          version: _databaseVersion,
+          onCreate: _onCreate,
+          onConfigure: (db) async {
+            applyEncryptionPragmas(db, plan.key);
+            await validateEncryptedKeyOrThrow(db);
+            await _onConfigure(db);
+          },
+          onUpgrade: _onUpgrade,
+        ),
+      );
+    }
+    // Android/desktop through the FFI factory backed by sqlite3mc.
+    return openEncryptedSqfliteDatabase(
+      plan.databaseName,
+      key: plan.key,
+      version: _databaseVersion,
+      onCreate: _onCreate,
+      onUpgrade: (db, oldVersion, newVersion) =>
+          _onUpgrade(db, oldVersion, newVersion),
+      extraOnConfigure: _onConfigure,
+    );
+  }
+
+  /// Legacy plaintext open path (iOS/macOS, out of the encryption scope).
+  Future<Database> _openLegacyPlaintextDatabase() async {
     String path;
     if (kIsWeb) {
-      // On web, use a logical database name (IndexedDB).
       path = _databaseName;
     } else {
       try {
-        // On mobile/desktop, use the application documents directory.
         final documentsDirectory = await getApplicationDocumentsDirectory();
         path = p.join(documentsDirectory.path, _databaseName);
       } catch (_) {
-        // Fallback for tests or environments without path_provider
         path = await getDatabasesPath();
         path = p.join(path, _databaseName);
       }
     }
 
-    Database db;
     if (kIsWeb) {
-      // On web, use databaseFactoryWeb directly.
-      db = await databaseFactoryWeb.openDatabase(
+      return databaseFactoryWeb.openDatabase(
         path,
         options: OpenDatabaseOptions(
           version: _databaseVersion,
@@ -95,20 +173,15 @@ class DatabaseService {
           onUpgrade: _onUpgrade,
         ),
       );
-    } else {
-      db = await openDatabase(
-        path,
-        version: _databaseVersion,
-        onCreate: _onCreate,
-        onConfigure: (db) => _onConfigure(db),
-        onUpgrade: (db, oldVersion, newVersion) => _onUpgrade(db, oldVersion, newVersion),
-      );
     }
-
-    // Intentionally do not import legacy SharedPreferences data. This fresh
-    // database starts empty; the previous SQLite file and legacy preference
-    // values are left untouched for manual recovery if needed.
-    return db;
+    return openDatabase(
+      path,
+      version: _databaseVersion,
+      onCreate: _onCreate,
+      onConfigure: (db) => _onConfigure(db),
+      onUpgrade: (db, oldVersion, newVersion) =>
+          _onUpgrade(db, oldVersion, newVersion),
+    );
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -393,7 +466,9 @@ class DatabaseService {
     if (oldVersion < 8) {
       // Version 8: Add ai_consent_at column (consentimento para envio de
       // dados clínicos ao serviço de IA; timestamp UTC, NULL = não autorizou).
-      await db.execute('ALTER TABLE user_profile ADD COLUMN ai_consent_at TEXT');
+      await db.execute(
+        'ALTER TABLE user_profile ADD COLUMN ai_consent_at TEXT',
+      );
     }
     if (oldVersion < 9) {
       // Version 9: Create exams table (módulo de exames — pedido → agendado
