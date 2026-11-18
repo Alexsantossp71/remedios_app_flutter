@@ -24,7 +24,7 @@ dependencies:
   flutter_local_notifications: ^20.1.0
   # Keep these versions aligned with the cross-platform SQLite3MC adapter POC.
   # This only prepares dependency compatibility; database encryption is NOT enabled.
-  sqlite3: 3.9.1
+  sqlite3: 3.5.2
   sqflite_common: 2.5.17
   sqflite_common_ffi: 2.4.7
   sqflite_common_ffi_web: 1.2.2
