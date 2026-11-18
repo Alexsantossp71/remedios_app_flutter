@@ -15,7 +15,7 @@ class DatabaseService {
 
   // Fresh database namespace: the previous v11 database remains untouched
   // and can be recovered by restoring the previous database name.
-  static const String _databaseName = 'remedios_app_fresh_v1.db';
+  static const String _databaseName = 'remedios_app.db';
   static const int _databaseVersion = 11;
 
   Database? _db;
