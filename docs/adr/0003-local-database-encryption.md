@@ -29,20 +29,19 @@ Essa combinação é **uma hipótese de integração, não uma implementação v
 
 O pacote `sqflite_sqlcipher` documenta suporte nativo a Android/iOS/macOS, mas não resolve Windows/Linux/Web. Não deve ser usado como solução única para a matriz do aplicativo.
 
-## Matriz de implementação
+## Escopo de implementação confirmado
+
+Somente Android e Web fazem parte da entrega atual. iOS, macOS, Windows e Linux ficam fora do escopo e não bloqueiam a conclusão deste trabalho.
 
 | Plataforma | Direção a validar | Situação |
 | --- | --- | --- |
-| Android | SQLite3MultipleCiphers via FFI ou backend nativo compatível; chave protegida pelo Android Keystore | Pendente |
-| iOS | SQLite3MultipleCiphers via FFI ou backend nativo compatível; chave protegida pelo Keychain | Pendente |
-| macOS | Mesma biblioteca FFI e Keychain, se o alvo for oficialmente suportado | Pendente |
-| Windows/Linux | SQLite3MultipleCiphers via FFI; chave protegida pelo mecanismo seguro do sistema operacional | Pendente |
-| Web | WASM do sqlite3mc compatível com o worker sqflite; chave via segredo de desbloqueio ou mecanismo WebCrypto validado | Pendente |
+| Android | SQLite3MultipleCiphers com backend validado; DEK protegida pelo Android Keystore | Pendente |
+| Web | WASM SQLite3MC compatível com worker/OPFS; desbloqueio e envelope de recuperação protegidos com Web Crypto | Pendente |
 
 ## Gestão de chaves e desbloqueio
 
 - Gerar chave aleatória de alta entropia; nunca embutir, registrar em log, sincronizar em texto claro ou guardar em SharedPreferences.
-- Em Android/iOS/macOS/Windows/Linux, avaliar `flutter_secure_storage` e verificar o mecanismo efetivo de cada sistema operacional.
+- Em Android, proteger a DEK com Android Keystore. No Web, usar desbloqueio explícito e envelope de recuperação com Web Crypto; não presumir que o armazenamento do navegador equivale ao Keystore.
 - No Web, não presumir que secure storage equivale ao Keychain/Keystore. Definir fluxo explícito de desbloqueio e recuperação; avaliar as limitações de WebCrypto, origem HTTPS, perfil/navegador e perda de dados do navegador.
 - Não criar um banco vazio nem redefinir a chave quando o segredo estiver ausente ou incorreto. Mostrar erro recuperável e preservar o banco original.
 
@@ -56,7 +55,7 @@ O pacote `sqflite_sqlcipher` documenta suporte nativo a Android/iOS/macOS, mas n
 6. **Ciclo de vida:** considerar backups, WAL/journal, arquivos temporários, exportações, anexos/fotos e exclusão de dados.
 7. **Compatibilidade:** preservar schema v11 e todas as migrações futuras; suportar atualização de instalações com dados reais.
 8. **Testes:** cobrir banco novo, banco legado populado, migração interrompida, reabertura, chave errada, adulteração, falta de chave, atualização de schema, restauração de backup e testes por plataforma.
-9. **Operação:** validar em aparelhos Android/iOS reais e nos navegadores suportados antes de declarar proteção concluída.
+9. **Operação:** validar em aparelhos Android reais e nos navegadores Web oficialmente suportados antes de declarar proteção concluída.
 
 ## Plano de entrega
 
@@ -81,7 +80,7 @@ As provas nativas e OPFS usam somente dados sintéticos. A prova sqflite Web ain
 
 ## Critério de conclusão
 
-A criptografia local só poderá ser declarada concluída quando todas as plataformas oficialmente suportadas tiverem implementação real, chaves protegidas, migração reversível/recuperável, testes de preservação de dados e validação de build/testes por plataforma. Enquanto isso, a documentação deve dizer explicitamente que o banco local não está criptografado em repouso.
+A criptografia local só poderá ser declarada concluída quando Android e Web tiverem implementação real, chaves protegidas, migração reversível/recuperável, testes de preservação de dados e validação de build/testes por plataforma. Enquanto isso, a documentação deve dizer explicitamente que o banco local não está criptografado em repouso.
 
 ## Consequência
 
@@ -106,3 +105,8 @@ dados.** O banco do aplicativo permanece sem criptografia em repouso até que a
 integração de chave, abertura cifrada e migração recuperável seja entregue e
 validada. A elevação do Dart mínimo também precisa ser considerada na política
 de compatibilidade de versões do aplicativo.
+
+
+## Redução de escopo — 2026-11-18
+
+A entrega foi deliberadamente limitada a Android e Web. iOS, macOS, Windows e Linux não serão implementados neste PR. Os critérios de aceite, CI e documentação devem avaliar somente Android e Web, sem enfraquecer os requisitos de recuperação e preservação de dados.
