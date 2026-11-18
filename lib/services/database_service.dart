@@ -13,8 +13,8 @@ class DatabaseService {
   DatabaseService._();
   static final DatabaseService instance = DatabaseService._();
 
-  // Fresh database namespace: the previous v11 database remains untouched
-  // and can be recovered by restoring the previous database name.
+  // Keep the established database name so existing v11 data remains visible.
+  // Encryption/migration must be integrated separately before changing this path.
   static const String _databaseName = 'remedios_app.db';
   static const int _databaseVersion = 11;
 
@@ -105,9 +105,9 @@ class DatabaseService {
       );
     }
 
-    // Intentionally do not import legacy SharedPreferences data. This fresh
-    // database starts empty; the previous SQLite file and legacy preference
-    // values are left untouched for manual recovery if needed.
+    // Do not import legacy SharedPreferences data. The SQLite database above is
+    // opened under its established name; existing records are retained and
+    // schema upgrades are handled by the callbacks supplied to openDatabase.
     return db;
   }
 
