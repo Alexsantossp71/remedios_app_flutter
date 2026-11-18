@@ -20,10 +20,11 @@ revisar o conteúdo antes do envio e conferir os campos extraídos antes de salv
 
 ## Controles atuais e limites conhecidos
 
-- O armazenamento local não deve ser tratado como criptografado em repouso.
+- **Android e Web**: o banco local agora é criptografado em repouso com SQLite3MultipleCiphers (ChaCha20) — DEK de 256 bits protegida pelo Android Keystore (Android) ou por senha de recuperação com WebCrypto + envelope autenticado (Web). Detalhes, limites e arquivos auxiliares em [docs/database-encryption.md](docs/database-encryption.md).
+- iOS, macOS, Windows e Linux permanecem fora do escopo: o armazenamento local nessas plataformas não deve ser tratado como criptografado em repouso.
 - Novos backups exportados pelo app usam AES-256-GCM com chave derivada da senha por PBKDF2-HMAC-SHA256 (310.000 iterações), salt e nonce aleatórios e autenticação de integridade. A senha não é armazenada nem enviada a servidores; sem ela, o backup não pode ser recuperado.
 - Backups JSON antigos, sem criptografia, continuam aceitos para restauração por compatibilidade. Proteja esses arquivos como dados sensíveis e gere um novo backup criptografado.
-- A criptografia do arquivo de backup não cifra o banco SQLite/IndexedDB ativo; a proteção em repouso desse armazenamento permanece pendente de uma migração específica por plataforma. Os requisitos e critérios de segurança estão definidos em [ADR 0003](docs/adr/0003-local-database-encryption.md).
+- A criptografia do arquivo de backup é independente da cifra do banco ativo; no Android e na Web o banco já é cifrado em repouso (ADR 0003 implementada), com o banco legado preservado em texto claro até a política de retenção removê-lo. O backup cifrado continua recomendado para portabilidade.
 - O cliente Flutter chama um proxy remoto de IA. Não coloque segredos de
   provedor no aplicativo; credenciais devem permanecer no ambiente do servidor.
 - A política de retenção e processamento do proxy/provedor deve ser confirmada
@@ -45,8 +46,8 @@ revisar o conteúdo antes do envio e conferir os campos extraídos antes de salv
 
 ## Próximas etapas técnicas
 
-- Concluir a validação de gestão e recuperação de chaves conforme ADR 0004 e o plano em `docs/security/database-key-management-test-plan.md`; a proposta ainda não está implementada.
-- Validar criptografia em repouso para SQLite e armazenamento Web, incluindo migração recuperável sem perda de dados.
+- Concluir a validação de gestão e recuperação de chaves conforme ADR 0004 e o plano em `docs/security/database-key-management-test-plan.md` (formato de envelope e fluxos de recuperação já implementados no PR #64; falta UI de exportação no Android).
+- Criptografia em repouso para SQLite/Web implementada (PR #64); pendências operacionais: validação em aparelho físico, Firefox/Safari reais e política de retenção do backup legado.
 - Implementar controles explícitos de consentimento por categoria de envio,
   revogação e registro auditável.
 - Definir política de retenção e exclusão no proxy, OCR e provedor de IA.

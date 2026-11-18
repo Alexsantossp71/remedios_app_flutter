@@ -33,6 +33,7 @@ dependencies:
   timezone: ^0.10.1
   file_picker: ^8.1.2
   web: ^1.1.0
+  synchronized: ^3.3.1
   share_plus: 11.0.0
 dev_dependencies:
   flutter_test:
@@ -43,6 +44,17 @@ dev_dependencies:
     sdk: flutter
   test: any
   flutter_lints: ^5.0.0
+
+# Compile the SQLite library used by sqflite_common_ffi as SQLite3MultipleCiphers
+# (SQLite3MC) with the ChaCha20 cipher, so the database can be encrypted at rest.
+# This replaces the plaintext SQLite build on Android and on the Dart VM used by
+# the automated tests. It does not change the schema or any stored data.
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc
+      cipher: chacha20
+
 flutter:
   uses-material-design: true
   assets:

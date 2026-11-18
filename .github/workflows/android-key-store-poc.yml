@@ -1,4 +1,4 @@
-name: Android Keystore key-store POC
+name: Android database key store (production)
 
 on:
   pull_request:
@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   android-keystore-tests:
-    name: Build and instrument Android Keystore POC
+    name: Build and instrument Android database key store
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

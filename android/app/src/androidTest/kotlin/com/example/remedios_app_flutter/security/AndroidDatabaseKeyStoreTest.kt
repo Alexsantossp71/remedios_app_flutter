@@ -17,16 +17,16 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class AndroidDatabaseKeyStorePocTest {
+class AndroidDatabaseKeyStoreTest {
     private lateinit var context: Context
     private lateinit var namespace: String
-    private lateinit var store: AndroidDatabaseKeyStorePoc
+    private lateinit var store: AndroidDatabaseKeyStore
 
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         namespace = "test-${UUID.randomUUID()}"
-        store = AndroidDatabaseKeyStorePoc(context, namespace)
+        store = AndroidDatabaseKeyStore(context, namespace)
     }
 
     @After
@@ -59,7 +59,7 @@ class AndroidDatabaseKeyStorePocTest {
         try {
             val futures = candidates.map { candidate ->
                 executor.submit(Callable {
-                    AndroidDatabaseKeyStorePoc(context, namespace)
+                    AndroidDatabaseKeyStore(context, namespace)
                         .createKeyIfAbsent(candidate)
                 })
             }

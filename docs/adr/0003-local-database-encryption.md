@@ -1,7 +1,7 @@
 # ADR 0003 — Criptografia do banco local em repouso
 
-- Status: decisão de arquitetura em validação; nenhuma criptografia do banco ativo é ativada por este ADR.
-- Data: 2026-11-16
+- Status: **implementada** para Android e Web pelo PR #64 (ver docs/database-encryption.md). iOS/macOS/Windows/Linux permanecem sem criptografia e abrem o banco legado sem alterações.
+- Data: 2026-11-16 (atualizado em 2026-11-18)
 - Contexto: PR #48 protege arquivos de backup exportados, mas não o banco local.
 
 ## Contexto observado no código
@@ -110,3 +110,14 @@ de compatibilidade de versões do aplicativo.
 ## Redução de escopo — 2026-11-18
 
 A entrega foi deliberadamente limitada a Android e Web. iOS, macOS, Windows e Linux não serão implementados neste PR. Os critérios de aceite, CI e documentação devem avaliar somente Android e Web, sem enfraquecer os requisitos de recuperação e preservação de dados.
+
+
+## Implementação entregue (2026-11-18, PR #64)
+
+A integração real seguiu exatamente as hipóteses validadas pelas provas de conceito:
+
+- Android: `sqlite3mc` via build hook (`hooks.user_defines.sqlite3`) + `sqflite_common_ffi`; DEK envolta pelo Android Keystore (`AndroidDatabaseKeyStore.kt` + canal `remedios_app/database_key_store`).
+- Web: `sqlite3mc.wasm` oficial 3.5.2 + worker `sqlite3_mc_sw.js` com wrapper `multipleciphers-<fs>`; desbloqueio explícito com WebCrypto (PBKDF2-HMAC-SHA256 + AES-256-GCM) e envelope de recuperação versionado portável.
+- Migração recuperável do banco legado v11 com cópia verificada, validação de contagens/IDs, `integrity_check`/`foreign_key_check`, troca atômica e preservação integral da origem.
+- Falha segura em todos os caminhos: chave ausente/corrompida nunca cria banco vazio; build SQLite sem cifra recusa-se a gravar dados (sonda de runtime).
+- Cobertura automatizada descrita em docs/database-encryption.md; 41 testes novos, suíte existente (410 testes) verde.

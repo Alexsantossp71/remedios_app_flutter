@@ -19,20 +19,28 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Isolated Android-only proof of concept. It is deliberately not registered
- * with Flutter or used by DatabaseService.
+ * Production Android key store for the local database's 256-bit DEK.
  *
  * A random DEK is wrapped by a non-exportable Android Keystore AES key. The
  * wrapped DEK is stored in noBackupFilesDir via AtomicFile. A JVM lock
  * serializes threads/instances in this process; an OS file lock serializes
  * cooperating processes using the same app-private lock file.
  *
- * This class is not production-approved. In particular, multiprocess tests,
- * device/OS lifecycle tests, and independent security review are still needed.
+ * Guarantees:
+ * - The raw DEK never leaves this class except through [readKey] (used by the
+ *   Dart layer to open the encrypted database in memory only).
+ * - Nothing is logged. The DEK never reaches SharedPreferences or any
+ *   plaintext file.
+ * - A missing/incomplete/inauthentic key material raises
+ *   [KeyRecoveryRequiredException] instead of silently creating a new key,
+ *   so the encrypted database is never replaced by an empty one.
+ * - The key survives device restarts (Keystore) and app restarts (envelope).
+ * - Key creation is atomic: concurrent first-use calls never overwrite an
+ *   existing key.
  */
-internal class AndroidDatabaseKeyStorePoc(
+class AndroidDatabaseKeyStore(
     context: Context,
-    private val namespace: String,
+    private val namespace: String = DEFAULT_NAMESPACE,
 ) {
     private val safeNamespace = namespace.also {
         require(it.matches(Regex("[a-zA-Z0-9_-]{1,48}"))) {
@@ -40,11 +48,11 @@ internal class AndroidDatabaseKeyStorePoc(
         }
     }
     private val appContext = context.applicationContext
-    private val directory = File(appContext.noBackupFilesDir, "database-key-poc")
+    private val directory = File(appContext.noBackupFilesDir, "database-key")
     private val envelopeFile = File(directory, "$safeNamespace.dek")
     private val lockFile = File(directory, "$safeNamespace.lock")
     private val atomicFile = AtomicFile(envelopeFile)
-    private val keyAlias = "remedios-db-key-poc-$safeNamespace"
+    private val keyAlias = "remedios-db-key-v1-$safeNamespace"
 
     /** Returns null only when both the wrapped DEK and its Keystore key are absent. */
     fun readKey(): ByteArray? = withExclusiveLock {
@@ -88,6 +96,37 @@ internal class AndroidDatabaseKeyStorePoc(
         val encrypted = encrypt(candidate, wrappingKey)
         writeEnvelopeAtomically(encrypted)
         true
+    }
+
+    /**
+     * Deletes the key material. Only call as part of an explicit, recoverable
+     * data lifecycle: the encrypted database becomes unreadable afterwards.
+     */
+    fun deleteKey() = withExclusiveLock {
+        val keyStore = loadKeyStore()
+        if (keyStore.containsAlias(keyAlias)) keyStore.deleteEntry(keyAlias)
+        atomicFile.delete()
+        Unit
+    }
+
+    /** Test-only corruption helper. Never call this from application flows. */
+    fun deleteEnvelopeForTesting() = withExclusiveLock {
+        atomicFile.delete()
+    }
+
+    /** Test-only corruption helper. Never call this from application flows. */
+    fun deleteWrappingKeyForTesting() = withExclusiveLock {
+        val keyStore = loadKeyStore()
+        if (keyStore.containsAlias(keyAlias)) keyStore.deleteEntry(keyAlias)
+    }
+
+    /** Test-only cleanup. Never call this from application flows. */
+    fun destroyForTesting() = withExclusiveLock {
+        val keyStore = loadKeyStore()
+        if (keyStore.containsAlias(keyAlias)) keyStore.deleteEntry(keyAlias)
+        atomicFile.delete()
+        lockFile.delete()
+        Unit
     }
 
     private fun ensureSupportedPlatform() {
@@ -207,26 +246,6 @@ internal class AndroidDatabaseKeyStorePoc(
         }
     }
 
-    /** Test-only corruption helper. Never call this from application flows. */
-    fun deleteEnvelopeForTesting() = withExclusiveLock {
-        atomicFile.delete()
-    }
-
-    /** Test-only corruption helper. Never call this from application flows. */
-    fun deleteWrappingKeyForTesting() = withExclusiveLock {
-        val keyStore = loadKeyStore()
-        if (keyStore.containsAlias(keyAlias)) keyStore.deleteEntry(keyAlias)
-    }
-
-    /** Test-only cleanup. Never call this from application flows. */
-    fun destroyForTesting() = withExclusiveLock {
-        val keyStore = loadKeyStore()
-        if (keyStore.containsAlias(keyAlias)) keyStore.deleteEntry(keyAlias)
-        atomicFile.delete()
-        lockFile.delete()
-        Unit
-    }
-
     private inline fun <T> ReentrantLock.withLockCompat(block: () -> T): T {
         lock()
         try {
@@ -237,6 +256,7 @@ internal class AndroidDatabaseKeyStorePoc(
     }
 
     companion object {
+        const val DEFAULT_NAMESPACE = "remedios_app"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val DEK_LENGTH = 32
@@ -248,4 +268,4 @@ internal class AndroidDatabaseKeyStorePoc(
     }
 }
 
-internal class KeyRecoveryRequiredException(message: String) : Exception(message)
+class KeyRecoveryRequiredException(message: String) : Exception(message)

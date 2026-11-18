@@ -32,10 +32,15 @@ jobs:
       - name: Verify lockfile is reproducible
         run: flutter pub get --enforce-lockfile
 
-      # Keep the generated Web worker and WASM matched to the pinned package
-      # versions. This is the regular SQLite build; encryption is not enabled.
-      - name: Prepare Web SQLite assets
-        run: dart run sqflite_common_ffi_web:setup --force
+      # Regenerate the upstream web worker for the pinned package versions,
+      # then replace the WASM with the SQLite3MultipleCiphers build and
+      # compile the encryption-capable shared worker used by the app.
+      - name: Prepare Web SQLite assets (SQLite3MC)
+        run: |
+          dart run sqflite_common_ffi_web:setup --force
+          curl -fsSLo web/sqlite3.wasm "https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/sqlite3mc.wasm"
+          echo "62a34ec725631c0438e4255ce0c6059099bf8e7fb331e7d4d91a38e075f43a19  web/sqlite3.wasm" | sha256sum -c -
+          dart compile js -O2 -o web/sqlite3_mc_sw.js web/sqlite3mc_shared_worker.dart
 
       # The existing repository has formatting drift across many untouched
       # Dart files. Report it without preventing analyzer/tests/build from
