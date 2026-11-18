@@ -8,6 +8,9 @@ on:
       - 'android/app/build.gradle.kts'
       - 'android/settings.gradle.kts'
       - '.github/workflows/android-key-store-poc.yml'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - 'android/gradle/wrapper/gradle-wrapper.properties'
 
 permissions:
   contents: read
@@ -34,7 +37,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.50.0'
+          flutter-version: '3.44.9'
           cache: true
 
       - name: Install Flutter dependencies
