@@ -50,7 +50,7 @@ flutter {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
-    // Isolated Android Keystore POC instrumentation tests only.
+    // Instrumentation test versions are aligned with the AndroidX versions resolved by the app runtime.
     androidTestImplementation("androidx.test:core:1.3.0")
     androidTestImplementation("androidx.test:runner:1.3.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.2")
