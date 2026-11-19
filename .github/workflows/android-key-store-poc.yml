@@ -37,7 +37,9 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.9'
+          # Alinhado com o flutter-ci.yml (channel stable). Pin antigo (3.44.9)
+          # quebra o pub get agora que o app usa material_ui (requer >= 3.47).
+          channel: stable
           cache: true
 
       - name: Install Flutter dependencies
