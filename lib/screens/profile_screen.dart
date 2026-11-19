@@ -1,9 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
-import 'dart:ui' show ImageByteFormat;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -24,12 +21,16 @@ import '../screens/progress_screen.dart';
 import '../services/backup_file.dart';
 import '../services/backup_crypto_service.dart';
 import '../services/backup_service.dart';
-import '../services/emergency_card_share_service.dart';
 import '../services/web_reminder_service.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/br_input_formatters.dart';
 import '../widgets/privacy_notice.dart';
 import '../widgets/section_header.dart';
+import 'profile/widgets/cadastro_icon_box.dart';
+import 'profile/widgets/emergency_card.dart';
+import 'profile/widgets/emergency_contact_dialog.dart';
+import 'profile/widgets/string_list_editor.dart';
+import 'profile/widgets/web_reminder_card.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -475,7 +476,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final provider = context.read<UserProfileProvider>();
     final result = await showDialog<EmergencyContact>(
       context: context,
-      builder: (context) => _EmergencyContactDialog(contact: contact),
+      builder: (context) => EmergencyContactDialog(contact: contact),
     );
     if (result == null) return;
 
@@ -547,7 +548,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _alergias.isNotEmpty ||
                 _condicoesCronicas.isNotEmpty) ...[
               const SizedBox(height: 24),
-              _EmergencyCard(
+              EmergencyCard(
                 tipoSanguineo: _tipoSanguineo,
                 alergias: _alergias,
                 condicoesCronicas: _condicoesCronicas,
@@ -651,7 +652,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    _StringListEditor(
+                    StringListEditor(
                       label: 'Alergias',
                       icon: Icons.warning_amber_outlined,
                       hint: 'Ex: Dipirona, frutos do mar',
@@ -659,7 +660,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onChanged: (values) => setState(() => _alergias = values),
                     ),
                     const SizedBox(height: 16),
-                    _StringListEditor(
+                    StringListEditor(
                       label: 'Condições crônicas',
                       icon: Icons.monitor_heart_outlined,
                       hint: 'Ex: Hipertensão, diabetes',
@@ -830,7 +831,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 children: [
                   ListTile(
-                    leading: _CadastroIconBox(
+                    leading: CadastroIconBox(
                       icon: Icons.medical_services_outlined,
                       isDark: isDark,
                     ),
@@ -850,7 +851,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   ListTile(
-                    leading: _CadastroIconBox(
+                    leading: CadastroIconBox(
                       icon: Icons.science_outlined,
                       isDark: isDark,
                     ),
@@ -872,7 +873,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   ListTile(
-                    leading: _CadastroIconBox(
+                    leading: CadastroIconBox(
                       icon: Icons.biotech_outlined,
                       isDark: isDark,
                     ),
@@ -894,7 +895,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   ListTile(
-                    leading: _CadastroIconBox(
+                    leading: CadastroIconBox(
                       icon: Icons.health_and_safety,
                       isDark: isDark,
                     ),
@@ -914,7 +915,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   ListTile(
-                    leading: _CadastroIconBox(
+                    leading: CadastroIconBox(
                       icon: Icons.insights_outlined,
                       isDark: isDark,
                     ),
@@ -939,7 +940,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (WebReminderService.instance.isSupported) ...[
               const SectionHeader(title: 'Lembretes no navegador'),
               const SizedBox(height: 10),
-              _WebReminderCard(),
+              WebReminderCard(),
               const SizedBox(height: 28),
             ],
             const SectionHeader(title: 'Backup e restauração'),
@@ -1122,615 +1123,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return 'Altura deve estar entre 0,30 e 3,00 m';
     }
     return null;
-  }
-}
-
-/// Cartão de emergência com resumo rápido do perfil.
-///
-/// Recebe os valores ao vivo do formulário (não o perfil salvo), para que
-/// o resumo reaja na hora em que o usuário edita alergias, condições
-/// crônicas ou tipo sanguíneo — antes de apertar "Salvar perfil".
-///
-/// O botão de compartilhar captura o próprio cartão como imagem PNG
-/// (RepaintBoundary) e abre a folha de compartilhamento do sistema; no
-/// navegador, quando não há suporte a compartilhar arquivos, o PNG é
-/// baixado direto.
-class _EmergencyCard extends StatefulWidget {
-  const _EmergencyCard({
-    required this.tipoSanguineo,
-    required this.alergias,
-    required this.condicoesCronicas,
-    required this.contacts,
-  });
-
-  final TipoSanguineo? tipoSanguineo;
-  final List<String> alergias;
-  final List<String> condicoesCronicas;
-  final List<EmergencyContact> contacts;
-
-  @override
-  State<_EmergencyCard> createState() => _EmergencyCardState();
-}
-
-class _EmergencyCardState extends State<_EmergencyCard> {
-  /// RepaintBoundary que delimita o que entra na imagem compartilhada.
-  final _boundaryKey = GlobalKey();
-
-  /// True enquanto a imagem está sendo gerada/compartilhada.
-  bool _compartilhando = false;
-
-  Future<void> _compartilharComoImagem() async {
-    if (_compartilhando) return;
-    final boundary =
-        _boundaryKey.currentContext?.findRenderObject()
-            as RenderRepaintBoundary?;
-    if (boundary == null) return;
-
-    // A captura acontece ANTES do spinner: a imagem é sempre do cartão
-    // completo, nunca com o indicador de progresso por cima.
-    final Uint8List pngBytes;
-    try {
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ImageByteFormat.png);
-      if (byteData == null) {
-        throw StateError('Falha ao codificar PNG do cartão de emergência');
-      }
-      pngBytes = byteData.buffer.asUint8List();
-    } catch (_) {
-      if (mounted) {
-        showAppSnackBar(
-          context,
-          'Não foi possível gerar a imagem do cartão.',
-          type: AppSnackType.error,
-        );
-      }
-      return;
-    }
-
-    setState(() => _compartilhando = true);
-    try {
-      final agora = DateTime.now();
-      await shareEmergencyCardImage(
-        pngBytes: pngBytes,
-        fileName: 'cartao-emergencia-${_stampArquivo(agora)}.png',
-        sharePositionOrigin: _rectDaTela(),
-      );
-      if (mounted) {
-        showAppSnackBar(
-          context,
-          'Imagem do cartão gerada — compartilhe ou salve onde quiser.',
-          type: AppSnackType.success,
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        showAppSnackBar(
-          context,
-          'Não foi possível compartilhar o cartão agora.',
-          type: AppSnackType.error,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _compartilhando = false);
-    }
-  }
-
-  /// Retângulo do cartão em coordenadas globais — âncora do popover de
-  /// compartilhamento no iPad/macOS; ignorado nas demais plataformas.
-  Rect? _rectDaTela() {
-    final box = _boundaryKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null || !box.attached) return null;
-    final position = box.localToGlobal(Offset.zero);
-    return position & box.size;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textTheme = Theme.of(context).textTheme;
-    final inkColor = isDark ? BrandColors.darkInk : BrandColors.ink;
-    final mutedColor = isDark ? BrandColors.darkMuted : BrandColors.muted;
-    final mainContact = widget.contacts.isNotEmpty
-        ? widget.contacts.first
-        : null;
-
-    return RecordCard(
-      // Acento vermelho da marca: cartão de emergência pede atenção —
-      // o mesmo papel do errorContainer antes da migração.
-      accentColor: BrandColors.red,
-      padding: EdgeInsets.zero,
-      child: Stack(
-        children: [
-          // A captura (RepaintBoundary) cobre o conteúdo inteiro do cartão,
-          // com fundo sólido — assim o PNG não sai com fundo transparente
-          // e leva título, linhas e rodapé prontos para quem receber.
-          RepaintBoundary(
-            key: _boundaryKey,
-            child: Container(
-              color: isDark ? BrandColors.darkSurface : Colors.white,
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.medical_information_outlined,
-                        color: BrandColors.red,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Cartão de emergência',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: inkColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _EmergencyRow(
-                    label: 'Tipo sanguíneo',
-                    value: widget.tipoSanguineo?.value ?? 'Não informado',
-                  ),
-                  const SizedBox(height: 6),
-                  _EmergencyRow(
-                    label: 'Alergias',
-                    value: _resumoLista(widget.alergias),
-                  ),
-                  const SizedBox(height: 6),
-                  _EmergencyRow(
-                    label: 'Condições crônicas',
-                    value: _resumoLista(widget.condicoesCronicas),
-                  ),
-                  const SizedBox(height: 6),
-                  _EmergencyRow(
-                    label: 'Contato de emergência',
-                    value: mainContact != null
-                        ? '${mainContact.nome} — ${mainContact.telefone}'
-                        : 'Nenhum cadastrado',
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Remédio na Hora • Gerado em ${_stampRodape(DateTime.now())}',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: mutedColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: _compartilhando
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2.4),
-                    ),
-                  )
-                : IconButton(
-                    tooltip: 'Compartilhar como imagem',
-                    icon: const Icon(Icons.ios_share_outlined),
-                    color: BrandColors.red,
-                    onPressed: _compartilharComoImagem,
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Resumo compacto de uma lista do cartão: 'Nenhuma' quando vazia,
-/// itens separados por vírgula e "(+N)" quando passa de dois.
-String _resumoLista(List<String> valores) {
-  if (valores.isEmpty) return 'Nenhuma';
-  if (valores.length <= 2) return valores.join(', ');
-  return '${valores.take(2).join(', ')} (+${valores.length - 2})';
-}
-
-/// Carimbo para o nome do arquivo: YYYYMMDD-HHMMSS.
-///
-/// Formatação manual (sem intl) para não depender do locale inicializado.
-String _stampArquivo(DateTime d) {
-  String p2(int v) => v.toString().padLeft(2, '0');
-  return '${d.year.toString().padLeft(4, '0')}${p2(d.month)}${p2(d.day)}'
-      '-${p2(d.hour)}${p2(d.minute)}${p2(d.second)}';
-}
-
-/// Carimbo legível para o rodapé da imagem: dd/MM/yyyy HH:mm.
-String _stampRodape(DateTime d) {
-  String p2(int v) => v.toString().padLeft(2, '0');
-  return '${p2(d.day)}/${p2(d.month)}/${d.year} ${p2(d.hour)}:${p2(d.minute)}';
-}
-
-class _EmergencyRow extends StatelessWidget {
-  const _EmergencyRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 140,
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: isDark ? BrandColors.darkMuted : BrandColors.muted,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: isDark ? BrandColors.darkInk : BrandColors.ink,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Editor simples de lista de textos: chips com remoção + campo para adicionar.
-class _StringListEditor extends StatefulWidget {
-  const _StringListEditor({
-    required this.label,
-    required this.icon,
-    required this.hint,
-    required this.values,
-    required this.onChanged,
-  });
-
-  final String label;
-  final IconData icon;
-  final String hint;
-  final List<String> values;
-  final ValueChanged<List<String>> onChanged;
-
-  @override
-  State<_StringListEditor> createState() => _StringListEditorState();
-}
-
-class _StringListEditorState extends State<_StringListEditor> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _add() {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    if (widget.values.any((v) => v.toLowerCase() == text.toLowerCase())) {
-      _controller.clear();
-      return;
-    }
-    widget.onChanged([...widget.values, text]);
-    _controller.clear();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return InputDecorator(
-      decoration: InputDecoration(
-        labelText: widget.label,
-        prefixIcon: Icon(widget.icon),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (widget.values.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 8),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: widget.values
-                    .map(
-                      (value) => InputChip(
-                        label: Text(value),
-                        onDeleted: () => widget.onChanged(
-                          widget.values.where((v) => v != value).toList(),
-                        ),
-                        deleteIcon: const Icon(Icons.close, size: 18),
-                      ),
-                    )
-                    .toList(),
-              ),
-            )
-          else
-            const Padding(
-              padding: EdgeInsets.only(top: 4, bottom: 8),
-              child: Text('Nenhum item adicionado'),
-            ),
-          TextField(
-            controller: _controller,
-            decoration: InputDecoration(
-              hintText: widget.hint,
-              isDense: true,
-              border: InputBorder.none,
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.add_circle_outline),
-                tooltip: 'Adicionar',
-                onPressed: _add,
-              ),
-            ),
-            textCapitalization: TextCapitalization.sentences,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _add(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Caixa de ícone `.stat-icon` do PWA para os atalhos de cadastro do
-/// Perfil: véu teal com anel fino, no claro e no escuro.
-class _CadastroIconBox extends StatelessWidget {
-  const _CadastroIconBox({required this.icon, required this.isDark});
-
-  final IconData icon;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: isDark
-            ? BrandColors.teal700.withValues(alpha: .18)
-            : BrandColors.accentSoft,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: BrandColors.teal700.withValues(alpha: .07)),
-      ),
-      child: Icon(icon, color: BrandColors.teal700, size: 22),
-    );
-  }
-}
-
-/// Dialog para criar/editar um contato de emergência.
-class _EmergencyContactDialog extends StatefulWidget {
-  const _EmergencyContactDialog({this.contact});
-
-  final EmergencyContact? contact;
-
-  @override
-  State<_EmergencyContactDialog> createState() =>
-      _EmergencyContactDialogState();
-}
-
-class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nomeController;
-  late final TextEditingController _parentescoController;
-  late final TextEditingController _telefoneController;
-
-  bool get _isEditing => widget.contact != null;
-
-  @override
-  void initState() {
-    super.initState();
-    _nomeController = TextEditingController(text: widget.contact?.nome ?? '');
-    _parentescoController = TextEditingController(
-      text: widget.contact?.parentesco ?? '',
-    );
-    _telefoneController = TextEditingController(
-      text: widget.contact?.telefone ?? '',
-    );
-  }
-
-  @override
-  void dispose() {
-    _nomeController.dispose();
-    _parentescoController.dispose();
-    _telefoneController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-    final contact = _isEditing
-        ? widget.contact!.copyWith(
-            nome: _nomeController.text.trim(),
-            parentesco: _parentescoController.text.trim(),
-            telefone: _telefoneController.text.trim(),
-          )
-        : EmergencyContact.create(
-            nome: _nomeController.text.trim(),
-            parentesco: _parentescoController.text.trim(),
-            telefone: _telefoneController.text.trim(),
-          );
-    Navigator.of(context).pop(contact);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(_isEditing ? 'Editar contato' : 'Adicionar contato'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _nomeController,
-                decoration: const InputDecoration(
-                  labelText: 'Nome *',
-                  hintText: 'Ex: Maria Silva',
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                textCapitalization: TextCapitalization.words,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Informe o nome';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _parentescoController,
-                decoration: const InputDecoration(
-                  labelText: 'Parentesco',
-                  hintText: 'Ex: Cônjuge, filho(a), amigo(a)',
-                  prefixIcon: Icon(Icons.family_restroom_outlined),
-                ),
-                textCapitalization: TextCapitalization.words,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _telefoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Telefone *',
-                  hintText: '(11) 91234-5678',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-                keyboardType: TextInputType.phone,
-                inputFormatters: [PhoneInputFormatter()],
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Informe o telefone';
-                  }
-                  final digits = value.replaceAll(RegExp(r'\D'), '');
-                  if (digits.length < 10 || digits.length > 11) {
-                    return 'Telefone deve ter 10 ou 11 dígitos';
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(_isEditing ? 'Salvar' : 'Adicionar'),
-        ),
-      ],
-    );
-  }
-}
-
-/// Card "Lembretes no navegador" — só aparece na web (Notification API).
-/// Três estados: concedido, bloqueado pelo site e nunca perguntado.
-class _WebReminderCard extends StatefulWidget {
-  @override
-  State<_WebReminderCard> createState() => _WebReminderCardState();
-}
-
-class _WebReminderCardState extends State<_WebReminderCard> {
-  late bool _granted = WebReminderService.instance.isPermissionGranted;
-  late bool _denied = WebReminderService.instance.isPermissionDenied;
-  bool _busy = false;
-
-  Future<void> _activate() async {
-    setState(() => _busy = true);
-    final granted = await WebReminderService.instance.requestPermission();
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _granted = granted;
-      _denied = WebReminderService.instance.isPermissionDenied;
-    });
-    showAppSnackBar(
-      context,
-      granted
-          ? 'Lembretes ativos neste navegador.'
-          : 'O navegador não concedeu a permissão. Libere as notificações '
-                'deste site e tente novamente.',
-      type: granted ? AppSnackType.success : AppSnackType.error,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return RecordCard(
-      padding: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  _granted
-                      ? Icons.notifications_active_outlined
-                      : Icons.notifications_outlined,
-                  color: _granted
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _granted
-                        ? 'Lembretes ativos neste navegador: enquanto o app '
-                              'estiver aberto, você recebe o aviso na hora da '
-                              'dose, mesmo com a aba em segundo plano.'
-                        : _denied
-                        ? 'As notificações estão bloqueadas para este '
-                              'site. Libere nas permissões do navegador e '
-                              'recarregue a página para ativar.'
-                        : 'O navegador pode avisar na hora da dose '
-                              'enquanto o app estiver aberto — mesmo com '
-                              'a aba em segundo plano. No celular (APK), '
-                              'os avisos já funcionam com o app fechado.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (!_granted && !_denied) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: _busy ? null : _activate,
-                icon: _busy
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.notifications_on_outlined),
-                label: const Text('Ativar lembretes'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }
