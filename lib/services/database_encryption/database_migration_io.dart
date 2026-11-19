@@ -217,9 +217,9 @@ class DatabaseMigrationIo {
       }
 
       // 8. Close both files before the swap.
-      tempDb.dispose();
+      tempDb.close();
       tempDb = null;
-      legacyDb.dispose();
+      legacyDb.close();
       legacyDb = null;
 
       // 9. Atomic swap: temporary file becomes the encrypted database. The
@@ -340,7 +340,7 @@ class DatabaseMigrationIo {
         );
       }
     } finally {
-      verifyDb.dispose();
+      verifyDb.close();
     }
     return backupPath;
   }
@@ -410,14 +410,14 @@ class DatabaseMigrationIo {
           statement.execute(values);
         }
       } finally {
-        statement.dispose();
+        statement.close();
       }
     }
   }
 
   Future<void> _cleanupAfterFailure(Database? tempDb, String tempPath) async {
     try {
-      tempDb?.dispose();
+      tempDb?.close();
     } catch (_) {}
     try {
       final tempFile = File(tempPath);

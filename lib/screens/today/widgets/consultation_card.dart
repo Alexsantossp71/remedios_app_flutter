@@ -1,9 +1,7 @@
 /// Card de consulta marcada para o dia selecionado no painel "Hoje".
 library;
 
-import 'package:flutter/services.dart';
-
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -12,6 +10,7 @@ import '../../../models/doctor.dart';
 
 class TodayConsultationCard extends StatelessWidget {
   const TodayConsultationCard({
+    super.key,
     required this.consultation,
     required this.doctor,
     required this.selectedDay,

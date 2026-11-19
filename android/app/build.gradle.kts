@@ -1,7 +1,9 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // The Flutter Gradle Plugin must be applied after the Android plugin.
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin
+    // Gradle plugins. (AGP 9 com android.builtInKotlin=false usa KGP como
+    // antes — ver android/gradle.properties.)
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -18,8 +20,10 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+        }
     }
 
     defaultConfig {

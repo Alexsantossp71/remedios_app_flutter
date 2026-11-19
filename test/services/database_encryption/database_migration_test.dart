@@ -522,7 +522,7 @@ void main() {
       final plaintextPath = '${tempDir.path}/plain.db';
       final db = sql3.sqlite3.open(plaintextPath);
       db.execute('CREATE TABLE t (v TEXT)');
-      db.dispose();
+      db.close();
       expect(
         detectSqliteFileFormat(plaintextPath),
         DatabaseFileFormat.plaintextSqlite,
@@ -533,7 +533,7 @@ void main() {
       final encDb = sql3.sqlite3.open(encryptedPath);
       applyEncryptionPragmas(encDb, key);
       encDb.execute('CREATE TABLE t (v TEXT)');
-      encDb.dispose();
+      encDb.close();
       expect(
         detectSqliteFileFormat(encryptedPath),
         DatabaseFileFormat.encryptedOrUnknown,

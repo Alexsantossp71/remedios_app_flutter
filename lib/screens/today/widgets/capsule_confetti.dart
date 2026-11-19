@@ -5,9 +5,7 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:flutter/services.dart';
-
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/design/app_tokens.dart';
 import '../../../core/theme/app_theme.dart';
@@ -24,7 +22,7 @@ void showCapsuleConfetti(BuildContext context) {
 }
 
 class CapsuleConfetti extends StatefulWidget {
-  const CapsuleConfetti({required this.onDone});
+  const CapsuleConfetti({super.key, required this.onDone});
 
   final VoidCallback onDone;
 

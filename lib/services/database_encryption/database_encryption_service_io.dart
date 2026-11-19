@@ -18,8 +18,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart' show databaseFactoryFfi;
 class DatabaseEncryptionServiceIo implements DatabaseEncryptionService {
   DatabaseEncryptionServiceIo({
     required this.keyService,
-    Future<String> Function()? directoryResolver,
-  }) : _directoryResolver = directoryResolver;
+    this._directoryResolver,
+  });
 
   final DatabaseKeyService keyService;
   final Future<String> Function()? _directoryResolver;

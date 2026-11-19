@@ -5,6 +5,8 @@
 ///
 /// The key is passed as a raw 32-byte value and sent as a hex literal. The
 /// hex string is built here and must NEVER be logged, printed or stored.
+library;
+
 import 'package:sqflite_common/sqlite_api.dart' show Database;
 
 const String kDatabaseCipherName = 'chacha20';

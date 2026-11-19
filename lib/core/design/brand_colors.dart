@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Paleta de marca V5 — replicada 1:1 do design system do PWA irmão
 /// "Remédios na Hora" (`tailwind.config.js` + `src/index.css` do repo
@@ -72,7 +72,8 @@ abstract final class BrandColors {
   // ── Sombras ─────────────────────────────────────────────────────────────
 
   /// `box-shadow: soft` — 0 8px 28px rgba(15, 23, 42, 0.06).
-  static const Color shadowSoft = Color(0x0F172A);
+  // rgba(15, 23, 42, 0.06) em ARGB — o valor antigo (6 dígitos) tinha alpha 00.
+  static const Color shadowSoft = Color(0x0F0F172A);
 
   /// Sombra projetada do herói — 0 18px 42px rgba(15, 118, 110, 0.16).
   static const Color shadowHero = Color(0xFF0F766E);
