@@ -22,7 +22,9 @@ concurrency:
 jobs:
   android-keystore-tests:
     name: Build and instrument Android database key store
-    runs-on: ubuntu-latest
+    # ubuntu-26.04 não expõe /dev/kvm (o emulador sobe com -accel off e não
+    # dá boot); ubuntu-24.04 tem KVM e o emulador acelera por hardware.
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - name: Checkout
