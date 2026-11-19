@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/emergency_contact.dart';
@@ -11,25 +10,21 @@ import '../providers/doctor_provider.dart';
 import '../providers/health_plan_provider.dart';
 import '../providers/therapy_provider.dart';
 import '../providers/user_profile_provider.dart';
-import '../core/design/brand_colors.dart';
-import '../core/design/record_card.dart';
-import '../screens/doctors_screen.dart';
-import '../screens/exams_screen.dart';
-import '../screens/lab_results_screen.dart';
-import '../screens/health_plans_screen.dart';
-import '../screens/progress_screen.dart';
 import '../services/backup_file.dart';
 import '../services/backup_crypto_service.dart';
 import '../services/backup_service.dart';
 import '../services/web_reminder_service.dart';
 import '../widgets/app_snack_bar.dart';
-import '../widgets/br_input_formatters.dart';
-import '../widgets/privacy_notice.dart';
 import '../widgets/section_header.dart';
 import 'profile/profile_validators.dart';
 import 'profile/widgets/cadastro_icon_box.dart';
 import 'profile/widgets/emergency_card.dart';
 import 'profile/widgets/emergency_contact_dialog.dart';
+import 'profile/widgets/emergency_contacts_card.dart';
+import 'profile/widgets/profile_backup_card.dart';
+import 'profile/widgets/profile_form_card.dart';
+import 'profile/widgets/profile_privacy_card.dart';
+import 'profile/widgets/profile_registry_card.dart';
 import 'profile/widgets/string_list_editor.dart';
 import 'profile/widgets/web_reminder_card.dart';
 
@@ -74,8 +69,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   /// True enquanto um backup está sendo exportado/restaurado.
   bool _backupBusy = false;
-
-  final _dateFormat = DateFormat('dd/MM/yyyy', 'pt_BR');
 
   @override
   void initState() {
@@ -506,7 +499,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final provider = context.watch<UserProfileProvider>();
     final profile = provider.profile;
     final contacts = provider.emergencyContacts;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SafeArea(
       child: Form(
@@ -546,384 +538,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 28),
             const SectionHeader(title: 'Dados pessoais'),
             const SizedBox(height: 10),
-            RecordCard(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      key: _nomeFieldKey,
-                      controller: _nomeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome',
-                        hintText: 'Como você quer ser chamado',
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                      textCapitalization: TextCapitalization.words,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          _firstInvalidFieldKey ??= _nomeFieldKey;
-                          return 'Informe seu nome';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      key: _cpfFieldKey,
-                      controller: _cpfController,
-                      decoration: const InputDecoration(
-                        labelText: 'CPF',
-                        hintText: '000.000.000-00',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [CpfInputFormatter()],
-                      validator: _validateCpf,
-                    ),
-                    const SizedBox(height: 16),
-                    InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: _selectBirthDate,
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Data de nascimento',
-                          prefixIcon: Icon(Icons.cake_outlined),
-                          suffixIcon: Icon(Icons.calendar_today_outlined),
-                        ),
-                        child: Text(
-                          _dataNascimento != null
-                              ? _dateFormat.format(_dataNascimento!)
-                              : 'Toque para selecionar',
-                          style: _dataNascimento != null
-                              ? null
-                              : TextStyle(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      key: _telefoneFieldKey,
-                      controller: _telefoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Telefone',
-                        hintText: '(11) 91234-5678',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                      ),
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [PhoneInputFormatter()],
-                      validator: _validateTelefone,
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<TipoSanguineo>(
-                      initialValue: _tipoSanguineo,
-                      decoration: const InputDecoration(
-                        labelText: 'Tipo sanguíneo',
-                        prefixIcon: Icon(Icons.bloodtype_outlined),
-                      ),
-                      items: TipoSanguineo.values
-                          .map(
-                            (tipo) => DropdownMenuItem(
-                              value: tipo,
-                              child: Text(tipo.value),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() => _tipoSanguineo = value);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    StringListEditor(
-                      label: 'Alergias',
-                      icon: Icons.warning_amber_outlined,
-                      hint: 'Ex: Dipirona, frutos do mar',
-                      values: _alergias,
-                      onChanged: (values) => setState(() => _alergias = values),
-                    ),
-                    const SizedBox(height: 16),
-                    StringListEditor(
-                      label: 'Condições crônicas',
-                      icon: Icons.monitor_heart_outlined,
-                      hint: 'Ex: Hipertensão, diabetes',
-                      values: _condicoesCronicas,
-                      onChanged: (values) =>
-                          setState(() => _condicoesCronicas = values),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            key: _pesoFieldKey,
-                            controller: _pesoController,
-                            decoration: const InputDecoration(
-                              labelText: 'Peso (kg)',
-                              hintText: 'Ex: 70',
-                              prefixIcon: Icon(Icons.monitor_weight_outlined),
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            validator: _validatePeso,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            key: _alturaFieldKey,
-                            controller: _alturaController,
-                            decoration: const InputDecoration(
-                              labelText: 'Altura (m)',
-                              hintText: 'Ex: 1.70',
-                              prefixIcon: Icon(Icons.height_outlined),
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            validator: _validateAltura,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _observacoesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Observações',
-                        hintText: 'Informações relevantes sobre sua saúde',
-                        prefixIcon: Icon(Icons.notes_outlined),
-                      ),
-                      maxLines: 3,
-                      textCapitalization: TextCapitalization.sentences,
-                    ),
-                    const SizedBox(height: 20),
-                    const PrivacyNoticeCard(),
-                    const SizedBox(height: 12),
-                    ConsentCheckbox(
-                      value: _consentGranted,
-                      grantedAt: _consentAt,
-                      onChanged: (value) {
-                        setState(() => _consentGranted = value ?? false);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: _saveProfile,
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('Salvar perfil'),
-                    ),
-                  ],
-                ),
-              ),
+            ProfileFormCard(
+              nomeFieldKey: _nomeFieldKey,
+              nomeController: _nomeController,
+              cpfFieldKey: _cpfFieldKey,
+              cpfController: _cpfController,
+              telefoneFieldKey: _telefoneFieldKey,
+              telefoneController: _telefoneController,
+              pesoFieldKey: _pesoFieldKey,
+              pesoController: _pesoController,
+              alturaFieldKey: _alturaFieldKey,
+              alturaController: _alturaController,
+              observacoesController: _observacoesController,
+              dataNascimento: _dataNascimento,
+              tipoSanguineo: _tipoSanguineo,
+              alergias: _alergias,
+              condicoesCronicas: _condicoesCronicas,
+              consentGranted: _consentGranted,
+              consentAt: _consentAt,
+              onTipoSanguineoChanged: (value) {
+                setState(() => _tipoSanguineo = value);
+              },
+              onAlergiasChanged: (values) {
+                setState(() => _alergias = values);
+              },
+              onCondicoesCronicasChanged: (values) {
+                setState(() => _condicoesCronicas = values);
+              },
+              onConsentChanged: (value) {
+                setState(() => _consentGranted = value ?? false);
+              },
+              onSelectBirthDate: _selectBirthDate,
+              onSave: _saveProfile,
+              onInvalidField: (fieldKey) => _firstInvalidFieldKey ??= fieldKey,
+              validateCpf: _validateCpf,
+              validateTelefone: _validateTelefone,
+              validatePeso: _validatePeso,
+              validateAltura: _validateAltura,
             ),
             const SizedBox(height: 28),
             const SectionHeader(title: 'Contatos de emergência'),
             const SizedBox(height: 10),
-            RecordCard(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    if (contacts.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 12,
-                        ),
-                        child: Text(
-                          'Nenhum contato cadastrado. Adicione alguém de '
-                          'confiança.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                      )
-                    else ...[
-                      for (var i = 0; i < contacts.length; i++) ...[
-                        if (i > 0)
-                          const Divider(height: 1, indent: 64, endIndent: 12),
-                        ListTile(
-                          leading: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              // Caixa de ícone com véu vermelho — contexto
-                              // de emergência no PWA usa o brand.red.
-                              color: BrandColors.red.withValues(
-                                alpha: isDark ? .16 : .10,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.contact_emergency_outlined,
-                              color: BrandColors.red,
-                              size: 22,
-                            ),
-                          ),
-                          title: Text(contacts[i].nome),
-                          subtitle: Text(
-                            [
-                              if (contacts[i].parentesco.isNotEmpty)
-                                contacts[i].parentesco,
-                              contacts[i].telefone,
-                            ].join(' • '),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined),
-                                tooltip: 'Editar',
-                                onPressed: () => _editContact(contacts[i]),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                tooltip: 'Remover',
-                                onPressed: () => _removeContact(contacts[i]),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _editContact(),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Adicionar contato'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            EmergencyContactsCard(
+              contacts: contacts,
+              isDark: Theme.of(context).brightness == Brightness.dark,
+              onAdd: () => _editContact(),
+              onEdit: (contact) => _editContact(contact),
+              onRemove: (contact) => _removeContact(contact),
             ),
             const SizedBox(height: 28),
             const SectionHeader(title: 'Meus cadastros'),
             const SizedBox(height: 10),
-            RecordCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: CadastroIconBox(
-                      icon: Icons.medical_services_outlined,
-                      isDark: isDark,
-                    ),
-                    title: const Text('Médicos'),
-                    subtitle: const Text('Seu catálogo de médicos e contatos'),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const DoctorsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: CadastroIconBox(
-                      icon: Icons.science_outlined,
-                      isDark: isDark,
-                    ),
-                    title: const Text('Exames'),
-                    subtitle: const Text(
-                      'Do pedido do médico ao laudo, com leitura por IA',
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ExamsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: CadastroIconBox(
-                      icon: Icons.biotech_outlined,
-                      isDark: isDark,
-                    ),
-                    title: const Text('Resultados de laboratório'),
-                    subtitle: const Text(
-                      'Laudos, valores e evolução dos exames',
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const LabResultsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: CadastroIconBox(
-                      icon: Icons.health_and_safety,
-                      isDark: isDark,
-                    ),
-                    title: const Text('Planos e convênios'),
-                    subtitle: const Text('Gerencie seus planos de saúde'),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const HealthPlansScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: CadastroIconBox(
-                      icon: Icons.insights_outlined,
-                      isDark: isDark,
-                    ),
-                    title: const Text('Progresso'),
-                    subtitle: const Text('Constância e histórico de doses'),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ProgressScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
+            const ProfileRegistryCard(),
             const SizedBox(height: 28),
             if (WebReminderService.instance.isSupported) ...[
               const SectionHeader(title: 'Lembretes no navegador'),
@@ -933,88 +599,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
             const SectionHeader(title: 'Backup e restauração'),
             const SizedBox(height: 10),
-            RecordCard(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Exporte um backup criptografado com senha para guardar ou levar '
-                      'para outro aparelho. A senha não é salva pelo app; '
-                      'sem ela, não será possível restaurar o arquivo. '
-                      'Backups JSON antigos também podem ser restaurados.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: _backupBusy ? null : _exportBackup,
-                            icon: _backupBusy
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.download_outlined),
-                            label: const Text('Exportar'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _backupBusy ? null : _restoreBackup,
-                            icon: const Icon(Icons.restore_outlined),
-                            label: const Text('Restaurar'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+            ProfileBackupCard(
+              busy: _backupBusy,
+              onExport: _exportBackup,
+              onRestore: _restoreBackup,
             ),
             const SizedBox(height: 28),
             const SectionHeader(title: 'Dados e privacidade'),
             const SizedBox(height: 10),
-            RecordCard(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Seus dados ficam armazenados apenas neste dispositivo. '
-                      'A qualquer momento você pode apagá-los por completo '
-                      '(LGPD).',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                      onPressed: _confirmDeleteAllData,
-                      icon: const Icon(Icons.delete_forever_outlined),
-                      label: const Text('Apagar meus dados'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            ProfilePrivacyCard(onDeleteAll: _confirmDeleteAllData),
             const SizedBox(height: 24),
             Center(
               child: Text(
