@@ -58,8 +58,14 @@ void main() {
         await tester.pumpAndSettle();
 
         // Check for form fields
-        expect(find.widgetWithText(TextFormField, 'Nome do plano'), findsOneWidget);
-        expect(find.widgetWithText(TextFormField, 'Número da carteirinha'), findsOneWidget);
+        expect(
+          find.widgetWithText(TextFormField, 'Nome do plano'),
+          findsOneWidget,
+        );
+        expect(
+          find.widgetWithText(TextFormField, 'Número da carteirinha'),
+          findsOneWidget,
+        );
       }
     });
   });

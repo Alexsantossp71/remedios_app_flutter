@@ -1,7 +1,6 @@
 /// Linha da trilha do dia (timeline V4) e pill de constância.
 library;
 
-
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/design/app_tokens.dart';
@@ -13,6 +12,7 @@ import '../../../models/dose_event.dart';
 /// do desfecho (verde/vermelho); pendente respira no azul de ação.
 class DoseTimelineRow extends StatelessWidget {
   const DoseTimelineRow({
+    super.key,
     required this.event,
     required this.isFirst,
     required this.isLast,
@@ -87,7 +87,7 @@ class DoseTimelineRow extends StatelessWidget {
 
 /// Pill de constância: chama calma + "N dias em dia".
 class StreakPill extends StatelessWidget {
-  const StreakPill({required this.days});
+  const StreakPill({super.key, required this.days});
 
   final int days;
 

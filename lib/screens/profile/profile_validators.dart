@@ -2,6 +2,7 @@
 ///
 /// Funções puras — sem acesso a estado de widget — reutilizadas pelos
 /// validadores de campo do ProfileScreen e testáveis isoladamente.
+library;
 
 /// Formata um número decimal do perfil (peso/altura): inteiro sem casas
 /// decimais quando possível, caso contrário com duas casas.

@@ -2,7 +2,6 @@
 /// botão circular de desfecho.
 library;
 
-
 import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 
@@ -145,6 +144,7 @@ class DoseCard extends StatelessWidget {
 /// vermelho "Pular").
 class DoseRoundAction extends StatelessWidget {
   const DoseRoundAction({
+    super.key,
     required this.icon,
     required this.tooltip,
     required this.color,

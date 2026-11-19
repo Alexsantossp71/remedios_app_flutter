@@ -4,7 +4,6 @@ library;
 
 import 'dart:async';
 
-
 import 'package:material_ui/material_ui.dart';
 
 import '../../../models/dose_event.dart';
@@ -12,7 +11,7 @@ import '../../../models/dose_event.dart';
 /// Contagem viva para a próxima dose pendente de hoje — atualiza sozinha
 /// a cada 30 segundos. Some quando não há nada pendente.
 class NextDoseBadge extends StatefulWidget {
-  const NextDoseBadge({required this.events});
+  const NextDoseBadge({super.key, required this.events});
 
   final List<DoseEvent> events;
 

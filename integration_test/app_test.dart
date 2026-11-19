@@ -94,8 +94,9 @@ void main() {
       await _resetInMemoryDb();
     });
 
-    testWidgets('Can add a doctor with contact and location details',
-        (tester) async {
+    testWidgets('Can add a doctor with contact and location details', (
+      tester,
+    ) async {
       // The dialog layout overflows the default 800x600 test surface.
       tester.view.physicalSize = const Size(1280, 900);
       tester.view.devicePixelRatio = 1;
@@ -119,7 +120,10 @@ void main() {
         find.widgetWithText(TextFormField, 'Especialidade'),
         'Dermatologia',
       );
-      await tester.enterText(find.widgetWithText(TextFormField, 'CRM'), '54321');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'CRM'),
+        '54321',
+      );
 
       // DropdownButtonFormField<String> — use keys (generic type differs).
       await tester.ensureVisible(find.byKey(const ValueKey('crmStateUf')));
@@ -144,9 +148,14 @@ void main() {
         find.widgetWithText(TextFormField, 'Rua ou avenida'),
         'Rua das Palmeiras',
       );
-      await tester.enterText(find.widgetWithText(TextFormField, 'Número'), '45');
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Cidade'), 'Niterói');
+        find.widgetWithText(TextFormField, 'Número'),
+        '45',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Cidade'),
+        'Niterói',
+      );
 
       await tester.ensureVisible(find.byKey(const ValueKey('addressUf')));
       await tester.pumpAndSettle();
@@ -224,4 +233,3 @@ Future<void> _pumpApp(WidgetTester tester) async {
   );
   await tester.pumpAndSettle();
 }
-

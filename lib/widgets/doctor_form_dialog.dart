@@ -635,7 +635,7 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
             // conselho também só entram via casamento com esta lista.
             DropdownButtonFormField<String>(
               key: const ValueKey('doctorSpecialty'),
-              value: _specialtyValue,
+              initialValue: _specialtyValue,
               isExpanded: true,
               hint: const Text('Selecione'),
               decoration: _decoration('Especialidade'),

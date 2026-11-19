@@ -80,7 +80,7 @@ void verifySqliteEncryptionOrThrow() {
     db.execute('CREATE TABLE probe (v TEXT NOT NULL)');
     db.execute("INSERT INTO probe VALUES ('probe')");
   } finally {
-    db.dispose();
+    db.close();
   }
 
   final format = detectSqliteFileFormat(probePath);

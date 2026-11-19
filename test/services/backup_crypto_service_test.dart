@@ -62,7 +62,7 @@ void main() {
       );
       final tampered = Map<String, dynamic>.from(encrypted);
       final bytes = tampered['ciphertext'] as String;
-      tampered['ciphertext'] = bytes.substring(0, bytes.length - 4) + 'AAAA';
+      tampered['ciphertext'] = '${bytes.substring(0, bytes.length - 4)}AAAA';
 
       await expectLater(
         service.decrypt(tampered, 'senha-forte-de-teste-123'),
