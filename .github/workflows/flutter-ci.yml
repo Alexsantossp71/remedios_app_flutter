@@ -54,7 +54,58 @@ jobs:
         run: flutter analyze --no-fatal-infos
 
       - name: Run tests
-        run: flutter test
+        run: flutter test --coverage
+
+      # P2-3: make the testing debt visible. Summarizes lcov.info into the job
+      # summary, keeps the raw lcov as an artifact and uploads to Codecov
+      # (tokenless for public repos; set CODECOV_TOKEN to enable the badge).
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ ! -f coverage/lcov.info ]; then
+            echo "coverage/lcov.info was not generated (tests likely did not run)"
+            exit 0
+          fi
+          awk -F: '
+            /^SF:/ { sf = substr($0, 4) }
+            /^LF:/ { lf = substr($0, 4) }
+            /^LH:/ { lh = substr($0, 4) }
+            /^end_of_record$/ {
+              tlf += lf; tlh += lh
+              pct = (lf > 0 ? 100 * lh / lf : 0)
+              printf "%.1f%% %s (%d/%d lines)\n", pct, sf, lh, lf
+            }
+          ' coverage/lcov.info | sort -n > coverage_per_file.txt
+          TOTAL=$(awk -v t="$tlf" -v h="$tlh" 'BEGIN { if (t > 0) printf "%.1f%%", 100 * h / t; else printf "0.0%%" }')
+          {
+            echo "## Line coverage (lcov)"
+            echo ""
+            echo "**Total: ${TOTAL}** (${tlh}/${tlf} lines)"
+            echo ""
+            echo "<details><summary>20 least covered files</summary>"
+            echo ""
+            echo '```'
+            head -20 coverage_per_file.txt
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Total line coverage: ${TOTAL} (${tlh}/${tlf} lines)"
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lcov-report
+          path: coverage/lcov.info
+          retention-days: 14
+
+      - name: Upload to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage/lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
       - name: Build web release
         run: flutter build web --release
