@@ -11,7 +11,7 @@ class HealthPlanStorageService {
   final DatabaseService _dbService;
 
   HealthPlanStorageService({DatabaseService? dbService})
-      : _dbService = dbService ?? DatabaseService.instance;
+    : _dbService = dbService ?? DatabaseService.instance;
 
   /// Loads all health plans from the database, ordered by name.
   Future<List<HealthPlan>> loadHealthPlans() async {
@@ -26,9 +26,30 @@ class HealthPlanStorageService {
     final db = await _dbService.database;
     final now = DateTime.now().toUtc().toIso8601String();
 
-    await db.insert(
-      'health_plans',
-      {
+    await db.insert('health_plans', {
+      'id': plan.id,
+      'name': plan.name,
+      'provider': plan.provider,
+      'card_number': plan.cardNumber ?? '',
+      'group_number': plan.groupNumber ?? '',
+      'beneficiary_code': plan.beneficiaryCode ?? '',
+      'validity': plan.validity ?? '',
+      'coverage_type': plan.coverageType ?? '',
+      'specialties': jsonEncode(plan.specialties),
+      'notes': plan.notes ?? '',
+      'created_at': plan.createdAt,
+      'updated_at': now,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Saves multiple health plans in a batch operation.
+  Future<void> saveHealthPlans(List<HealthPlan> plans) async {
+    final db = await _dbService.database;
+    final batch = db.batch();
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    for (final plan in plans) {
+      batch.insert('health_plans', {
         'id': plan.id,
         'name': plan.name,
         'provider': plan.provider,
@@ -41,36 +62,7 @@ class HealthPlanStorageService {
         'notes': plan.notes ?? '',
         'created_at': plan.createdAt,
         'updated_at': now,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  /// Saves multiple health plans in a batch operation.
-  Future<void> saveHealthPlans(List<HealthPlan> plans) async {
-    final db = await _dbService.database;
-    final batch = db.batch();
-    final now = DateTime.now().toUtc().toIso8601String();
-
-    for (final plan in plans) {
-      batch.insert(
-        'health_plans',
-        {
-          'id': plan.id,
-          'name': plan.name,
-          'provider': plan.provider,
-          'card_number': plan.cardNumber ?? '',
-          'group_number': plan.groupNumber ?? '',
-          'beneficiary_code': plan.beneficiaryCode ?? '',
-          'validity': plan.validity ?? '',
-          'coverage_type': plan.coverageType ?? '',
-          'specialties': jsonEncode(plan.specialties),
-          'notes': plan.notes ?? '',
-          'created_at': plan.createdAt,
-          'updated_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
 
     await batch.commit(noResult: true);

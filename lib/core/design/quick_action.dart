@@ -28,20 +28,17 @@ class _QuickActionState extends State<QuickAction> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final borderColor =
-        _hovered
-            ? (isDark ? BrandColors.teal700 : const Color(0xFF99F6E4))
-            : (isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0));
-    final fillColor =
-        _hovered
-            ? (isDark
-                ? BrandColors.teal700.withValues(alpha: .16)
-                : const Color(0xFFF0FDFA))
-            : Colors.transparent;
-    final contentColor =
-        _hovered
-            ? (isDark ? const Color(0xFF99F6E4) : BrandColors.teal700)
-            : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155));
+    final borderColor = _hovered
+        ? (isDark ? BrandColors.teal700 : const Color(0xFF99F6E4))
+        : (isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0));
+    final fillColor = _hovered
+        ? (isDark
+              ? BrandColors.teal700.withValues(alpha: .16)
+              : const Color(0xFFF0FDFA))
+        : Colors.transparent;
+    final contentColor = _hovered
+        ? (isDark ? const Color(0xFF99F6E4) : BrandColors.teal700)
+        : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155));
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),

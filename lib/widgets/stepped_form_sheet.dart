@@ -165,8 +165,8 @@ class _SteppedFormShellState extends State<SteppedFormShell> {
                           ),
                           duration: AppDurations.medium,
                           curve: AppCurves.emphasized,
-                          builder:
-                              (context, value, _) => LinearProgressIndicator(
+                          builder: (context, value, _) =>
+                              LinearProgressIndicator(
                                 value: value,
                                 minHeight: 6,
                                 borderRadius: BorderRadius.circular(3),

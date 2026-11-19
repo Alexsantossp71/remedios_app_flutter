@@ -7,7 +7,7 @@ class ConsultationStorageService {
   final DatabaseService _dbService;
 
   ConsultationStorageService({DatabaseService? dbService})
-      : _dbService = dbService ?? DatabaseService.instance;
+    : _dbService = dbService ?? DatabaseService.instance;
 
   Future<List<Consultation>> loadConsultations() async {
     final db = await _dbService.database;
@@ -16,11 +16,13 @@ class ConsultationStorageService {
     return rows.map((row) {
       final dateUtc = DateTime.parse(row['date'] as String);
       final returnDateRaw = row['return_date'] as String?;
-      final returnDateUtc =
-          returnDateRaw != null ? DateTime.parse(returnDateRaw) : null;
+      final returnDateUtc = returnDateRaw != null
+          ? DateTime.parse(returnDateRaw)
+          : null;
       final completedAtRaw = row['completed_at'] as String?;
-      final completedAtUtc =
-          completedAtRaw != null ? DateTime.parse(completedAtRaw) : null;
+      final completedAtUtc = completedAtRaw != null
+          ? DateTime.parse(completedAtRaw)
+          : null;
 
       return Consultation(
         id: row['id'] as String,
@@ -39,9 +41,26 @@ class ConsultationStorageService {
     final db = await _dbService.database;
     final nowIso = DateTime.now().toUtc().toIso8601String();
 
-    await db.insert(
-      'consultations',
-      {
+    await db.insert('consultations', {
+      'id': consultation.id,
+      'doctor_id': consultation.doctorId,
+      'date': consultation.date.toUtc().toIso8601String(),
+      'title': consultation.title,
+      'notes': consultation.notes,
+      'status': consultation.status,
+      'return_date': consultation.returnDate?.toUtc().toIso8601String(),
+      'created_at': nowIso,
+      'updated_at': nowIso,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> saveConsultations(List<Consultation> consultations) async {
+    final db = await _dbService.database;
+    final batch = db.batch();
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+
+    for (final consultation in consultations) {
+      batch.insert('consultations', {
         'id': consultation.id,
         'doctor_id': consultation.doctorId,
         'date': consultation.date.toUtc().toIso8601String(),
@@ -51,32 +70,7 @@ class ConsultationStorageService {
         'return_date': consultation.returnDate?.toUtc().toIso8601String(),
         'created_at': nowIso,
         'updated_at': nowIso,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  Future<void> saveConsultations(List<Consultation> consultations) async {
-    final db = await _dbService.database;
-    final batch = db.batch();
-    final nowIso = DateTime.now().toUtc().toIso8601String();
-
-    for (final consultation in consultations) {
-      batch.insert(
-        'consultations',
-        {
-          'id': consultation.id,
-          'doctor_id': consultation.doctorId,
-          'date': consultation.date.toUtc().toIso8601String(),
-          'title': consultation.title,
-          'notes': consultation.notes,
-          'status': consultation.status,
-          'return_date': consultation.returnDate?.toUtc().toIso8601String(),
-          'created_at': nowIso,
-          'updated_at': nowIso,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }

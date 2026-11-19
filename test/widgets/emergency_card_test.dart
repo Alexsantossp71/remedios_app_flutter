@@ -26,9 +26,7 @@ void main() {
     await tester.pumpWidget(
       ChangeNotifierProvider<UserProfileProvider>.value(
         value: provider,
-        child: const MaterialApp(
-          home: Scaffold(body: ProfileScreen()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: ProfileScreen())),
       ),
     );
     await tester.pumpAndSettle();
@@ -45,8 +43,9 @@ void main() {
     await DatabaseService.instance.close();
   });
 
-  testWidgets('cartão mostra condições crônicas ao vivo antes de salvar',
-      (tester) async {
+  testWidgets('cartão mostra condições crônicas ao vivo antes de salvar', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     expect(provider.profile, isNull);
@@ -74,8 +73,9 @@ void main() {
     expect(find.text('Nenhuma'), findsNothing);
   });
 
-  testWidgets('botão compartilhar existe e trata falha com aviso',
-      (tester) async {
+  testWidgets('botão compartilhar existe e trata falha com aviso', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     // Sem dados de emergência não há cartão nem botão.

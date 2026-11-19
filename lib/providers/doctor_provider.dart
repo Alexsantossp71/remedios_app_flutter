@@ -7,7 +7,7 @@ import '../services/doctor_storage_service.dart';
 
 class DoctorProvider extends ChangeNotifier {
   DoctorProvider({DoctorStorageService? storage})
-      : _storage = storage ?? DoctorStorageService();
+    : _storage = storage ?? DoctorStorageService();
 
   final DoctorStorageService _storage;
 
@@ -19,8 +19,10 @@ class DoctorProvider extends ChangeNotifier {
 
   Future<void> initialize() async {
     _doctors = await _storage.loadDoctors();
-    _doctors.sort((first, second) =>
-        first.name.toLowerCase().compareTo(second.name.toLowerCase()));
+    _doctors.sort(
+      (first, second) =>
+          first.name.toLowerCase().compareTo(second.name.toLowerCase()),
+    );
     _isLoading = false;
     notifyListeners();
   }
@@ -71,7 +73,9 @@ class DoctorProvider extends ChangeNotifier {
   }
 
   void _sortDoctors() {
-    _doctors.sort((first, second) =>
-        first.name.toLowerCase().compareTo(second.name.toLowerCase()));
+    _doctors.sort(
+      (first, second) =>
+          first.name.toLowerCase().compareTo(second.name.toLowerCase()),
+    );
   }
 }

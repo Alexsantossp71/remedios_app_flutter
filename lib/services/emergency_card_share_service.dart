@@ -20,9 +20,7 @@ Future<void> shareEmergencyCardImage({
 }) {
   return SharePlus.instance.share(
     ShareParams(
-      files: [
-        XFile.fromData(pngBytes, mimeType: 'image/png', name: fileName),
-      ],
+      files: [XFile.fromData(pngBytes, mimeType: 'image/png', name: fileName)],
       title: 'Cartão de emergência',
       subject: 'Cartão de emergência — Remédio na Hora',
       // Âncora do popover no iPad/macOS; ignorado nas demais plataformas.

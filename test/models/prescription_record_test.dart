@@ -85,18 +85,9 @@ void main() {
         PrescriptionSource.prescriptionPhoto,
       );
       expect(PrescriptionSource.fromName(null), PrescriptionSource.manual);
-      expect(
-        PrescriptionSource.fromName('lixo'),
-        PrescriptionSource.manual,
-      );
-      expect(
-        PrescriptionSource.manual.label,
-        'Cadastro manual',
-      );
-      expect(
-        PrescriptionSource.prescriptionPhoto.label,
-        'Foto da receita',
-      );
+      expect(PrescriptionSource.fromName('lixo'), PrescriptionSource.manual);
+      expect(PrescriptionSource.manual.label, 'Cadastro manual');
+      expect(PrescriptionSource.prescriptionPhoto.label, 'Foto da receita');
     });
 
     test('matchesTreatment reconhece a mesma receita (nome, CRM e dia)', () {
@@ -137,15 +128,18 @@ void main() {
   });
 
   group('Treatment prescriber (quem receitou)', () {
-    test('sem prescritor, hasPrescriber é falso e o JSON não obriga campos', () {
-      final treatment = _treatment();
-      expect(treatment.hasPrescriber, isFalse);
-      expect(treatment.prescriberCrmLabel, isEmpty);
+    test(
+      'sem prescritor, hasPrescriber é falso e o JSON não obriga campos',
+      () {
+        final treatment = _treatment();
+        expect(treatment.hasPrescriber, isFalse);
+        expect(treatment.prescriberCrmLabel, isEmpty);
 
-      final restored = Treatment.fromJson(treatment.toJson());
-      expect(restored.hasPrescriber, isFalse);
-      expect(restored.prescribedOn, isNull);
-    });
+        final restored = Treatment.fromJson(treatment.toJson());
+        expect(restored.hasPrescriber, isFalse);
+        expect(restored.prescribedOn, isNull);
+      },
+    );
 
     test('com prescritor, snapshot preserva nome, CRM, UF e data', () {
       final treatment = _treatment(
@@ -236,10 +230,7 @@ void main() {
       );
 
       // De prescritor a nenhum: mudou.
-      expect(
-        Treatment.samePrescription(base, _treatment()),
-        isFalse,
-      );
+      expect(Treatment.samePrescription(base, _treatment()), isFalse);
     });
   });
 }

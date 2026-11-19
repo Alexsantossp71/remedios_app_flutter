@@ -74,8 +74,9 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
     _notesController = TextEditingController(
       text: data.notes ?? (data.rawText.isEmpty ? '' : data.rawText),
     );
-    _coverageType =
-        kCoverageTypes.contains(data.coverageType) ? data.coverageType : null;
+    _coverageType = kCoverageTypes.contains(data.coverageType)
+        ? data.coverageType
+        : null;
     _specialties = <String>{};
   }
 
@@ -163,13 +164,11 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
           border: const OutlineInputBorder(),
           isDense: true,
         ),
-        validator:
-            required
-                ? (value) =>
-                    (value == null || value.trim().isEmpty)
-                        ? 'Informe $label'
-                        : null
-                : null,
+        validator: required
+            ? (value) => (value == null || value.trim().isEmpty)
+                  ? 'Informe $label'
+                  : null
+            : null,
       ),
     );
   }
@@ -203,15 +202,11 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
                   child: Image.memory(
                     _imageBytes,
                     fit: BoxFit.cover,
-                    errorBuilder:
-                        (context, error, stackTrace) => Container(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.broken_image_outlined,
-                            size: 40,
-                          ),
-                        ),
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.broken_image_outlined, size: 40),
+                    ),
                   ),
                 ),
               ),
@@ -226,14 +221,13 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
                   ),
                   TextButton.icon(
                     onPressed: _rescanning ? null : _rescan,
-                    icon:
-                        _rescanning
-                            ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : const Icon(Icons.refresh, size: 18),
+                    icon: _rescanning
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh, size: 18),
                     label: const Text('Escanear novamente'),
                   ),
                 ],
@@ -313,14 +307,13 @@ class _HealthPlanReviewScreenState extends State<HealthPlanReviewScreen> {
                       FilterChip(
                         label: Text(specialty),
                         selected: _specialties.contains(specialty),
-                        onSelected:
-                            (selected) => setState(() {
-                              if (selected) {
-                                _specialties.add(specialty);
-                              } else {
-                                _specialties.remove(specialty);
-                              }
-                            }),
+                        onSelected: (selected) => setState(() {
+                          if (selected) {
+                            _specialties.add(specialty);
+                          } else {
+                            _specialties.remove(specialty);
+                          }
+                        }),
                       ),
                   ],
                 ),

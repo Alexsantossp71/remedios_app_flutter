@@ -19,12 +19,7 @@ void main() {
     await DatabaseService.instance.close();
   });
 
-  Exam examOf(
-    String id,
-    String name,
-    String status, {
-    DateTime? date,
-  }) {
+  Exam examOf(String id, String name, String status, {DateTime? date}) {
     return Exam(
       id: id,
       name: name,
@@ -56,40 +51,51 @@ void main() {
     expect(provider.exams.single.name, 'Hemograma completo');
   });
 
-  test('pendentes sobem ordenados e realizados descem do mais recente',
-      () async {
-    final provider = ExamProvider();
-    await provider.saveExam(
-      examOf('e1', 'Glicemia', ExamStatus.scheduled,
-          date: DateTime(2026, 5, 1)),
-    );
-    await provider.saveExam(
-      examOf('e2', 'Hemograma', ExamStatus.requested,
-          date: DateTime(2026, 4, 1)),
-    );
-    await provider.saveExam(
-      examOf('e3', 'ECG antigo', ExamStatus.done,
-          date: DateTime(2026, 1, 1)),
-    );
-    await provider.saveExam(
-      examOf('e4', 'ECG recente', ExamStatus.done,
-          date: DateTime(2026, 2, 1)),
-    );
+  test(
+    'pendentes sobem ordenados e realizados descem do mais recente',
+    () async {
+      final provider = ExamProvider();
+      await provider.saveExam(
+        examOf(
+          'e1',
+          'Glicemia',
+          ExamStatus.scheduled,
+          date: DateTime(2026, 5, 1),
+        ),
+      );
+      await provider.saveExam(
+        examOf(
+          'e2',
+          'Hemograma',
+          ExamStatus.requested,
+          date: DateTime(2026, 4, 1),
+        ),
+      );
+      await provider.saveExam(
+        examOf('e3', 'ECG antigo', ExamStatus.done, date: DateTime(2026, 1, 1)),
+      );
+      await provider.saveExam(
+        examOf(
+          'e4',
+          'ECG recente',
+          ExamStatus.done,
+          date: DateTime(2026, 2, 1),
+        ),
+      );
 
-    expect(
-      provider.pendingExams.map((e) => e.name).toList(),
-      ['Hemograma', 'Glicemia'],
-      reason: 'pendentes em ordem crescente de data',
-    );
-    expect(
-      provider.doneExams.map((e) => e.name).toList(),
-      ['ECG recente', 'ECG antigo'],
-      reason: 'realizados do mais recente para o mais antigo',
-    );
-    expect(provider.requestedCount, 1);
-    expect(provider.scheduledCount, 1);
-    expect(provider.doneCount, 2);
-  });
+      expect(provider.pendingExams.map((e) => e.name).toList(), [
+        'Hemograma',
+        'Glicemia',
+      ], reason: 'pendentes em ordem crescente de data');
+      expect(provider.doneExams.map((e) => e.name).toList(), [
+        'ECG recente',
+        'ECG antigo',
+      ], reason: 'realizados do mais recente para o mais antigo');
+      expect(provider.requestedCount, 1);
+      expect(provider.scheduledCount, 1);
+      expect(provider.doneCount, 2);
+    },
+  );
 
   test('removeExam apaga do estado e do banco', () async {
     final provider = ExamProvider();

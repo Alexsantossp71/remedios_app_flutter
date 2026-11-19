@@ -25,21 +25,18 @@ Future<void> pumpHarness(WidgetTester tester, DoctorProvider provider) async {
       child: MaterialApp(
         home: Scaffold(
           body: Builder(
-            builder:
-                (context) => Center(
-                  child: FilledButton(
-                    onPressed: () async {
-                      _popped = await showDialog<Exam>(
-                        context: context,
-                        builder:
-                            (_) => ExamFormDialog(
-                              initialExam: _existingForNextOpen,
-                            ),
-                      );
-                    },
-                    child: const Text('abrir'),
-                  ),
-                ),
+            builder: (context) => Center(
+              child: FilledButton(
+                onPressed: () async {
+                  _popped = await showDialog<Exam>(
+                    context: context,
+                    builder: (_) =>
+                        ExamFormDialog(initialExam: _existingForNextOpen),
+                  );
+                },
+                child: const Text('abrir'),
+              ),
+            ),
           ),
         ),
       ),
@@ -85,32 +82,34 @@ void main() {
     await DatabaseService.instance.close();
   });
 
-  testWidgets('exame exige médico: sem catálogo mostra banner e trava o salvar',
-      (tester) async {
-    await pumpHarness(tester, doctorProvider);
-    await openExamForm(tester);
-    await goToDoctorStep(tester);
+  testWidgets(
+    'exame exige médico: sem catálogo mostra banner e trava o salvar',
+    (tester) async {
+      await pumpHarness(tester, doctorProvider);
+      await openExamForm(tester);
+      await goToDoctorStep(tester);
 
-    // Catálogo vazio: banner com cadastro inline, não beco sem saída.
-    expect(
-      find.text(
-        'Nenhum médico cadastrado. O médico é obrigatório — cadastre aqui '
-        'para continuar.',
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('Cadastrar médico'), findsOneWidget);
+      // Catálogo vazio: banner com cadastro inline, não beco sem saída.
+      expect(
+        find.text(
+          'Nenhum médico cadastrado. O médico é obrigatório — cadastre aqui '
+          'para continuar.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Cadastrar médico'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Registrar exame'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Registrar exame'));
+      await tester.pumpAndSettle();
 
-    // Não salvou: o passo continua com o aviso obrigatório.
-    expect(
-      find.text('Selecione ou cadastre o médico solicitante.'),
-      findsOneWidget,
-    );
-    expect(_popped, isNull);
-  });
+      // Não salvou: o passo continua com o aviso obrigatório.
+      expect(
+        find.text('Selecione ou cadastre o médico solicitante.'),
+        findsOneWidget,
+      );
+      expect(_popped, isNull);
+    },
+  );
 
   testWidgets('exame com médico do catálogo salva vinculado', (tester) async {
     await pumpHarness(tester, doctorProvider);
@@ -138,8 +137,9 @@ void main() {
     expect(_popped!.doctorName, 'Dra. Ana');
   });
 
-  testWidgets('nome do pedido casa com o catálogo e pré-seleciona o médico',
-      (tester) async {
+  testWidgets('nome do pedido casa com o catálogo e pré-seleciona o médico', (
+    tester,
+  ) async {
     await pumpHarness(tester, doctorProvider);
     // Escrita no SQLite é I/O real: runAsync (padrão do repositório).
     await tester.runAsync(
@@ -170,8 +170,9 @@ void main() {
     expect(_popped!.doctorName, 'Dra. Ana');
   });
 
-  testWidgets('cadastro inline a partir do exame cria e seleciona o médico',
-      (tester) async {
+  testWidgets('cadastro inline a partir do exame cria e seleciona o médico', (
+    tester,
+  ) async {
     await pumpHarness(tester, doctorProvider);
     await openExamForm(tester);
     await goToDoctorStep(tester);

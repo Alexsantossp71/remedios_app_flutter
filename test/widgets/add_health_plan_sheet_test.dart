@@ -57,8 +57,9 @@ void main() {
     expect(choice, AddPlanChoice.image);
   });
 
-  testWidgets('retorna manual ao tocar em cadastrar manualmente',
-      (tester) async {
+  testWidgets('retorna manual ao tocar em cadastrar manualmente', (
+    tester,
+  ) async {
     AddPlanChoice? choice;
     await tester.pumpWidget(
       MaterialApp(

@@ -46,13 +46,14 @@ class DoseSchedulePresets {
     final step = (dayMinutes / timesPerDay).round();
     final times = <int, DoseTime>{};
     for (var i = 0; i < timesPerDay; i++) {
-      final minutes =
-          (firstDose.minutesSinceMidnight + i * step) % dayMinutes;
+      final minutes = (firstDose.minutesSinceMidnight + i * step) % dayMinutes;
       times[minutes] = _fromMinutes(minutes);
     }
     final values = times.values.toList(growable: false)
-      ..sort((first, second) =>
-          first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight));
+      ..sort(
+        (first, second) =>
+            first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight),
+      );
     return values;
   }
 
@@ -97,14 +98,16 @@ class DoseSchedulePresets {
   /// "hoje 20:00 · amanhã 08:00 · 10/11 08:00"
   static String formatInstants(List<DateTime> instants, DateTime now) {
     final today = DateTime(now.year, now.month, now.day);
-    return instants.map((instant) {
-      final time =
-          '${instant.hour.toString().padLeft(2, '0')}:${instant.minute.toString().padLeft(2, '0')}';
-      final day = DateTime(instant.year, instant.month, instant.day);
-      final difference = day.difference(today).inDays;
-      if (difference == 0) return 'hoje $time';
-      if (difference == 1) return 'amanhã $time';
-      return '${instant.day.toString().padLeft(2, '0')}/${instant.month.toString().padLeft(2, '0')} $time';
-    }).join(' · ');
+    return instants
+        .map((instant) {
+          final time =
+              '${instant.hour.toString().padLeft(2, '0')}:${instant.minute.toString().padLeft(2, '0')}';
+          final day = DateTime(instant.year, instant.month, instant.day);
+          final difference = day.difference(today).inDays;
+          if (difference == 0) return 'hoje $time';
+          if (difference == 1) return 'amanhã $time';
+          return '${instant.day.toString().padLeft(2, '0')}/${instant.month.toString().padLeft(2, '0')} $time';
+        })
+        .join(' · ');
   }
 }

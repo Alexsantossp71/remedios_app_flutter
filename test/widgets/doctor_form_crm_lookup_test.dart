@@ -19,9 +19,8 @@ const _spJson = {
   'escolaNome': 'USP',
 };
 
-http.Client _spClient() => MockClient(
-      (_) async => http.Response(jsonEncode(_spJson), 200),
-    );
+http.Client _spClient() =>
+    MockClient((_) async => http.Response(jsonEncode(_spJson), 200));
 
 Widget buildSubject({CrmLookupService? crmLookup}) {
   return MaterialApp(
@@ -56,18 +55,16 @@ Future<void> selectCrmUf(WidgetTester tester, String uf) async {
 }
 
 void main() {
-  testWidgets('lookup button prefills name and specialty from CREMESP',
-      (tester) async {
+  testWidgets('lookup button prefills name and specialty from CREMESP', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       buildSubject(crmLookup: CrmLookupService(client: _spClient())),
     );
     await tester.pumpAndSettle();
     await goToStep2(tester);
 
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'CRM'),
-      '33333',
-    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'CRM'), '33333');
     await selectCrmUf(tester, 'SP');
 
     await tester.tap(find.byTooltip('Buscar dados pelo CRM no conselho'));
@@ -97,8 +94,9 @@ void main() {
     expect(find.text('Endocrinologia'), findsOneWidget);
   });
 
-  testWidgets('lookup without UF shows a warning and does not call the API',
-      (tester) async {
+  testWidgets('lookup without UF shows a warning and does not call the API', (
+    tester,
+  ) async {
     var called = false;
     final service = CrmLookupService(
       client: MockClient((_) async {
@@ -110,10 +108,7 @@ void main() {
     await tester.pumpAndSettle();
     await goToStep2(tester);
 
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'CRM'),
-      '33333',
-    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'CRM'), '33333');
     await tester.tap(find.byTooltip('Buscar dados pelo CRM no conselho'));
     await tester.pumpAndSettle();
 
@@ -121,18 +116,16 @@ void main() {
     expect(find.textContaining('Selecione a UF do CRM'), findsOneWidget);
   });
 
-  testWidgets('MG shows unsupported message and keeps fields manual',
-      (tester) async {
+  testWidgets('MG shows unsupported message and keeps fields manual', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       buildSubject(crmLookup: CrmLookupService(client: _spClient())),
     );
     await tester.pumpAndSettle();
     await goToStep2(tester);
 
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'CRM'),
-      '33333',
-    );
+    await tester.enterText(find.widgetWithText(TextFormField, 'CRM'), '33333');
     await selectCrmUf(tester, 'MG');
 
     await tester.tap(find.byTooltip('Buscar dados pelo CRM no conselho'));

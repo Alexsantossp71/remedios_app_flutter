@@ -25,18 +25,20 @@ class FakeAiClient extends http.BaseClient {
 }
 
 http.Response chat(String content) => http.Response(
-      jsonEncode({
-        'choices': [
-          {'message': {'content': content}, 'finish_reason': 'stop'},
-        ],
-      }),
-      200,
-      headers: {'content-type': 'application/json'},
-    );
+  jsonEncode({
+    'choices': [
+      {
+        'message': {'content': content},
+        'finish_reason': 'stop',
+      },
+    ],
+  }),
+  200,
+  headers: {'content-type': 'application/json'},
+);
 
-AiService serviceWith(http.BaseClient client) => AiService(
-      proxyClient: AiProxyClient(client: client, isWebOverride: false),
-    );
+AiService serviceWith(http.BaseClient client) =>
+    AiService(proxyClient: AiProxyClient(client: client, isWebOverride: false));
 
 Treatment treatment(
   String id,
@@ -46,21 +48,20 @@ Treatment treatment(
   DateTime? endDate,
   TreatmentFrequency frequency = TreatmentFrequency.daily,
   List<int> weekdays = const [],
-}) =>
-    Treatment(
-      id: id,
-      name: name,
-      dosage: dosage,
-      presentation: 'comprimido',
-      instructions: '',
-      startDate: DateTime(2026, 1, 1),
-      endDate: endDate,
-      frequency: frequency,
-      doseTimes: times,
-      weekdays: weekdays,
-      stock: null,
-      refillThreshold: null,
-    );
+}) => Treatment(
+  id: id,
+  name: name,
+  dosage: dosage,
+  presentation: 'comprimido',
+  instructions: '',
+  startDate: DateTime(2026, 1, 1),
+  endDate: endDate,
+  frequency: frequency,
+  doseTimes: times,
+  weekdays: weekdays,
+  stock: null,
+  refillThreshold: null,
+);
 
 void main() {
   group('aiExtractJson', () {
@@ -74,10 +75,7 @@ void main() {
     });
 
     test('sem objeto JSON lança mensagem amigável', () {
-      expect(
-        () => aiExtractJson('sem json aqui'),
-        throwsA(isA<AiException>()),
-      );
+      expect(() => aiExtractJson('sem json aqui'), throwsA(isA<AiException>()));
     });
   });
 
@@ -124,18 +122,15 @@ void main() {
 
       expect(report.summary, 'Dois pontos de atenção.');
       expect(report.interactions.length, 2);
-      expect(
-        report.interactions.first.severity,
-        AiInteractionSeverity.alta,
-      );
+      expect(report.interactions.first.severity, AiInteractionSeverity.alta);
       // Severidade desconhecida cai em moderada.
-      expect(
-        report.interactions[1].severity,
-        AiInteractionSeverity.moderada,
-      );
+      expect(report.interactions[1].severity, AiInteractionSeverity.moderada);
       expect(report.duplicates.length, 1);
       expect(report.duplicates.first.activeIngredient, 'Dipirona');
-      expect(report.sources, ['Bulario eletrônico (2026-01-01)', 'Uma empresa']);
+      expect(report.sources, [
+        'Bulario eletrônico (2026-01-01)',
+        'Uma empresa',
+      ]);
     });
 
     test('entrada estranha vira relatório vazio sem lançar', () {
@@ -416,13 +411,15 @@ void main() {
               jsonDecode(request.body)['messages'][0]['content'] as String;
           expect(content, contains('Losartana'));
           expect(content, contains('dosagem: 50 mg'));
-          return chat(jsonEncode({
-            'whatFor': 'Controla a pressão alta.',
-            'howToUse': 'Geralmente uma vez ao dia.',
-            'commonSideEffects': ['Tontura'],
-            'warnings': ['Evite álcool'],
-            'note': 'Consulte a bula.',
-          }));
+          return chat(
+            jsonEncode({
+              'whatFor': 'Controla a pressão alta.',
+              'howToUse': 'Geralmente uma vez ao dia.',
+              'commonSideEffects': ['Tontura'],
+              'warnings': ['Evite álcool'],
+              'note': 'Consulte a bula.',
+            }),
+          );
         }),
       );
 
@@ -440,18 +437,20 @@ void main() {
               jsonDecode(request.body)['messages'][0]['content'] as String;
           expect(content, contains('[t1]'));
           expect(content, contains('horários atuais: 08:00'));
-          return chat(jsonEncode({
-            'summary': 'Sem mudança segura.',
-            'suggestions': [
-              {
-                'medicationId': 't1',
-                'medicationName': 'Losartana',
-                'suggestedTimes': ['08:00'],
-                'reason': 'Mantenha.',
-                'warnings': [],
-              },
-            ],
-          }));
+          return chat(
+            jsonEncode({
+              'summary': 'Sem mudança segura.',
+              'suggestions': [
+                {
+                  'medicationId': 't1',
+                  'medicationName': 'Losartana',
+                  'suggestedTimes': ['08:00'],
+                  'reason': 'Mantenha.',
+                  'warnings': [],
+                },
+              ],
+            }),
+          );
         }),
       );
 

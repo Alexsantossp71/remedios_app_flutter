@@ -133,7 +133,9 @@ class Exam {
       id: json['id'] as String,
       name: json['name'] as String,
       category: examCategories.contains(category) ? category : '',
-      status: ExamStatus.values.contains(status) ? status : ExamStatus.requested,
+      status: ExamStatus.values.contains(status)
+          ? status
+          : ExamStatus.requested,
       date: DateTime.parse(json['date'] as String),
       time: json['time'] as String?,
       photo: json['photo'] as String?,
@@ -148,19 +150,19 @@ class Exam {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'category': category,
-        'status': status,
-        'date': date.toIso8601String(),
-        'time': time,
-        'photo': photo,
-        'doctorId': doctorId,
-        'doctorName': doctorName,
-        'place': place,
-        'results': results,
-        'createdAt': createdAt?.toUtc().toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'category': category,
+    'status': status,
+    'date': date.toIso8601String(),
+    'time': time,
+    'photo': photo,
+    'doctorId': doctorId,
+    'doctorName': doctorName,
+    'place': place,
+    'results': results,
+    'createdAt': createdAt?.toUtc().toIso8601String(),
+  };
 
   Exam copyWith({
     String? name,

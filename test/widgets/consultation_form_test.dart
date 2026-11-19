@@ -24,23 +24,21 @@ Future<void> pumpDialog(
       child: MaterialApp(
         home: Scaffold(
           body: Builder(
-            builder:
-                (context) => Center(
-                  child: FilledButton(
-                    onPressed: () async {
-                      final result = await showDialog<Consultation>(
-                        context: context,
-                        builder:
-                            (_) => ConsultationFormDialog(
-                              initialConsultation: existing,
-                              initialDoctorId: initialDoctorId,
-                            ),
-                      );
-                      _popped = result;
-                    },
-                    child: const Text('abrir'),
-                  ),
-                ),
+            builder: (context) => Center(
+              child: FilledButton(
+                onPressed: () async {
+                  final result = await showDialog<Consultation>(
+                    context: context,
+                    builder: (_) => ConsultationFormDialog(
+                      initialConsultation: existing,
+                      initialDoctorId: initialDoctorId,
+                    ),
+                  );
+                  _popped = result;
+                },
+                child: const Text('abrir'),
+              ),
+            ),
           ),
         ),
       ),

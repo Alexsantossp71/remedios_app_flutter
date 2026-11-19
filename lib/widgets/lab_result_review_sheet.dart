@@ -53,8 +53,9 @@ class _LabResultReviewSheetState extends State<LabResultReviewSheet> {
   void initState() {
     super.initState();
     final existing = widget.initialResult;
-    _labNameController =
-        TextEditingController(text: existing?.labName ?? widget.scannedLabName);
+    _labNameController = TextEditingController(
+      text: existing?.labName ?? widget.scannedLabName,
+    );
     _notesController = TextEditingController(text: existing?.notes ?? '');
     _date = existing?.date ?? _parseScanDate() ?? DateTime.now();
     _photoBytes = widget.photoBytes;
@@ -148,8 +149,9 @@ class _LabResultReviewSheetState extends State<LabResultReviewSheet> {
       if (name.isEmpty) continue;
       final valueText = row.valueController.text.trim();
       final referenceText = row.referenceController.text.trim();
-      final numericValue =
-          valueText.isNotEmpty ? parseNumericValue(valueText) : null;
+      final numericValue = valueText.isNotEmpty
+          ? parseNumericValue(valueText)
+          : null;
       final parsed = parseReferenceText(referenceText);
       values.add(
         LabValue(
@@ -192,9 +194,7 @@ class _LabResultReviewSheetState extends State<LabResultReviewSheet> {
     final isEditing = widget.initialResult != null;
 
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.92,
@@ -265,8 +265,10 @@ class _LabResultReviewSheetState extends State<LabResultReviewSheet> {
                           _ValueRowCard(
                             key: ValueKey(_rows[index].key),
                             row: _rows[index],
-                            flagColor:
-                                _rows[index].previewFlag(context, semantic),
+                            flagColor: _rows[index].previewFlag(
+                              context,
+                              semantic,
+                            ),
                             onRemove: () => _removeRow(index),
                           ),
                         TextButton.icon(
@@ -304,9 +306,7 @@ class _LabResultReviewSheetState extends State<LabResultReviewSheet> {
                     const Spacer(),
                     FilledButton(
                       onPressed: _save,
-                      child: Text(
-                        isEditing ? 'Salvar' : 'Salvar laudo',
-                      ),
+                      child: Text(isEditing ? 'Salvar' : 'Salvar laudo'),
                     ),
                   ],
                 ),
@@ -327,7 +327,8 @@ class _ValueRow {
     referenceController = TextEditingController();
   }
 
-  _ValueRow.fromValue(LabValue value) : key = DateTime.now().microsecondsSinceEpoch {
+  _ValueRow.fromValue(LabValue value)
+    : key = DateTime.now().microsecondsSinceEpoch {
     nameController = TextEditingController(text: value.examName);
     valueController = TextEditingController(text: value.valueText);
     unitController = TextEditingController(text: value.unit);

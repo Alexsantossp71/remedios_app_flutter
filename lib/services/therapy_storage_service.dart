@@ -10,14 +10,15 @@ class TherapyStorageService {
   final DatabaseService _dbService;
 
   TherapyStorageService({DatabaseService? dbService})
-      : _dbService = dbService ?? DatabaseService.instance;
+    : _dbService = dbService ?? DatabaseService.instance;
 
   Future<List<Treatment>> loadTreatments() async {
     final db = await _dbService.database;
     final rows = await db.query('treatments', orderBy: 'name ASC');
 
     return rows.map((row) {
-      final doseTimesRaw = jsonDecode(row['dose_times'] as String) as List<dynamic>;
+      final doseTimesRaw =
+          jsonDecode(row['dose_times'] as String) as List<dynamic>;
       final doseTimes = doseTimesRaw
           .map((item) => DoseTime.fromJson(item as Map<String, dynamic>))
           .toList();
@@ -41,9 +42,9 @@ class TherapyStorageService {
         weekdays: (row['weekdays'] == null)
             ? const <int>[]
             : (jsonDecode(row['weekdays'] as String) as List<dynamic>)
-                .map((day) => day as int)
-                .where((day) => day >= 1 && day <= 7)
-                .toList(),
+                  .map((day) => day as int)
+                  .where((day) => day >= 1 && day <= 7)
+                  .toList(),
         stock: row['stock'] as int?,
         refillThreshold: row['refill_threshold'] as int?,
         isArchived: (row['is_archived'] as int? ?? 0) == 1,
@@ -65,8 +66,9 @@ class TherapyStorageService {
     return rows.map((row) {
       final scheduledAtUtc = DateTime.parse(row['scheduled_at'] as String);
       final completedAtRaw = row['completed_at'] as String?;
-      final completedAtUtc =
-          completedAtRaw != null ? DateTime.parse(completedAtRaw) : null;
+      final completedAtUtc = completedAtRaw != null
+          ? DateTime.parse(completedAtRaw)
+          : null;
 
       return DoseEvent(
         id: row['id'] as String,
@@ -84,9 +86,47 @@ class TherapyStorageService {
     final db = await _dbService.database;
     final nowIso = DateTime.now().toUtc().toIso8601String();
 
-    await db.insert(
-      'treatments',
-      {
+    await db.insert('treatments', {
+      'id': treatment.id,
+      'name': treatment.name,
+      'dosage': treatment.dosage,
+      'presentation': treatment.presentation,
+      'instructions': treatment.instructions,
+      'start_date': treatment.startDate.toUtc().toIso8601String(),
+      'end_date': treatment.endDate?.toUtc().toIso8601String(),
+      'frequency': treatment.frequency.name,
+      'dose_times': jsonEncode(
+        treatment.doseTimes.map((t) => t.toJson()).toList(),
+      ),
+      'weekdays': treatment.weekdays.isEmpty
+          ? null
+          : jsonEncode(treatment.weekdays),
+      'stock': treatment.stock,
+      'refill_threshold': treatment.refillThreshold,
+      'is_archived': treatment.isArchived ? 1 : 0,
+      'prescriber_doctor_id': treatment.prescriberDoctorId,
+      'prescriber_name': treatment.prescriberName.isEmpty
+          ? null
+          : treatment.prescriberName,
+      'prescriber_crm': treatment.prescriberCrm.isEmpty
+          ? null
+          : treatment.prescriberCrm,
+      'prescriber_crm_state': treatment.prescriberCrmState.isEmpty
+          ? null
+          : treatment.prescriberCrmState,
+      'prescribed_on': treatment.prescribedOn?.toUtc().toIso8601String(),
+      'created_at': nowIso,
+      'updated_at': nowIso,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> saveTreatments(List<Treatment> treatments) async {
+    final db = await _dbService.database;
+    final batch = db.batch();
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+
+    for (final treatment in treatments) {
+      batch.insert('treatments', {
         'id': treatment.id,
         'name': treatment.name,
         'dosage': treatment.dosage,
@@ -105,65 +145,19 @@ class TherapyStorageService {
         'refill_threshold': treatment.refillThreshold,
         'is_archived': treatment.isArchived ? 1 : 0,
         'prescriber_doctor_id': treatment.prescriberDoctorId,
-        'prescriber_name':
-            treatment.prescriberName.isEmpty ? null : treatment.prescriberName,
-        'prescriber_crm':
-            treatment.prescriberCrm.isEmpty ? null : treatment.prescriberCrm,
+        'prescriber_name': treatment.prescriberName.isEmpty
+            ? null
+            : treatment.prescriberName,
+        'prescriber_crm': treatment.prescriberCrm.isEmpty
+            ? null
+            : treatment.prescriberCrm,
         'prescriber_crm_state': treatment.prescriberCrmState.isEmpty
             ? null
             : treatment.prescriberCrmState,
-        'prescribed_on':
-            treatment.prescribedOn?.toUtc().toIso8601String(),
+        'prescribed_on': treatment.prescribedOn?.toUtc().toIso8601String(),
         'created_at': nowIso,
         'updated_at': nowIso,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  Future<void> saveTreatments(List<Treatment> treatments) async {
-    final db = await _dbService.database;
-    final batch = db.batch();
-    final nowIso = DateTime.now().toUtc().toIso8601String();
-
-    for (final treatment in treatments) {
-      batch.insert(
-        'treatments',
-        {
-          'id': treatment.id,
-          'name': treatment.name,
-          'dosage': treatment.dosage,
-          'presentation': treatment.presentation,
-          'instructions': treatment.instructions,
-          'start_date': treatment.startDate.toUtc().toIso8601String(),
-          'end_date': treatment.endDate?.toUtc().toIso8601String(),
-          'frequency': treatment.frequency.name,
-          'dose_times': jsonEncode(
-            treatment.doseTimes.map((t) => t.toJson()).toList(),
-          ),
-          'weekdays': treatment.weekdays.isEmpty
-              ? null
-              : jsonEncode(treatment.weekdays),
-          'stock': treatment.stock,
-          'refill_threshold': treatment.refillThreshold,
-          'is_archived': treatment.isArchived ? 1 : 0,
-          'prescriber_doctor_id': treatment.prescriberDoctorId,
-          'prescriber_name':
-              treatment.prescriberName.isEmpty
-                  ? null
-                  : treatment.prescriberName,
-          'prescriber_crm':
-              treatment.prescriberCrm.isEmpty ? null : treatment.prescriberCrm,
-          'prescriber_crm_state': treatment.prescriberCrmState.isEmpty
-              ? null
-              : treatment.prescriberCrmState,
-          'prescribed_on':
-              treatment.prescribedOn?.toUtc().toIso8601String(),
-          'created_at': nowIso,
-          'updated_at': nowIso,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }
@@ -172,18 +166,14 @@ class TherapyStorageService {
     final db = await _dbService.database;
     final nowIso = DateTime.now().toUtc().toIso8601String();
 
-    await db.insert(
-      'dose_events',
-      {
-        'id': event.id,
-        'treatment_id': event.treatmentId,
-        'scheduled_at': event.scheduledAt.toUtc().toIso8601String(),
-        'status': event.status.name,
-        'completed_at': event.completedAt?.toUtc().toIso8601String(),
-        'created_at': nowIso,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('dose_events', {
+      'id': event.id,
+      'treatment_id': event.treatmentId,
+      'scheduled_at': event.scheduledAt.toUtc().toIso8601String(),
+      'status': event.status.name,
+      'completed_at': event.completedAt?.toUtc().toIso8601String(),
+      'created_at': nowIso,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> saveDoseEvents(List<DoseEvent> doseEvents) async {
@@ -192,18 +182,14 @@ class TherapyStorageService {
     final nowIso = DateTime.now().toUtc().toIso8601String();
 
     for (final event in doseEvents) {
-      batch.insert(
-        'dose_events',
-        {
-          'id': event.id,
-          'treatment_id': event.treatmentId,
-          'scheduled_at': event.scheduledAt.toUtc().toIso8601String(),
-          'status': event.status.name,
-          'completed_at': event.completedAt?.toUtc().toIso8601String(),
-          'created_at': nowIso,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      batch.insert('dose_events', {
+        'id': event.id,
+        'treatment_id': event.treatmentId,
+        'scheduled_at': event.scheduledAt.toUtc().toIso8601String(),
+        'status': event.status.name,
+        'completed_at': event.completedAt?.toUtc().toIso8601String(),
+        'created_at': nowIso,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }
@@ -230,11 +216,9 @@ class TherapyStorageService {
         doctorName: row['doctor_name'] as String? ?? '',
         doctorCrm: row['doctor_crm'] as String? ?? '',
         doctorCrmState: row['doctor_crm_state'] as String? ?? '',
-        prescribedOn:
-            DateTime.parse(row['prescribed_on'] as String).toLocal(),
+        prescribedOn: DateTime.parse(row['prescribed_on'] as String).toLocal(),
         source: PrescriptionSource.fromName(row['source'] as String?),
-        createdAt:
-            DateTime.parse(row['created_at'] as String).toLocal(),
+        createdAt: DateTime.parse(row['created_at'] as String).toLocal(),
       );
     }).toList();
   }
@@ -250,12 +234,12 @@ class TherapyStorageService {
       'doctor_id': record.doctorId,
       'doctor_name': record.doctorName,
       'doctor_crm': record.doctorCrm.isEmpty ? null : record.doctorCrm,
-      'doctor_crm_state':
-          record.doctorCrmState.isEmpty ? null : record.doctorCrmState,
+      'doctor_crm_state': record.doctorCrmState.isEmpty
+          ? null
+          : record.doctorCrmState,
       'prescribed_on': record.prescribedOn.toUtc().toIso8601String(),
       'source': record.source.name,
       'created_at': record.createdAt.toUtc().toIso8601String(),
     });
   }
-
-  }
+}

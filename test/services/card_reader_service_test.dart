@@ -84,7 +84,8 @@ Espero ter ajudado.
     test('envia base64 e mimeType ao proxy e extrai o resultado', () async {
       final client = _FakeClient(
         statusCode: 200,
-        body: '{"content":"{\\"name\\":\\"Golden\\",'
+        body:
+            '{"content":"{\\"name\\":\\"Golden\\",'
             '\\"provider\\":\\"Porto Seguro\\"}",'
             '"model":"nvidia/llama-3.2-vision"}',
       );
@@ -109,7 +110,9 @@ Espero ter ajudado.
     });
 
     test('usa a URL padrão do proxy de produção', () {
-      final service = CardReaderService(client: _FakeClient(statusCode: 200, body: '{}'));
+      final service = CardReaderService(
+        client: _FakeClient(statusCode: 200, body: '{}'),
+      );
       expect(
         service.proxyUrl,
         'https://remedios-app-flutter.vercel.app/api/read-card',
@@ -118,30 +121,42 @@ Espero ter ajudado.
 
     test('converte 400 em mensagem de imagem não aceita', () async {
       final service = CardReaderService(
-        client: _FakeClient(statusCode: 400, body: '{"error":"invalid_request"}'),
+        client: _FakeClient(
+          statusCode: 400,
+          body: '{"error":"invalid_request"}',
+        ),
         proxyUrl: proxyUrl,
       );
 
       await expectLater(
         service.readCard(imageBytes: Uint8List.fromList([1])),
         throwsA(
-          isA<CardReaderException>()
-              .having((e) => e.message, 'message', contains('não foi aceita')),
+          isA<CardReaderException>().having(
+            (e) => e.message,
+            'message',
+            contains('não foi aceita'),
+          ),
         ),
       );
     });
 
     test('converte 413 em mensagem de imagem grande', () async {
       final service = CardReaderService(
-        client: _FakeClient(statusCode: 413, body: '{"error":"image_too_large"}'),
+        client: _FakeClient(
+          statusCode: 413,
+          body: '{"error":"image_too_large"}',
+        ),
         proxyUrl: proxyUrl,
       );
 
       await expectLater(
         service.readCard(imageBytes: Uint8List.fromList([1])),
         throwsA(
-          isA<CardReaderException>()
-              .having((e) => e.message, 'message', contains('muito grande')),
+          isA<CardReaderException>().having(
+            (e) => e.message,
+            'message',
+            contains('muito grande'),
+          ),
         ),
       );
     });
@@ -155,8 +170,11 @@ Espero ter ajudado.
       await expectLater(
         service.readCard(imageBytes: Uint8List.fromList([1])),
         throwsA(
-          isA<CardReaderException>()
-              .having((e) => e.message, 'message', contains('Limite diário')),
+          isA<CardReaderException>().having(
+            (e) => e.message,
+            'message',
+            contains('Limite diário'),
+          ),
         ),
       );
     });
@@ -170,8 +188,11 @@ Espero ter ajudado.
       await expectLater(
         service.readCard(imageBytes: Uint8List.fromList([1])),
         throwsA(
-          isA<CardReaderException>()
-              .having((e) => e.message, 'message', contains('indisponível')),
+          isA<CardReaderException>().having(
+            (e) => e.message,
+            'message',
+            contains('indisponível'),
+          ),
         ),
       );
     });
@@ -185,8 +206,11 @@ Espero ter ajudado.
       await expectLater(
         service.readCard(imageBytes: Uint8List.fromList([1])),
         throwsA(
-          isA<CardReaderException>()
-              .having((e) => e.message, 'message', contains('conexão')),
+          isA<CardReaderException>().having(
+            (e) => e.message,
+            'message',
+            contains('conexão'),
+          ),
         ),
       );
     });

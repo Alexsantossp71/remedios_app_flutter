@@ -48,8 +48,9 @@ void main() {
     await DatabaseService.instance.close();
   });
 
-  testWidgets('convite nomeia o médico lido sem criar nada por conta própria',
-      (tester) async {
+  testWidgets('convite nomeia o médico lido sem criar nada por conta própria', (
+    tester,
+  ) async {
     await pumpHarness(tester, doctorProvider);
 
     expect(find.textContaining('Dra. Helena'), findsWidgets);
@@ -59,8 +60,9 @@ void main() {
     expect(_created, isNull);
   });
 
-  testWidgets('um toque abre o cadastro preenchido e entrega o médico criado',
-      (tester) async {
+  testWidgets('um toque abre o cadastro preenchido e entrega o médico criado', (
+    tester,
+  ) async {
     await pumpHarness(tester, doctorProvider);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Cadastrar médico'));
@@ -82,7 +84,9 @@ void main() {
     // Escrita no SQLite é I/O real: roda fora do fake async (padrão do repo).
     final saved = await tester.runAsync(() async {
       await Future<void>.delayed(const Duration(milliseconds: 300));
-      return doctorProvider.doctors.any((doctor) => doctor.name == 'Dra. Helena');
+      return doctorProvider.doctors.any(
+        (doctor) => doctor.name == 'Dra. Helena',
+      );
     });
     expect(saved, isTrue);
 

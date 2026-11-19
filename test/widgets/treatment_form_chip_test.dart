@@ -5,9 +5,7 @@ import 'package:remedios_app_flutter/widgets/treatment_form_dialog.dart';
 
 void main() {
   Widget buildSubject() {
-    return const MaterialApp(
-      home: Scaffold(body: TreatmentFormDialog()),
-    );
+    return const MaterialApp(home: Scaffold(body: TreatmentFormDialog()));
   }
 
   /// V4 em passos: os horários vivem no passo 2. Preenche o nome (obriga-
@@ -35,8 +33,9 @@ void main() {
     expect(find.widgetWithText(ActionChip, 'Dormir 22:00'), findsOneWidget);
   });
 
-  testWidgets('tapping the lunch preset adds 12:00 to the dose-time list',
-      (tester) async {
+  testWidgets('tapping the lunch preset adds 12:00 to the dose-time list', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
     await openStep2(tester);
@@ -50,8 +49,9 @@ void main() {
     expect(find.widgetWithText(Chip, '12:00'), findsOneWidget);
   });
 
-  testWidgets('tapping a routine preset twice toggles the time off',
-      (tester) async {
+  testWidgets('tapping a routine preset twice toggles the time off', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
     await openStep2(tester);
@@ -65,8 +65,9 @@ void main() {
     expect(find.widgetWithText(Chip, '12:00'), findsNothing);
   });
 
-  testWidgets('tapping a routine preset for the pre-added time removes it',
-      (tester) async {
+  testWidgets('tapping a routine preset for the pre-added time removes it', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
     await openStep2(tester);

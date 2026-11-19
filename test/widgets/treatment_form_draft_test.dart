@@ -12,8 +12,9 @@ void main() {
     );
   }
 
-  testWidgets('rascunho da receita preenche o formulário para conferência',
-      (tester) async {
+  testWidgets('rascunho da receita preenche o formulário para conferência', (
+    tester,
+  ) async {
     final draft = TreatmentDraft(
       name: 'DIPIRONA',
       dosage: '500MG',
@@ -56,24 +57,27 @@ void main() {
     expect(find.widgetWithText(Chip, '12:00'), findsNothing);
   });
 
-  testWidgets('frequência lida da receita abre pré-selecionada para conferência',
-      (tester) async {
-    const draft = TreatmentDraft(
-      name: 'CALCITRIOL',
-      doseTimes: [DoseTime(hour: 8, minute: 0)],
-      frequency: TreatmentFrequency.everyOtherDay,
-    );
+  testWidgets(
+    'frequência lida da receita abre pré-selecionada para conferência',
+    (tester) async {
+      const draft = TreatmentDraft(
+        name: 'CALCITRIOL',
+        doseTimes: [DoseTime(hour: 8, minute: 0)],
+        frequency: TreatmentFrequency.everyOtherDay,
+      );
 
-    await tester.pumpWidget(buildSubject(draft));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(buildSubject(draft));
+      await tester.pumpAndSettle();
 
-    // O dropdown abre já com "Dia sim, dia não": o usuário VÊ a frequência
-    // que a leitura inferiu e pode trocar antes de salvar.
-    expect(find.text('Dia sim, dia não'), findsOneWidget);
-  });
+      // O dropdown abre já com "Dia sim, dia não": o usuário VÊ a frequência
+      // que a leitura inferiu e pode trocar antes de salvar.
+      expect(find.text('Dia sim, dia não'), findsOneWidget);
+    },
+  );
 
-  testWidgets('rascunho semanal abre com os dias da receita marcados',
-      (tester) async {
+  testWidgets('rascunho semanal abre com os dias da receita marcados', (
+    tester,
+  ) async {
     Treatment? saved;
     await tester.pumpWidget(
       MaterialApp(
@@ -105,11 +109,13 @@ void main() {
 
     // "1x por semana aos sábados": frequência e dia vêm da receita, visíveis.
     expect(find.text('Semanal'), findsOneWidget);
-    final sabadoChip =
-        tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Sáb'));
+    final sabadoChip = tester.widget<FilterChip>(
+      find.widgetWithText(FilterChip, 'Sáb'),
+    );
     expect(sabadoChip.selected, isTrue);
-    final segundaChip =
-        tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Seg'));
+    final segundaChip = tester.widget<FilterChip>(
+      find.widgetWithText(FilterChip, 'Seg'),
+    );
     expect(segundaChip.selected, isFalse);
 
     // Passo 2 (horários) → passo 3 → Salvar.

@@ -33,8 +33,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('intervalo da receita gera o dia inteiro a partir da 1ª dose',
-      (tester) async {
+  testWidgets('intervalo da receita gera o dia inteiro a partir da 1ª dose', (
+    tester,
+  ) async {
     await openReview(
       tester,
       PrescriptionReadResult(
@@ -65,8 +66,9 @@ void main() {
     expect(find.widgetWithText(Chip, '02:00'), findsOneWidget);
   });
 
-  testWidgets('âncora segue a 1ª dose escolhida, não o relógio',
-      (tester) async {
+  testWidgets('âncora segue a 1ª dose escolhida, não o relógio', (
+    tester,
+  ) async {
     await openReview(
       tester,
       PrescriptionReadResult(
@@ -91,8 +93,9 @@ void main() {
     expect(find.widgetWithText(Chip, '08:00'), findsNothing);
   });
 
-  testWidgets('"Distribuir Nx ao dia" aparece quando a receita conta vezes',
-      (tester) async {
+  testWidgets('"Distribuir Nx ao dia" aparece quando a receita conta vezes', (
+    tester,
+  ) async {
     await openReview(
       tester,
       PrescriptionReadResult(
@@ -118,8 +121,9 @@ void main() {
     expect(find.widgetWithText(Chip, '00:00'), findsOneWidget);
   });
 
-  testWidgets('"dia sim, dia não" lido da receita segue no rascunho',
-      (tester) async {
+  testWidgets('"dia sim, dia não" lido da receita segue no rascunho', (
+    tester,
+  ) async {
     final popped = <PrescriptionReviewOutcome>[];
     await tester.pumpWidget(
       MaterialApp(
@@ -128,24 +132,24 @@ void main() {
             onPressed: () async {
               final outcome = await Navigator.of(context)
                   .push<PrescriptionReviewOutcome>(
-                MaterialPageRoute<PrescriptionReviewOutcome>(
-                  builder: (_) => Scaffold(
-                    body: PrescriptionReviewScreen(
-                      result: const PrescriptionReadResult(
-                        medicamentos: [
-                          PrescriptionMedication(
-                            nome: 'CALCITRIOL',
-                            horarios: ['08:00'],
-                            diasAlternados: true,
+                    MaterialPageRoute<PrescriptionReviewOutcome>(
+                      builder: (_) => Scaffold(
+                        body: PrescriptionReviewScreen(
+                          result: const PrescriptionReadResult(
+                            medicamentos: [
+                              PrescriptionMedication(
+                                nome: 'CALCITRIOL',
+                                horarios: ['08:00'],
+                                diasAlternados: true,
+                              ),
+                            ],
+                            rawText: 'CALCITRIOL',
                           ),
-                        ],
-                        rawText: 'CALCITRIOL',
+                          catalogFuture: Future.value(const []),
+                        ),
                       ),
-                      catalogFuture: Future.value(const []),
                     ),
-                  ),
-                ),
-              );
+                  );
               if (outcome != null) popped.add(outcome);
             },
             child: const Text('abrir'),
@@ -166,8 +170,9 @@ void main() {
     expect(draft.frequency, TreatmentFrequency.everyOtherDay);
   });
 
-  testWidgets('receita sem frequência especial deixa o rascunho sem palpite',
-      (tester) async {
+  testWidgets('receita sem frequência especial deixa o rascunho sem palpite', (
+    tester,
+  ) async {
     final popped = <PrescriptionReviewOutcome>[];
     await tester.pumpWidget(
       MaterialApp(
@@ -176,24 +181,24 @@ void main() {
             onPressed: () async {
               final outcome = await Navigator.of(context)
                   .push<PrescriptionReviewOutcome>(
-                MaterialPageRoute<PrescriptionReviewOutcome>(
-                  builder: (_) => Scaffold(
-                    body: PrescriptionReviewScreen(
-                      result: const PrescriptionReadResult(
-                        medicamentos: [
-                          PrescriptionMedication(
-                            nome: 'DIPIRONA',
-                            intervaloHoras: 8,
-                            horarios: ['08:00', '16:00', '00:00'],
+                    MaterialPageRoute<PrescriptionReviewOutcome>(
+                      builder: (_) => Scaffold(
+                        body: PrescriptionReviewScreen(
+                          result: const PrescriptionReadResult(
+                            medicamentos: [
+                              PrescriptionMedication(
+                                nome: 'DIPIRONA',
+                                intervaloHoras: 8,
+                                horarios: ['08:00', '16:00', '00:00'],
+                              ),
+                            ],
+                            rawText: 'DIPIRONA',
                           ),
-                        ],
-                        rawText: 'DIPIRONA',
+                          catalogFuture: Future.value(const []),
+                        ),
                       ),
-                      catalogFuture: Future.value(const []),
                     ),
-                  ),
-                ),
-              );
+                  );
               if (outcome != null) popped.add(outcome);
             },
             child: const Text('abrir'),
@@ -210,8 +215,9 @@ void main() {
 
     expect(popped.single.drafts.single.frequency, isNull);
   });
-  testWidgets('"1x por semana" lido da receita segue no rascunho com o dia',
-      (tester) async {
+  testWidgets('"1x por semana" lido da receita segue no rascunho com o dia', (
+    tester,
+  ) async {
     final popped = <PrescriptionReviewOutcome>[];
     await tester.pumpWidget(
       MaterialApp(
@@ -220,25 +226,25 @@ void main() {
             onPressed: () async {
               final outcome = await Navigator.of(context)
                   .push<PrescriptionReviewOutcome>(
-                MaterialPageRoute<PrescriptionReviewOutcome>(
-                  builder: (_) => Scaffold(
-                    body: PrescriptionReviewScreen(
-                      result: const PrescriptionReadResult(
-                        medicamentos: [
-                          PrescriptionMedication(
-                            nome: 'METOTREXATO',
-                            horarios: ['08:00'],
-                            vezesPorSemana: 1,
-                            diasDaSemana: [DateTime.saturday],
+                    MaterialPageRoute<PrescriptionReviewOutcome>(
+                      builder: (_) => Scaffold(
+                        body: PrescriptionReviewScreen(
+                          result: const PrescriptionReadResult(
+                            medicamentos: [
+                              PrescriptionMedication(
+                                nome: 'METOTREXATO',
+                                horarios: ['08:00'],
+                                vezesPorSemana: 1,
+                                diasDaSemana: [DateTime.saturday],
+                              ),
+                            ],
+                            rawText: 'METOTREXATO',
                           ),
-                        ],
-                        rawText: 'METOTREXATO',
+                          catalogFuture: Future.value(const []),
+                        ),
                       ),
-                      catalogFuture: Future.value(const []),
                     ),
-                  ),
-                ),
-              );
+                  );
               if (outcome != null) popped.add(outcome);
             },
             child: const Text('abrir'),

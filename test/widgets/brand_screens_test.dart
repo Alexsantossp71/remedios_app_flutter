@@ -50,8 +50,9 @@ void main() {
   });
 
   group('Tratamentos', () {
-    testWidgets('resumo em StatCards e cartão do tratamento em RecordCard',
-        (tester) async {
+    testWidgets('resumo em StatCards e cartão do tratamento em RecordCard', (
+      tester,
+    ) async {
       // Escrita no SQLite é IO real: precisa de runAsync dentro do teste.
       await tester.runAsync(
         () => therapy.addTreatment(
@@ -96,34 +97,27 @@ void main() {
   });
 
   group('Consultas', () {
-    testWidgets('destaque dos próximos 5 dias acende o acento no RecordCard',
-        (tester) async {
+    testWidgets('destaque dos próximos 5 dias acende o acento no RecordCard', (
+      tester,
+    ) async {
       final tomorrow = DateTime.now().add(const Duration(days: 1));
       // O médico precisa existir antes: consultations tem FK para doctors.
-      await tester.runAsync(
-        () async {
-          await doctors.saveDoctor(
-            const Doctor(
-              id: 'd1',
-              name: 'Dra. Ana Ribeiro',
-              specialty: 'Cardiologia',
-            ),
-          );
-          await consultations.saveConsultation(
-            Consultation.create(
-              doctorId: 'd1',
-              date: DateTime(
-                tomorrow.year,
-                tomorrow.month,
-                tomorrow.day,
-                10,
-                30,
-              ),
-              title: 'Cardiologia',
-            ),
-          );
-        },
-      );
+      await tester.runAsync(() async {
+        await doctors.saveDoctor(
+          const Doctor(
+            id: 'd1',
+            name: 'Dra. Ana Ribeiro',
+            specialty: 'Cardiologia',
+          ),
+        );
+        await consultations.saveConsultation(
+          Consultation.create(
+            doctorId: 'd1',
+            date: DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 10, 30),
+            title: 'Cardiologia',
+          ),
+        );
+      });
 
       await tester.pumpWidget(
         MultiProvider(
@@ -133,9 +127,7 @@ void main() {
             ),
             ChangeNotifierProvider<DoctorProvider>.value(value: doctors),
           ],
-          child: const MaterialApp(
-            home: Scaffold(body: ConsultationsScreen()),
-          ),
+          child: const MaterialApp(home: Scaffold(body: ConsultationsScreen())),
         ),
       );
       await tester.pumpAndSettle();
@@ -157,42 +149,44 @@ void main() {
   });
 
   group('Perfil', () {
-    testWidgets('cartão de emergência migra para RecordCard com acento vermelho',
-        (tester) async {
-      // Viewport alto: o formulário tem ~1600px e o cartão fica abaixo
-      // da dobra; o ListView lazy não constrói o que está fora da árvore.
-      tester.view.physicalSize = const Size(800, 3200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    testWidgets(
+      'cartão de emergência migra para RecordCard com acento vermelho',
+      (tester) async {
+        // Viewport alto: o formulário tem ~1600px e o cartão fica abaixo
+        // da dobra; o ListView lazy não constrói o que está fora da árvore.
+        tester.view.physicalSize = const Size(800, 3200);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(
-        ChangeNotifierProvider<UserProfileProvider>.value(
-          value: profile,
-          child: const MaterialApp(home: Scaffold(body: ProfileScreen())),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          ChangeNotifierProvider<UserProfileProvider>.value(
+            value: profile,
+            child: const MaterialApp(home: Scaffold(body: ProfileScreen())),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Sem dados de emergência não há cartão.
-      expect(find.text('Cartão de emergência'), findsNothing);
+        // Sem dados de emergência não há cartão.
+        expect(find.text('Cartão de emergência'), findsNothing);
 
-      // Uma alergia faz o cartão surgir (mesma interação do teste antigo).
-      await tester.enterText(find.byType(TextField).at(3), 'Dipirona');
-      await tester.tap(find.byIcon(Icons.add_circle_outline).first);
-      await tester.pumpAndSettle();
+        // Uma alergia faz o cartão surgir (mesma interação do teste antigo).
+        await tester.enterText(find.byType(TextField).at(3), 'Dipirona');
+        await tester.tap(find.byIcon(Icons.add_circle_outline).first);
+        await tester.pumpAndSettle();
 
-      expect(find.text('Cartão de emergência'), findsOneWidget);
-      expect(find.byTooltip('Compartilhar como imagem'), findsOneWidget);
+        expect(find.text('Cartão de emergência'), findsOneWidget);
+        expect(find.byTooltip('Compartilhar como imagem'), findsOneWidget);
 
-      // O cartão é um RecordCard da marca com o acento vermelho.
-      final emergencyCards = tester
-          .widgetList<RecordCard>(find.byType(RecordCard))
-          .where((card) => card.accentColor != null);
-      expect(emergencyCards, hasLength(1));
+        // O cartão é um RecordCard da marca com o acento vermelho.
+        final emergencyCards = tester
+            .widgetList<RecordCard>(find.byType(RecordCard))
+            .where((card) => card.accentColor != null);
+        expect(emergencyCards, hasLength(1));
 
-      // As seções do Perfil (dados pessoais, contatos, cadastros, backup,
-      // privacidade) também vivem em RecordCards.
-      expect(find.byType(RecordCard).evaluate().length, greaterThan(3));
-    });
+        // As seções do Perfil (dados pessoais, contatos, cadastros, backup,
+        // privacidade) também vivem em RecordCards.
+        expect(find.byType(RecordCard).evaluate().length, greaterThan(3));
+      },
+    );
   });
 }

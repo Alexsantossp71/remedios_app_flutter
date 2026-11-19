@@ -324,8 +324,8 @@ class _HealthPlanFormDialogState extends State<HealthPlanFormDialog> {
                 for (final type in kCoverageTypes)
                   DropdownMenuItem(value: type, child: Text(type)),
               ],
-              onChanged:
-                  (value) => setState(() => _selectedCoverageType = value),
+              onChanged: (value) =>
+                  setState(() => _selectedCoverageType = value),
             ),
             const SizedBox(height: AppSpacing.md),
             Align(
@@ -348,12 +348,11 @@ class _HealthPlanFormDialogState extends State<HealthPlanFormDialog> {
                     FilterChip(
                       label: Text(specialty),
                       selected: _selectedSpecialties.contains(specialty),
-                      onSelected:
-                          (selected) => setState(() {
-                            selected
-                                ? _selectedSpecialties.add(specialty)
-                                : _selectedSpecialties.remove(specialty);
-                          }),
+                      onSelected: (selected) => setState(() {
+                        selected
+                            ? _selectedSpecialties.add(specialty)
+                            : _selectedSpecialties.remove(specialty);
+                      }),
                     ),
                 ],
               ),

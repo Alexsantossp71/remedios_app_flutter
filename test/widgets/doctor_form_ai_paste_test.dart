@@ -21,17 +21,17 @@ import '../database_setup.dart';
 /// legado preservado na edição).
 
 http.Response chat(String content) => http.Response(
-      jsonEncode({
-        'choices': [
-          {
-            'message': {'content': content},
-            'finish_reason': 'stop',
-          },
-        ],
-      }),
-      200,
-      headers: {'content-type': 'application/json'},
-    );
+  jsonEncode({
+    'choices': [
+      {
+        'message': {'content': content},
+        'finish_reason': 'stop',
+      },
+    ],
+  }),
+  200,
+  headers: {'content-type': 'application/json'},
+);
 
 Doctor? _popped;
 
@@ -47,22 +47,20 @@ Future<void> pumpHarness(
       child: MaterialApp(
         home: Scaffold(
           body: Builder(
-            builder:
-                (context) => Center(
-                  child: FilledButton(
-                    onPressed: () async {
-                      _popped = await showDialog<Doctor>(
-                        context: context,
-                        builder:
-                            (_) => DoctorFormDialog(
-                              initialDoctor: initialDoctor,
-                              aiService: aiService,
-                            ),
-                      );
-                    },
-                    child: const Text('abrir'),
-                  ),
-                ),
+            builder: (context) => Center(
+              child: FilledButton(
+                onPressed: () async {
+                  _popped = await showDialog<Doctor>(
+                    context: context,
+                    builder: (_) => DoctorFormDialog(
+                      initialDoctor: initialDoctor,
+                      aiService: aiService,
+                    ),
+                  );
+                },
+                child: const Text('abrir'),
+              ),
+            ),
           ),
         ),
       ),
@@ -111,43 +109,47 @@ void main() {
   });
 
   AiService aiWith(String content) => AiService(
-        proxyClient: AiProxyClient(
-          client: MockClient((_) async => chat(content)),
-          isWebOverride: false,
-        ),
+    proxyClient: AiProxyClient(
+      client: MockClient((_) async => chat(content)),
+      isWebOverride: false,
+    ),
+  );
+
+  testWidgets(
+    'IA preenche nome, especialidade, telefone e avisa para conferir',
+    (tester) async {
+      final ai = aiWith(
+        jsonEncode({
+          'nome': 'Dra. Ana Silva',
+          'especialidade': 'Cardiologia',
+          'crm': '123456',
+          'uf': 'SP',
+          'telefone': '(11) 98888-7777',
+        }),
+      );
+      await pumpHarness(tester, userProvider: userProvider, aiService: ai);
+
+      await pasteAndFill(
+        tester,
+        'Minha médica: Dra. Ana Silva, CRM 123456-SP, cardiologista, '
+        '(11) 98888-7777',
       );
 
-  testWidgets('IA preenche nome, especialidade, telefone e avisa para conferir',
-      (tester) async {
-    final ai = aiWith(
-      jsonEncode({
-        'nome': 'Dra. Ana Silva',
-        'especialidade': 'Cardiologia',
-        'crm': '123456',
-        'uf': 'SP',
-        'telefone': '(11) 98888-7777',
-      }),
-    );
-    await pumpHarness(tester, userProvider: userProvider, aiService: ai);
-
-    await pasteAndFill(
-      tester,
-      'Minha médica: Dra. Ana Silva, CRM 123456-SP, cardiologista, '
-      '(11) 98888-7777',
-    );
-
-    // Nome no campo (sem Dr./Dra.), especialidade na lista fixa, telefone.
-    expect(find.text('Ana Silva'), findsWidgets);
-    expect(find.text('Cardiologia'), findsWidgets);
-    expect(find.text('(11) 98888-7777'), findsOneWidget);
-    // O aviso de confiança por conferência fica no cabeçalho da sheet.
-    expect(
-      find.text('Preenchido pela IA — confira antes de salvar.'),
-      findsOneWidget,
-    );
-    expect(find.text('Dados aplicados. Confira antes de salvar.'),
-        findsOneWidget);
-  });
+      // Nome no campo (sem Dr./Dra.), especialidade na lista fixa, telefone.
+      expect(find.text('Ana Silva'), findsWidgets);
+      expect(find.text('Cardiologia'), findsWidgets);
+      expect(find.text('(11) 98888-7777'), findsOneWidget);
+      // O aviso de confiança por conferência fica no cabeçalho da sheet.
+      expect(
+        find.text('Preenchido pela IA — confira antes de salvar.'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Dados aplicados. Confira antes de salvar.'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('CRM e UF lidos pela IA ficam no passo 2', (tester) async {
     final ai = aiWith(
@@ -178,8 +180,9 @@ void main() {
     expect(find.text('SP'), findsWidgets);
   });
 
-  testWidgets('texto que não é um médico mostra a mensagem da IA',
-      (tester) async {
+  testWidgets('texto que não é um médico mostra a mensagem da IA', (
+    tester,
+  ) async {
     final ai = aiWith(jsonEncode({'error': 'not_a_doctor'}));
     await pumpHarness(tester, userProvider: userProvider, aiService: ai);
 
@@ -204,8 +207,9 @@ void main() {
     expect(find.text('Ninguém'), findsNothing);
   });
 
-  testWidgets('especialidade é lista fixa e o valor legado é preservado',
-      (tester) async {
+  testWidgets('especialidade é lista fixa e o valor legado é preservado', (
+    tester,
+  ) async {
     await pumpHarness(
       tester,
       userProvider: userProvider,
@@ -256,8 +260,9 @@ void main() {
     expect(_popped!.name, 'Dr. Old');
   });
 
-  testWidgets('passo 2 traz o link de conferência manual no portal do CFM',
-      (tester) async {
+  testWidgets('passo 2 traz o link de conferência manual no portal do CFM', (
+    tester,
+  ) async {
     await pumpHarness(tester, userProvider: userProvider);
 
     await tester.enterText(

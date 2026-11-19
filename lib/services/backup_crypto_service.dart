@@ -92,11 +92,7 @@ class BackupCryptoService {
         nonce: salt,
       );
       final plaintext = await _cipher.decrypt(
-        SecretBox(
-          ciphertext,
-          nonce: nonce,
-          mac: Mac(mac),
-        ),
+        SecretBox(ciphertext, nonce: nonce, mac: Mac(mac)),
         secretKey: key,
         aad: utf8.encode(_aad),
       );

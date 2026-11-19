@@ -5,8 +5,12 @@ import 'package:remedios_app_flutter/services/doctor_matching.dart';
 
 /// Regra única de casamento de médico com o catálogo — usada por "quem
 /// receitou" (tratamento), pedido de exame e foto da receita para cadastro.
-Doctor doctorOf(String name, {String crm = '', String crmState = ''}) =>
-    Doctor(id: 'id-$name-$crm-$crmState', name: name, crm: crm, crmState: crmState);
+Doctor doctorOf(String name, {String crm = '', String crmState = ''}) => Doctor(
+  id: 'id-$name-$crm-$crmState',
+  name: name,
+  crm: crm,
+  crmState: crmState,
+);
 
 void main() {
   group('findDoctorInCatalog', () {
@@ -20,7 +24,9 @@ void main() {
     });
 
     test('casa por CRM+UF mesmo com nome ruidoso do OCR', () {
-      final catalog = [doctorOf('Dr. João Silva', crm: '123456', crmState: 'SP')];
+      final catalog = [
+        doctorOf('Dr. João Silva', crm: '123456', crmState: 'SP'),
+      ];
       final match = findDoctorInCatalog(
         catalog,
         name: 'Dr, Joao S1lva',
@@ -32,7 +38,9 @@ void main() {
     });
 
     test('mesmo nome com CRM divergente não casa (nova conferência)', () {
-      final catalog = [doctorOf('Dr. João Silva', crm: '111111', crmState: 'SP')];
+      final catalog = [
+        doctorOf('Dr. João Silva', crm: '111111', crmState: 'SP'),
+      ];
       expect(
         findDoctorInCatalog(catalog, name: 'Dr. João Silva', crm: '222222'),
         isNull,
@@ -40,24 +48,29 @@ void main() {
     });
 
     test('rascunho sem CRM casa médico do catálogo que tem CRM', () {
-      final catalog = [doctorOf('Dr. João Silva', crm: '123456', crmState: 'SP')];
+      final catalog = [
+        doctorOf('Dr. João Silva', crm: '123456', crmState: 'SP'),
+      ];
       expect(findDoctorInCatalog(catalog, name: 'dr. joão silva'), isNotNull);
     });
 
-    test('médico sem CRM no catálogo casa por nome mesmo com CRM no rascunho', () {
-      // "quem receitou" digitado à mão com CRM; o cadastro antigo não tinha
-      // número — o nome continua confirmando quem é (completar depois).
-      final catalog = [doctorOf('Dr. João Silva')];
-      expect(
-        findDoctorInCatalog(
-          catalog,
-          name: 'Dr. João Silva',
-          crm: '123456',
-          crmState: 'SP',
-        ),
-        isNotNull,
-      );
-    });
+    test(
+      'médico sem CRM no catálogo casa por nome mesmo com CRM no rascunho',
+      () {
+        // "quem receitou" digitado à mão com CRM; o cadastro antigo não tinha
+        // número — o nome continua confirmando quem é (completar depois).
+        final catalog = [doctorOf('Dr. João Silva')];
+        expect(
+          findDoctorInCatalog(
+            catalog,
+            name: 'Dr. João Silva',
+            crm: '123456',
+            crmState: 'SP',
+          ),
+          isNotNull,
+        );
+      },
+    );
 
     test('CRM+UF idêntico de dois cadastros devolve o primeiro', () {
       final catalog = [
@@ -74,8 +87,10 @@ void main() {
     });
 
     test('sem correspondente devolve null', () {
-      expect(findDoctorInCatalog([doctorOf('Dra. Ana')], name: 'Dr. Bruno'),
-          isNull);
+      expect(
+        findDoctorInCatalog([doctorOf('Dra. Ana')], name: 'Dr. Bruno'),
+        isNull,
+      );
       expect(findDoctorInCatalog(const [], name: 'Dra. Ana'), isNull);
       expect(findDoctorInCatalog([doctorOf('Dra. Ana')], name: '   '), isNull);
       // Nome vazio com CRM que não existe no catálogo: nada confirmado.

@@ -37,10 +37,9 @@ class TreatmentsScreen extends StatelessWidget {
       builder: (_) => TreatmentFormDialog(
         initialTreatment: treatment,
         doctorCatalog: context.read<DoctorProvider>().doctors.toList(),
-        prescriptionHistory:
-            context.read<TherapyProvider>().prescriptionRecordsFor(
-                  treatment.id,
-                ),
+        prescriptionHistory: context
+            .read<TherapyProvider>()
+            .prescriptionRecordsFor(treatment.id),
       ),
     );
     if (result == null || !context.mounted) return;
@@ -60,23 +59,22 @@ class TreatmentsScreen extends StatelessWidget {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (dialogContext) => AlertDialog(
-            title: const Text('Arquivar tratamento?'),
-            content: Text(
-              '${treatment.name} deixará de gerar novas doses, mas o histórico será preservado.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton.tonal(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Arquivar'),
-              ),
-            ],
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Arquivar tratamento?'),
+        content: Text(
+          '${treatment.name} deixará de gerar novas doses, mas o histórico será preservado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
           ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Arquivar'),
+          ),
+        ],
+      ),
     );
     if (confirmed == true && context.mounted) {
       await context.read<TherapyProvider>().archiveTreatment(treatment.id);
@@ -165,7 +163,8 @@ class TreatmentsScreen extends StatelessWidget {
                   actionLabel: 'Adicionar medicamento',
                   onAction: () => createTreatmentManually(context),
                   secondaryActionLabel: 'Usar foto da receita',
-                  onSecondaryAction: () => createTreatmentFromPrescription(context),
+                  onSecondaryAction: () =>
+                      createTreatmentFromPrescription(context),
                 ),
               )
             else
@@ -180,10 +179,8 @@ class TreatmentsScreen extends StatelessWidget {
                       treatment: treatment,
                       onEdit: () => _editTreatment(context, treatment),
                       onArchive: () => _confirmArchive(context, treatment),
-                      onGuide: () => showAiMedicationGuideSheet(
-                        context,
-                        treatment,
-                      ),
+                      onGuide: () =>
+                          showAiMedicationGuideSheet(context, treatment),
                     );
                   },
                 ),
@@ -191,28 +188,27 @@ class TreatmentsScreen extends StatelessWidget {
           ],
         ),
       ),
-      floatingActionButton:
-          treatments.isEmpty
-              ? null
-              : Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  FloatingActionButton.extended(
-                    heroTag: 'prescription-scan-fab',
-                    onPressed: () => createTreatmentFromPrescription(context),
-                    icon: const Icon(Icons.photo_camera_outlined),
-                    label: const Text('Foto da receita'),
-                  ),
-                  const SizedBox(height: 12),
-                  FloatingActionButton.extended(
-                    heroTag: 'add-treatment-fab',
-                    onPressed: () => createTreatmentManually(context),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Adicionar'),
-                  ),
-                ],
-              ),
+      floatingActionButton: treatments.isEmpty
+          ? null
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                FloatingActionButton.extended(
+                  heroTag: 'prescription-scan-fab',
+                  onPressed: () => createTreatmentFromPrescription(context),
+                  icon: const Icon(Icons.photo_camera_outlined),
+                  label: const Text('Foto da receita'),
+                ),
+                const SizedBox(height: 12),
+                FloatingActionButton.extended(
+                  heroTag: 'add-treatment-fab',
+                  onPressed: () => createTreatmentManually(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Adicionar'),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -243,19 +239,18 @@ class _TreatmentStats extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: StatCard(
-            icon:
-                lowStockCount > 0
-                    ? Icons.inventory_2_rounded
-                    : Icons.check_circle_outline_rounded,
+            icon: lowStockCount > 0
+                ? Icons.inventory_2_rounded
+                : Icons.check_circle_outline_rounded,
             value: '$lowStockCount',
-            label:
-                lowStockCount == 0
-                    ? 'estoque em dia'
-                    : lowStockCount == 1
-                    ? 'item para repor'
-                    : 'itens para repor',
-            iconColor:
-                lowStockCount > 0 ? BrandColors.yellow : BrandColors.teal600,
+            label: lowStockCount == 0
+                ? 'estoque em dia'
+                : lowStockCount == 1
+                ? 'item para repor'
+                : 'itens para repor',
+            iconColor: lowStockCount > 0
+                ? BrandColors.yellow
+                : BrandColors.teal600,
           ),
         ),
       ],
@@ -302,10 +297,9 @@ class TreatmentCard extends StatelessWidget {
             height: 54,
             decoration: BoxDecoration(
               // Caixa de ícone `.stat-icon` do PWA: véu teal com anel fino.
-              color:
-                  isDark
-                      ? BrandColors.teal700.withValues(alpha: .18)
-                      : BrandColors.accentSoft,
+              color: isDark
+                  ? BrandColors.teal700.withValues(alpha: .18)
+                  : BrandColors.accentSoft,
               borderRadius: BorderRadius.circular(AppRadius.iconBox),
               border: Border.all(
                 color: BrandColors.teal700.withValues(alpha: .07),
@@ -341,33 +335,32 @@ class TreatmentCard extends StatelessWidget {
                         if (value == 'archive') onArchive();
                         if (value == 'guide') onGuide();
                       },
-                      itemBuilder:
-                          (_) => const [
-                            PopupMenuItem(
-                              value: 'edit',
-                              child: ListTile(
-                                leading: Icon(Icons.edit_outlined),
-                                title: Text('Editar'),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'guide',
-                              child: ListTile(
-                                leading: Icon(Icons.auto_awesome_outlined),
-                                title: Text('Explicar com IA'),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'archive',
-                              child: ListTile(
-                                leading: Icon(Icons.archive_outlined),
-                                title: Text('Arquivar'),
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ],
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: ListTile(
+                            leading: Icon(Icons.edit_outlined),
+                            title: Text('Editar'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'guide',
+                          child: ListTile(
+                            leading: Icon(Icons.auto_awesome_outlined),
+                            title: Text('Explicar com IA'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'archive',
+                          child: ListTile(
+                            leading: Icon(Icons.archive_outlined),
+                            title: Text('Arquivar'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
                       child: const Icon(Icons.more_horiz),
                     ),
                   ],
@@ -393,10 +386,9 @@ class TreatmentCard extends StatelessWidget {
                     ),
                     if (treatment.stock != null)
                       InfoChip(
-                        icon:
-                            treatment.needsRefill
-                                ? Icons.warning_amber_rounded
-                                : Icons.inventory_2_outlined,
+                        icon: treatment.needsRefill
+                            ? Icons.warning_amber_rounded
+                            : Icons.inventory_2_outlined,
                         label: '${treatment.stock} un.',
                         isWarning: treatment.needsRefill,
                       ),

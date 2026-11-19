@@ -191,15 +191,14 @@ class _MainShellState extends State<MainShell>
       barrierLabel: 'Fechar menu de cadastro',
       barrierColor: Colors.black38,
       transitionDuration: AppDurations.medium,
-      pageBuilder:
-          (dialogContext, _, __) => _RadialCreateMenu(
-            onTreatment: _createTreatment,
-            onConsultation: _createConsultation,
-            onExam: _createExam,
-            onLabResult: _createLabResult,
-            onHealthPlan: _createHealthPlan,
-            onDoctor: _createDoctor,
-          ),
+      pageBuilder: (dialogContext, _, __) => _RadialCreateMenu(
+        onTreatment: _createTreatment,
+        onConsultation: _createConsultation,
+        onExam: _createExam,
+        onLabResult: _createLabResult,
+        onHealthPlan: _createHealthPlan,
+        onDoctor: _createDoctor,
+      ),
     );
   }
 
@@ -213,26 +212,24 @@ class _MainShellState extends State<MainShell>
 
     return Scaffold(
       // AppShell pinta o brilho radial teal do PWA atrás de todas as abas.
-      body:
-          isWide
-              ? Row(
-                children: [
-                  _buildRail(),
-                  const VerticalDivider(width: 1, thickness: 1),
-                  Expanded(child: AppShell(child: content)),
-                ],
-              )
-              : AppShell(child: content),
+      body: isWide
+          ? Row(
+              children: [
+                _buildRail(),
+                const VerticalDivider(width: 1, thickness: 1),
+                Expanded(child: AppShell(child: content)),
+              ],
+            )
+          : AppShell(child: content),
       floatingActionButton: FloatingActionButton(
         tooltip: 'Cadastrar',
         shape: const CircleBorder(),
         onPressed: _openCreateMenu,
         child: const Icon(Icons.add),
       ),
-      floatingActionButtonLocation:
-          isWide
-              ? FloatingActionButtonLocation.endFloat
-              : FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: isWide
+          ? FloatingActionButtonLocation.endFloat
+          : FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: isWide ? null : _buildBottomBar(),
     );
   }
@@ -303,10 +300,9 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color =
-        selected
-            ? theme.colorScheme.primary
-            : theme.colorScheme.onSurfaceVariant;
+    final color = selected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurfaceVariant;
 
     return Expanded(
       child: Semantics(
@@ -331,10 +327,9 @@ class _NavItem extends StatelessWidget {
                       width: selected ? 56 : 0,
                       height: 30,
                       decoration: BoxDecoration(
-                        color:
-                            selected
-                                ? theme.colorScheme.primaryContainer
-                                : Colors.transparent,
+                        color: selected
+                            ? theme.colorScheme.primaryContainer
+                            : Colors.transparent,
                         borderRadius: BorderRadius.circular(15),
                       ),
                     ),
@@ -478,14 +473,13 @@ class _RadialOption extends StatelessWidget {
         tween: Tween(begin: 0, end: 1),
         duration: AppDurations.medium,
         curve: Interval(stagger, 1, curve: AppCurves.emphasized),
-        builder:
-            (context, value, child) => Opacity(
-              opacity: value,
-              child: Transform.translate(
-                offset: Offset(0, 24 * (1 - value)),
-                child: Transform.scale(scale: 0.6 + 0.4 * value, child: child),
-              ),
-            ),
+        builder: (context, value, child) => Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 24 * (1 - value)),
+            child: Transform.scale(scale: 0.6 + 0.4 * value, child: child),
+          ),
+        ),
         child: FilledButton.tonalIcon(
           onPressed: onTap,
           style: FilledButton.styleFrom(

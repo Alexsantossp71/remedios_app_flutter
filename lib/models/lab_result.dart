@@ -58,10 +58,7 @@ class LabResult {
     final low = values.where((v) => v.flag == 'low').length;
     final summary = '${values.length} valores';
     if (high + low == 0) return '$summary na faixa ou sem faixa';
-    return '$summary · ${[
-      if (high > 0) '$high ${high == 1 ? 'acima' : 'acima'}',
-      if (low > 0) '$low ${low == 1 ? 'abaixo' : 'abaixo'}',
-    ].join(' · ')}';
+    return '$summary · ${[if (high > 0) '$high ${high == 1 ? 'acima' : 'acima'}', if (low > 0) '$low ${low == 1 ? 'abaixo' : 'abaixo'}'].join(' · ')}';
   }
 
   int get highCount => values.where((v) => v.flag == 'high').length;
@@ -87,22 +84,22 @@ class LabResult {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'date': date.toIso8601String(),
-        'labName': labName,
-        'photo': photo,
-        'values': values.map((value) => value.toJson()).toList(),
-        'notes': notes,
-        'createdAt': createdAt?.toUtc().toIso8601String(),
-      };
+    'id': id,
+    'date': date.toIso8601String(),
+    'labName': labName,
+    'photo': photo,
+    'values': values.map((value) => value.toJson()).toList(),
+    'notes': notes,
+    'createdAt': createdAt?.toUtc().toIso8601String(),
+  };
 
   factory LabResult.fromJson(Map<String, dynamic> json) {
     final rawValues = json['values'];
     final values = rawValues is List
         ? rawValues
-            .whereType<Map<String, dynamic>>()
-            .map(LabValue.fromJson)
-            .toList()
+              .whereType<Map<String, dynamic>>()
+              .map(LabValue.fromJson)
+              .toList()
         : <LabValue>[];
 
     return LabResult(

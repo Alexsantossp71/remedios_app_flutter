@@ -36,9 +36,7 @@ void main() {
     await tester.pumpWidget(
       ChangeNotifierProvider<UserProfileProvider>.value(
         value: provider,
-        child: const MaterialApp(
-          home: Scaffold(body: ProfileScreen()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: ProfileScreen())),
       ),
     );
     await tester.pumpAndSettle();
@@ -55,8 +53,9 @@ void main() {
     await DatabaseService.instance.close();
   });
 
-  testWidgets('exibe aviso de privacidade e consentimento destacado',
-      (tester) async {
+  testWidgets('exibe aviso de privacidade e consentimento destacado', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     expect(find.text('Aviso de privacidade'), findsOneWidget);
@@ -74,10 +73,7 @@ void main() {
       find.textContaining('Controlador', findRichText: true),
       findsOneWidget,
     );
-    expect(
-      find.textContaining('art. 18', findRichText: true),
-      findsOneWidget,
-    );
+    expect(find.textContaining('art. 18', findRichText: true), findsOneWidget);
 
     expect(find.byType(CheckboxListTile), findsOneWidget);
     expect(find.textContaining('Autorizo o tratamento'), findsOneWidget);
@@ -86,8 +82,9 @@ void main() {
     expect(checkbox.value, isFalse);
   });
 
-  testWidgets('salvar sem consentimento mostra aviso e não grava',
-      (tester) async {
+  testWidgets('salvar sem consentimento mostra aviso e não grava', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     await tester.enterText(find.byType(TextFormField).first, 'Maria Silva');
@@ -104,8 +101,9 @@ void main() {
     expect(provider.profile, isNull);
   });
 
-  testWidgets('com campo inválido, salvar mostra aviso e não grava',
-      (tester) async {
+  testWidgets('com campo inválido, salvar mostra aviso e não grava', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     await tester.enterText(find.byType(TextFormField).first, 'Maria Silva');
@@ -130,8 +128,9 @@ void main() {
     expect(provider.profile, isNull);
   });
 
-  testWidgets('cartão de emergência mostra alergia ao vivo antes de salvar',
-      (tester) async {
+  testWidgets('cartão de emergência mostra alergia ao vivo antes de salvar', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     // Perfil ainda não salvo: o cartão nem existia antes da correção.
@@ -149,8 +148,9 @@ void main() {
     expect(find.text('Dipirona'), findsNWidgets(2));
   });
 
-  testWidgets('com consentimento marcado, salva e registra consentAt',
-      (tester) async {
+  testWidgets('com consentimento marcado, salva e registra consentAt', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     await tester.enterText(find.byType(TextFormField).first, 'Maria Silva');

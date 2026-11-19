@@ -41,10 +41,7 @@ class PrescriptionReviewScreen extends StatefulWidget {
 /// pelo usuário) — nulo quando não havia médico na leitura ou o usuário
 /// optou por não registrá-lo.
 class PrescriptionReviewOutcome {
-  const PrescriptionReviewOutcome({
-    required this.drafts,
-    this.medico,
-  });
+  const PrescriptionReviewOutcome({required this.drafts, this.medico});
 
   final List<TreatmentDraft> drafts;
 
@@ -76,10 +73,10 @@ class _EditableDoctor {
   }
 
   PrescriptionDoctor toDoctor() => PrescriptionDoctor(
-        nome: name.text.trim(),
-        crm: crm.text.trim().replaceAll(RegExp(r'\D'), ''),
-        uf: uf.text.trim().toUpperCase(),
-      );
+    nome: name.text.trim(),
+    crm: crm.text.trim().replaceAll(RegExp(r'\D'), ''),
+    uf: uf.text.trim().toUpperCase(),
+  );
 }
 
 class _EditableMed {
@@ -87,16 +84,15 @@ class _EditableMed {
     : name = TextEditingController(text: original.nome),
       dosage = TextEditingController(text: original.dosagem),
       presentation = original.apresentacao,
-      times =
-          original.suggestedDoseTimes.isEmpty
-              ? <DoseTime>[const DoseTime(hour: 8, minute: 0)]
-              : original.suggestedDoseTimes.toList(),
+      times = original.suggestedDoseTimes.isEmpty
+          ? <DoseTime>[const DoseTime(hour: 8, minute: 0)]
+          : original.suggestedDoseTimes.toList(),
       frequency =
           original.vezesPorSemana != null || original.diasDaSemana.isNotEmpty
-              ? TreatmentFrequency.weekly
-              : original.diasAlternados
-              ? TreatmentFrequency.everyOtherDay
-              : null;
+          ? TreatmentFrequency.weekly
+          : original.diasAlternados
+          ? TreatmentFrequency.everyOtherDay
+          : null;
 
   final PrescriptionMedication original;
   final TextEditingController name;
@@ -130,10 +126,9 @@ class _EditableMed {
       presentation: presentation,
       instructions: original.observacao.trim(),
       doseTimes: List.unmodifiable(times),
-      endDate:
-          original.duracaoDias == null
-              ? null
-              : today.add(Duration(days: original.duracaoDias!)),
+      endDate: original.duracaoDias == null
+          ? null
+          : today.add(Duration(days: original.duracaoDias!)),
       frequency: frequency,
       weekdays: isWeekly ? original.diasDaSemana : const [],
     );
@@ -237,13 +232,9 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
     _toggleTime(med, DoseTime(hour: picked.hour, minute: picked.minute));
   }
 
-  TimeOfDay _firstDoseTime(_EditableMed med) =>
-      med.times.isEmpty
-          ? const TimeOfDay(hour: 8, minute: 0)
-          : TimeOfDay(
-            hour: med.times.first.hour,
-            minute: med.times.first.minute,
-          );
+  TimeOfDay _firstDoseTime(_EditableMed med) => med.times.isEmpty
+      ? const TimeOfDay(hour: 8, minute: 0)
+      : TimeOfDay(hour: med.times.first.hour, minute: med.times.first.minute);
 
   /// "A cada Xh" na conferência, igual ao formulário: pergunta a 1ª toma e
   /// gera o dia inteiro de uma vez. A convenção médica ancora na primeira
@@ -315,10 +306,9 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final unknownCount =
-        _catalog != null && _catalog!.isNotEmpty
-            ? _meds.where((med) => med.catalogHit == null).length
-            : 0;
+    final unknownCount = _catalog != null && _catalog!.isNotEmpty
+        ? _meds.where((med) => med.catalogHit == null).length
+        : 0;
     return Scaffold(
       appBar: AppBar(title: const Text('Conferir receita')),
       body: ListView(
@@ -520,10 +510,9 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
   /// vazio — sugerir o que já está certo é ruído na conferência.
   bool _hasSomethingToGain(_EditableMed med, Medicine suggestion) {
     if (!_sameFold(med.name.text, suggestion.name)) return true;
-    final catalogDosage =
-        suggestion.dosage.isNotEmpty
-            ? suggestion.dosage
-            : suggestion.listedDosage;
+    final catalogDosage = suggestion.dosage.isNotEmpty
+        ? suggestion.dosage
+        : suggestion.listedDosage;
     if (med.dosage.text.trim().isEmpty && catalogDosage.isNotEmpty) return true;
     if (med.presentation.isEmpty && suggestion.presentation.isNotEmpty) {
       return true;
@@ -535,10 +524,9 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
     if (!_sameFold(med.name.text, suggestion.name)) {
       med.name.text = suggestion.name;
     }
-    final catalogDosage =
-        suggestion.dosage.isNotEmpty
-            ? suggestion.dosage
-            : suggestion.listedDosage;
+    final catalogDosage = suggestion.dosage.isNotEmpty
+        ? suggestion.dosage
+        : suggestion.listedDosage;
     if (med.dosage.text.trim().isEmpty && catalogDosage.isNotEmpty) {
       med.dosage.text = catalogDosage;
     }
@@ -612,8 +600,8 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
               children: [
                 Checkbox(
                   value: med.selected,
-                  onChanged:
-                      (value) => setState(() => med.selected = value ?? false),
+                  onChanged: (value) =>
+                      setState(() => med.selected = value ?? false),
                 ),
                 Expanded(
                   child: Text(
@@ -681,9 +669,8 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
                       label: Text(
                         'Distribuir ${med.original.vezesAoDia}x ao dia',
                       ),
-                      onPressed:
-                          () =>
-                              _applyTimesPerDay(med, med.original.vezesAoDia!),
+                      onPressed: () =>
+                          _applyTimesPerDay(med, med.original.vezesAoDia!),
                     ),
                 ],
               ),
@@ -709,10 +696,9 @@ class _PrescriptionReviewScreenState extends State<PrescriptionReviewScreen> {
                       label: Text(
                         '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
                       ),
-                      onDeleted:
-                          med.times.length > 1
-                              ? () => _toggleTime(med, time)
-                              : null,
+                      onDeleted: med.times.length > 1
+                          ? () => _toggleTime(med, time)
+                          : null,
                     ),
                   ActionChip(
                     avatar: const Icon(Icons.schedule, size: 18),

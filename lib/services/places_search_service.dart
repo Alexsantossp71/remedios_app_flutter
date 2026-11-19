@@ -30,8 +30,7 @@ class PlaceSuggestion {
       street.isNotEmpty || neighborhood.isNotEmpty || city.isNotEmpty;
 
   factory PlaceSuggestion.fromJson(Map<String, dynamic> json) {
-    String text(String key) =>
-        (json[key] as String? ?? '').trim();
+    String text(String key) => (json[key] as String? ?? '').trim();
 
     return PlaceSuggestion(
       label: text('label'),
@@ -53,8 +52,8 @@ class PlaceSuggestion {
 /// `flutter run --dart-define=PLACES_URL=http://localhost:3000/api/places`.
 class PlacesSearchService {
   PlacesSearchService({http.Client? client, String? placesUrl})
-      : _client = client ?? http.Client(),
-        placesUrl = (placesUrl ?? defaultPlacesUrl).trim();
+    : _client = client ?? http.Client(),
+      placesUrl = (placesUrl ?? defaultPlacesUrl).trim();
 
   /// URL padrão do proxy (sobreponível por `--dart-define=PLACES_URL=`).
   static const defaultPlacesUrl = String.fromEnvironment(
@@ -76,9 +75,7 @@ class PlacesSearchService {
     final http.Response response;
     try {
       response = await _client
-          .get(
-            Uri.parse(placesUrl).replace(queryParameters: {'q': trimmed}),
-          )
+          .get(Uri.parse(placesUrl).replace(queryParameters: {'q': trimmed}))
           .timeout(const Duration(seconds: 8));
     } catch (_) {
       return const [];

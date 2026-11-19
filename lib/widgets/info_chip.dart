@@ -30,19 +30,17 @@ class InfoChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final semantic = AppSemanticColors.of(context);
-    final effectiveColor =
-        isWarning
-            ? semantic.warning
-            : (color ?? Theme.of(context).colorScheme.onSurfaceVariant);
+    final effectiveColor = isWarning
+        ? semantic.warning
+        : (color ?? Theme.of(context).colorScheme.onSurfaceVariant);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color:
-            isWarning
-                ? semantic.warning.withValues(alpha: .12)
-                : (color?.withValues(alpha: .10) ??
-                    Theme.of(context).colorScheme.surfaceContainerHighest),
+        color: isWarning
+            ? semantic.warning.withValues(alpha: .12)
+            : (color?.withValues(alpha: .10) ??
+                  Theme.of(context).colorScheme.surfaceContainerHighest),
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Row(

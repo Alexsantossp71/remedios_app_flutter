@@ -10,7 +10,7 @@ import '../services/exam_storage_service.dart';
 /// cima, realizados embaixo).
 class ExamProvider extends ChangeNotifier {
   ExamProvider({ExamStorageService? storage})
-      : _storage = storage ?? ExamStorageService();
+    : _storage = storage ?? ExamStorageService();
 
   final ExamStorageService _storage;
 
@@ -34,12 +34,10 @@ class ExamProvider extends ChangeNotifier {
       ..sort((a, b) => b.date.compareTo(a.date));
   }
 
-  int get requestedCount => _exams
-      .where((exam) => exam.status == ExamStatus.requested)
-      .length;
-  int get scheduledCount => _exams
-      .where((exam) => exam.status == ExamStatus.scheduled)
-      .length;
+  int get requestedCount =>
+      _exams.where((exam) => exam.status == ExamStatus.requested).length;
+  int get scheduledCount =>
+      _exams.where((exam) => exam.status == ExamStatus.scheduled).length;
   int get doneCount => doneExams.length;
 
   Future<void> initialize() async {

@@ -21,14 +21,14 @@ class Medicine {
     this.aliases = const [],
     this.eans = const [],
     this.requiresManualDetails = false,
-  })  : _normalizedName = normalizeMedicineText(name),
-        _normalizedIngredient = normalizeMedicineText(activeIngredient),
-        _normalizedAliases = aliases.map(normalizeMedicineText).toList(
-              growable: false,
-            ),
-        _normalizedSearch = normalizeMedicineText(
-          '$name $activeIngredient $presentation $registrationNumber ${aliases.join(' ')} ${eans.join(' ')}',
-        );
+  }) : _normalizedName = normalizeMedicineText(name),
+       _normalizedIngredient = normalizeMedicineText(activeIngredient),
+       _normalizedAliases = aliases
+           .map(normalizeMedicineText)
+           .toList(growable: false),
+       _normalizedSearch = normalizeMedicineText(
+         '$name $activeIngredient $presentation $registrationNumber ${aliases.join(' ')} ${eans.join(' ')}',
+       );
 
   factory Medicine.fromJson(Map<String, dynamic> json) {
     final rawAliases = json['aliases'] as List<dynamic>? ?? const [];
@@ -39,8 +39,9 @@ class Medicine {
       presentation: json['presentation'] as String,
       activeIngredient: json['activeIngredient'] as String? ?? '',
       registrationNumber: json['registrationNumber'] as String? ?? '',
-      aliases:
-          rawAliases.map((alias) => alias as String).toList(growable: false),
+      aliases: rawAliases
+          .map((alias) => alias as String)
+          .toList(growable: false),
       eans: rawEans.map((ean) => ean as String).toList(growable: false),
       requiresManualDetails: json['requiresManualDetails'] as bool? ?? false,
     );

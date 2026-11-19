@@ -66,30 +66,29 @@ Future<bool> ensureImageReadingConsent(
   final accepted = await showDialog<bool>(
     context: context,
     barrierDismissible: false,
-    builder:
-        (dialogContext) => AlertDialog(
-          title: const Text('Autorização necessária'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(explanation),
-                const SizedBox(height: 12),
-                const PrivacyNoticeCard(),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Aceito e autorizo'),
-            ),
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Autorização necessária'),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(explanation),
+            const SizedBox(height: 12),
+            const PrivacyNoticeCard(),
           ],
         ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: const Text('Aceito e autorizo'),
+        ),
+      ],
+    ),
   );
 
   if (accepted != true || !context.mounted) return false;
@@ -112,7 +111,10 @@ Future<ImageSource?> pickReadingImageSource(
 
 /// Abre o seletor de imagem com os limites padrão de leitura
 /// (1600px, qualidade 85). `null` = cancelou ou o seletor falhou.
-Future<XFile?> pickReadingImage(BuildContext context, ImageSource source) async {
+Future<XFile?> pickReadingImage(
+  BuildContext context,
+  ImageSource source,
+) async {
   try {
     return await ImagePicker().pickImage(
       source: source,
@@ -354,11 +356,7 @@ Future<void> createConsultation(BuildContext context) async {
   if (result == null || !context.mounted) return;
   await context.read<ConsultationProvider>().saveConsultation(result);
   if (!context.mounted) return;
-  showAppSnackBar(
-    context,
-    'Consulta agendada.',
-    type: AppSnackType.success,
-  );
+  showAppSnackBar(context, 'Consulta agendada.', type: AppSnackType.success);
 }
 
 // ── Exames ─────────────────────────────────────────────────────────────────
@@ -481,16 +479,12 @@ Future<void> addHealthPlan(
 
   final plan = await Navigator.of(context).push<HealthPlan>(
     MaterialPageRoute(
-      builder:
-          (_) => HealthPlanReviewScreen(
-            scan: scan,
-            onRescan:
-                () => scanHealthPlanCard(
-                  context,
-                  cardReaderFactory: cardReaderFactory,
-                ),
-            onManualEntry: (scan) => _leavePlanReviewForManual(context, scan),
-          ),
+      builder: (_) => HealthPlanReviewScreen(
+        scan: scan,
+        onRescan: () =>
+            scanHealthPlanCard(context, cardReaderFactory: cardReaderFactory),
+        onManualEntry: (scan) => _leavePlanReviewForManual(context, scan),
+      ),
     ),
   );
 
@@ -713,14 +707,13 @@ Future<void> createDoctorFromPrescription(BuildContext context) async {
 
   final saved = await showSteppedFormSheet<Doctor>(
     context: context,
-    builder:
-        (dialogContext) => DoctorFormDialog(
-          draft: DoctorDraft(
-            name: medicoDraft.nome,
-            crm: medicoDraft.crm,
-            crmState: medicoDraft.uf,
-          ),
-        ),
+    builder: (dialogContext) => DoctorFormDialog(
+      draft: DoctorDraft(
+        name: medicoDraft.nome,
+        crm: medicoDraft.crm,
+        crmState: medicoDraft.uf,
+      ),
+    ),
   );
   if (saved != null && context.mounted) {
     await provider.saveDoctor(saved);

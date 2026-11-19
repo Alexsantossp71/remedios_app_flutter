@@ -28,17 +28,17 @@ void main() {
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () async {
-              outcome =
-                  await Navigator.of(context).push<PrescriptionReviewOutcome>(
-                MaterialPageRoute<PrescriptionReviewOutcome>(
-                  builder: (_) => Scaffold(
-                    body: PrescriptionReviewScreen(
-                      result: result,
-                      catalogFuture: Future.value(const []),
+              outcome = await Navigator.of(context)
+                  .push<PrescriptionReviewOutcome>(
+                    MaterialPageRoute<PrescriptionReviewOutcome>(
+                      builder: (_) => Scaffold(
+                        body: PrescriptionReviewScreen(
+                          result: result,
+                          catalogFuture: Future.value(const []),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              );
+                  );
             },
             child: const Text('abrir'),
           ),
@@ -52,8 +52,9 @@ void main() {
     return () => outcome;
   }
 
-  testWidgets('médico lido da receita abre no card para conferência',
-      (tester) async {
+  testWidgets('médico lido da receita abre no card para conferência', (
+    tester,
+  ) async {
     final capture = await openReview(tester, receitaComMedico);
 
     // Preenchido e confirmado por padrão: registrar quem assinou é o
@@ -76,8 +77,9 @@ void main() {
     expect(outcome.drafts, hasLength(1));
   });
 
-  testWidgets('edição do médico na conferência segue para o outcome',
-      (tester) async {
+  testWidgets('edição do médico na conferência segue para o outcome', (
+    tester,
+  ) async {
     final capture = await openReview(
       tester,
       const PrescriptionReadResult(
@@ -94,10 +96,7 @@ void main() {
       find.widgetWithText(TextField, 'Médico que receitou'),
       'Dr. Carlos Almeida',
     );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'UF'),
-      'SP',
-    );
+    await tester.enterText(find.widgetWithText(TextField, 'UF'), 'SP');
     await tester.tap(find.text('Continuar com 1 tratamento(s)'));
     await tester.pumpAndSettle();
 
@@ -107,8 +106,9 @@ void main() {
     expect(outcome.medico!.uf, 'SP');
   });
 
-  testWidgets('desmarcar o médico devolve outcome sem prescritor',
-      (tester) async {
+  testWidgets('desmarcar o médico devolve outcome sem prescritor', (
+    tester,
+  ) async {
     final capture = await openReview(tester, receitaComMedico);
 
     // O primeiro checkbox da tela é o do card de médico (os das

@@ -12,22 +12,20 @@ import 'package:remedios_app_flutter/services/ai_service.dart';
 /// UF tem que ser válida no Brasil e nada é inventado.
 
 http.Response chat(String content) => http.Response(
-      jsonEncode({
-        'choices': [
-          {
-            'message': {'content': content},
-            'finish_reason': 'stop',
-          },
-        ],
-      }),
-      200,
-      headers: {'content-type': 'application/json'},
-    );
+  jsonEncode({
+    'choices': [
+      {
+        'message': {'content': content},
+        'finish_reason': 'stop',
+      },
+    ],
+  }),
+  200,
+  headers: {'content-type': 'application/json'},
+);
 
-AiService serviceWith(
-  http.Client client,
-  List<http.Request> requests,
-) => AiService(
+AiService serviceWith(http.Client client, List<http.Request> requests) =>
+    AiService(
       proxyClient: AiProxyClient(client: RecordingClient(client, requests)),
     );
 
@@ -60,10 +58,7 @@ void main() {
   });
 
   AiService withPayload(String content) {
-    service = serviceWith(
-      MockClient((_) async => chat(content)),
-      requests,
-    );
+    service = serviceWith(MockClient((_) async => chat(content)), requests);
     return service;
   }
 
@@ -94,10 +89,9 @@ void main() {
       // O prompt envia a lista fixa: a especialidade tem que ser escolhida
       // dentro dela, não inventada. O proxy também faz um GET /v1/models
       // de catálogo antes — filtra só o chat.
-      final chatRequests =
-          requests
-              .where((request) => request.url.path.contains('chat/completions'))
-              .toList();
+      final chatRequests = requests
+          .where((request) => request.url.path.contains('chat/completions'))
+          .toList();
       expect(chatRequests, hasLength(1));
       expect(chatRequests.single.body, contains('Cardiologia'));
       expect(chatRequests.single.body, contains('Minha médica'));

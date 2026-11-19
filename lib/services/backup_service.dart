@@ -15,7 +15,7 @@ import 'database_service.dart';
 /// novas vêm vazias ao restaurar um backup antigo, respeitando os DEFAULTs).
 class BackupService {
   BackupService({DatabaseService? dbService})
-      : _dbService = dbService ?? DatabaseService.instance;
+    : _dbService = dbService ?? DatabaseService.instance;
 
   final DatabaseService _dbService;
 
@@ -125,14 +125,16 @@ class BackupService {
         final row = rawRows[i];
         if (row is! Map) {
           throw BackupFormatException(
-              'Linha $i de "$table" não é um objeto JSON.');
+            'Linha $i de "$table" não é um objeto JSON.',
+          );
         }
         final map = row.cast<String, dynamic>();
         for (final key in required) {
           final value = map[key];
           if (value == null || (value is String && value.isEmpty)) {
             throw BackupFormatException(
-                'Linha $i de "$table" está sem "$key" (obrigatório).');
+              'Linha $i de "$table" está sem "$key" (obrigatório).',
+            );
           }
         }
         rows.add(map);
@@ -173,21 +175,24 @@ class BackupService {
   void _validate(Map<String, dynamic> backup) {
     if (backup['app'] != appMarker) {
       throw BackupFormatException(
-          'Este arquivo não é um backup do Remédio na Hora.');
+        'Este arquivo não é um backup do Remédio na Hora.',
+      );
     }
 
     final format = _readInt(backup['formatVersion']);
     if (format == null || format > backupFormatVersion) {
       throw BackupFormatException(
-          'Formato de backup ($format) é mais novo que este app suporta '
-          '($backupFormatVersion). Atualize o app.');
+        'Formato de backup ($format) é mais novo que este app suporta '
+        '($backupFormatVersion). Atualize o app.',
+      );
     }
 
     final schema = _readInt(backup['schemaVersion']);
     if (schema == null || schema > maxSchemaVersion) {
       throw BackupFormatException(
-          'O backup foi feito por uma versão mais nova do app '
-          '(schema $schema > $maxSchemaVersion). Atualize o app.');
+        'O backup foi feito por uma versão mais nova do app '
+        '(schema $schema > $maxSchemaVersion). Atualize o app.',
+      );
     }
   }
 

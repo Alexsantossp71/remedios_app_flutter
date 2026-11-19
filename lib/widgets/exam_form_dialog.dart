@@ -62,16 +62,20 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
     _isEditing = existing != null;
     _nameController = TextEditingController(text: existing?.name ?? '');
     _placeController = TextEditingController(text: existing?.place ?? '');
-    _doctorNameController =
-        TextEditingController(text: existing?.doctorName ?? '');
-    _resultsController =
-        TextEditingController(text: existing?.results ?? '');
+    _doctorNameController = TextEditingController(
+      text: existing?.doctorName ?? '',
+    );
+    _resultsController = TextEditingController(text: existing?.results ?? '');
     _category = existing?.category ?? widget.initialScan?.category ?? '';
     _status = existing?.status ?? ExamStatus.requested;
-    _date = existing?.date ?? _parseScanDate(widget.initialScan?.date) ?? DateTime.now();
+    _date =
+        existing?.date ??
+        _parseScanDate(widget.initialScan?.date) ??
+        DateTime.now();
     _time = _parseTime(existing?.time);
-    _selectedDoctorId =
-        (existing?.doctorId.isNotEmpty ?? false) ? existing!.doctorId : null;
+    _selectedDoctorId = (existing?.doctorId.isNotEmpty ?? false)
+        ? existing!.doctorId
+        : null;
     if (existing?.photo != null) {
       _photoBytes = base64Decode(existing!.photo!);
     }
@@ -165,11 +169,13 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
     if (!mounted) return;
 
     setState(() => _isReading = true);
-    unawaited(showReadingDialog(
-      context,
-      title: 'Lendo pedido…',
-      subtitle: 'A IA extrai os dados impressos no pedido.',
-    ));
+    unawaited(
+      showReadingDialog(
+        context,
+        title: 'Lendo pedido…',
+        subtitle: 'A IA extrai os dados impressos no pedido.',
+      ),
+    );
 
     AiExamScan? scan;
     String? error;
@@ -181,7 +187,8 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
     } on AiException catch (e) {
       error = e.message;
     } catch (_) {
-      error = 'Não foi possível ler o pedido. Tente outra foto ou preencha '
+      error =
+          'Não foi possível ler o pedido. Tente outra foto ou preencha '
           'manualmente.';
     }
 
@@ -205,8 +212,7 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
         _tryMatchDoctorByName(scan.doctorName);
         // Sem casamento: o médico lido vira CONVITE de cadastro, nunca
         // criação automática — quem decide é o usuário.
-        _scannedDoctorName =
-            _selectedDoctorId == null ? scan.doctorName : null;
+        _scannedDoctorName = _selectedDoctorId == null ? scan.doctorName : null;
       }
       final parsedDate = _parseScanDate(scan.date);
       if (parsedDate != null) _date = parsedDate;
@@ -336,10 +342,9 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
         // ── Passo 1: o que foi pedido ────────────────────────────────────
         FormStep(
           title: 'O que foi pedido',
-          validate: () =>
-              _nameController.text.trim().isEmpty
-                  ? 'Informe o nome do exame (ou leia a foto do pedido).'
-                  : null,
+          validate: () => _nameController.text.trim().isEmpty
+              ? 'Informe o nome do exame (ou leia a foto do pedido).'
+              : null,
           children: [
             OutlinedButton.icon(
               onPressed: _isReading ? null : _readFromPhoto,
@@ -403,8 +408,7 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
                     FilterChip(
                       label: Text(category),
                       selected: _category == category,
-                      onSelected: (_) =>
-                          setState(() => _category = category),
+                      onSelected: (_) => setState(() => _category = category),
                     ),
                 ],
               ),
@@ -425,10 +429,7 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
                   value: ExamStatus.scheduled,
                   label: Text('Agendado'),
                 ),
-                ButtonSegment(
-                  value: ExamStatus.done,
-                  label: Text('Realizado'),
-                ),
+                ButtonSegment(value: ExamStatus.done, label: Text('Realizado')),
               ],
               selected: {_status},
               onSelectionChanged: (selection) =>
@@ -476,20 +477,19 @@ class _ExamFormDialogState extends State<ExamFormDialog> {
         // ── Passo 3: médico e resultado ──────────────────────────────────
         FormStep(
           title: 'Médico e resultado',
-          validate:
-              () => (_selectedDoctorId == null || _selectedDoctorId!.isEmpty)
-                  ? 'Selecione ou cadastre o médico solicitante.'
-                  : null,
+          validate: () =>
+              (_selectedDoctorId == null || _selectedDoctorId!.isEmpty)
+              ? 'Selecione ou cadastre o médico solicitante.'
+              : null,
           children: [
             if (doctors.isEmpty) ...[
               // Exame exige médico: com o catálogo vazio, o cadastro
               // acontece ali mesmo — o nome lido do pedido (OCR) já vai
               // pré-preenchido para conferir e salvar.
               InlineDoctorBanner(
-                draft:
-                    _doctorNameController.text.trim().isEmpty
-                        ? null
-                        : DoctorDraft(name: _doctorNameController.text.trim()),
+                draft: _doctorNameController.text.trim().isEmpty
+                    ? null
+                    : DoctorDraft(name: _doctorNameController.text.trim()),
                 onDoctorCreated: (created) {
                   setState(() {
                     _selectedDoctorId = created.id;

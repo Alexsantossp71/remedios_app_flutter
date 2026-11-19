@@ -19,7 +19,10 @@ void main() {
     ),
   ];
 
-  Future<void> openReview(WidgetTester tester, PrescriptionReadResult result) async {
+  Future<void> openReview(
+    WidgetTester tester,
+    PrescriptionReadResult result,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -33,8 +36,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('sugere entrada do catálogo para nome lido por OCR',
-      (tester) async {
+  testWidgets('sugere entrada do catálogo para nome lido por OCR', (
+    tester,
+  ) async {
     await openReview(
       tester,
       PrescriptionReadResult(
@@ -48,8 +52,9 @@ void main() {
     expect(find.textContaining('Catálogo: DIPIRONA'), findsOneWidget);
   });
 
-  testWidgets('aplicar a sugestão corrige grafia e completa campos',
-      (tester) async {
+  testWidgets('aplicar a sugestão corrige grafia e completa campos', (
+    tester,
+  ) async {
     await openReview(
       tester,
       PrescriptionReadResult(
@@ -70,8 +75,9 @@ void main() {
     expect(find.textContaining('Catálogo:'), findsNothing);
   });
 
-  testWidgets('nome já correto sem campos a completar não gera sugestão',
-      (tester) async {
+  testWidgets('nome já correto sem campos a completar não gera sugestão', (
+    tester,
+  ) async {
     await openReview(
       tester,
       PrescriptionReadResult(
@@ -90,16 +96,14 @@ void main() {
     expect(find.textContaining('Catálogo:'), findsNothing);
   });
 
-  testWidgets('nome correto mas apresentação vazia sugere completar',
-      (tester) async {
+  testWidgets('nome correto mas apresentação vazia sugere completar', (
+    tester,
+  ) async {
     await openReview(
       tester,
       PrescriptionReadResult(
         medicamentos: const [
-          PrescriptionMedication(
-            nome: 'losartana',
-            horarios: ['08:00'],
-          ),
+          PrescriptionMedication(nome: 'losartana', horarios: ['08:00']),
         ],
         rawText: 'losartana',
       ),
@@ -111,8 +115,9 @@ void main() {
     );
   });
 
-  testWidgets('item fora do catálogo começa desmarcado e avisado',
-      (tester) async {
+  testWidgets('item fora do catálogo começa desmarcado e avisado', (
+    tester,
+  ) async {
     await openReview(
       tester,
       PrescriptionReadResult(
@@ -138,9 +143,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(
-      find.text(
-        'Não encontrei no catálogo da ANVISA — confira o nome',
-      ),
+      find.text('Não encontrei no catálogo da ANVISA — confira o nome'),
       findsOneWidget,
     );
   });

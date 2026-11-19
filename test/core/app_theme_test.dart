@@ -13,16 +13,12 @@ void main() {
 
     test('usa Inter e registra as cores semânticas', () {
       expect(theme.textTheme.bodyMedium?.fontFamily, 'Inter');
-      expect(theme.extension<AppSemanticColors>()!.success,
-          const Color(0xFF2E9E6B));
       expect(
-        theme.extension<AppSemanticColors>()!.danger,
-        BrandColors.red,
+        theme.extension<AppSemanticColors>()!.success,
+        const Color(0xFF2E9E6B),
       );
-      expect(
-        theme.extension<AppSemanticColors>()!.warning,
-        BrandColors.yellow,
-      );
+      expect(theme.extension<AppSemanticColors>()!.danger, BrandColors.red);
+      expect(theme.extension<AppSemanticColors>()!.warning, BrandColors.yellow);
     });
 
     test('primário na família do teal de ação (canal verde-azulado)', () {
@@ -47,8 +43,10 @@ void main() {
 
     test('é Brightness.dark com extensão semântica clara própria', () {
       expect(dark.colorScheme.brightness, Brightness.dark);
-      expect(dark.extension<AppSemanticColors>()!.success,
-          const Color(0xFF63C894));
+      expect(
+        dark.extension<AppSemanticColors>()!.success,
+        const Color(0xFF63C894),
+      );
       // Fundos escuros realmente escuros (não branco de noite).
       expect(dark.scaffoldBackgroundColor, BrandColors.darkCanvas);
       expect(dark.cardTheme.color, BrandColors.darkSurface);
@@ -71,8 +69,9 @@ void main() {
     });
   });
 
-  testWidgets('AppSemanticColors.of tem fallback quando o tema não registra',
-      (tester) async {
+  testWidgets('AppSemanticColors.of tem fallback quando o tema não registra', (
+    tester,
+  ) async {
     late AppSemanticColors resolved;
     await tester.pumpWidget(
       MaterialApp(

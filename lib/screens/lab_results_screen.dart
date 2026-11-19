@@ -45,10 +45,7 @@ class LabResultsScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _confirmDelete(
-    BuildContext context,
-    LabResult result,
-  ) async {
+  Future<void> _confirmDelete(BuildContext context, LabResult result) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -98,21 +95,17 @@ class LabResultsScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Resultados de laboratório',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
+                            style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 5),
                           Text(
                             'Laudos, valores por marcador e evolução ao longo do tempo.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                           ),
                         ],
@@ -290,8 +283,8 @@ class _LabResultCard extends StatelessWidget {
     final accent = result.highCount > 0
         ? semantic.danger
         : result.lowCount > 0
-            ? semantic.warning
-            : null;
+        ? semantic.warning
+        : null;
 
     return RecordCard(
       accentColor: accent,
@@ -321,8 +314,9 @@ class _LabResultCard extends StatelessWidget {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: BrandColors.teal700
-                          .withValues(alpha: isDark ? .18 : .10),
+                      color: BrandColors.teal700.withValues(
+                        alpha: isDark ? .18 : .10,
+                      ),
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Icon(
@@ -355,9 +349,7 @@ class _LabResultCard extends StatelessWidget {
                       result.valuesSummary,
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: isDark
-                            ? BrandColors.darkInk
-                            : BrandColors.ink,
+                        color: isDark ? BrandColors.darkInk : BrandColors.ink,
                       ),
                     ),
                   ],
@@ -411,12 +403,11 @@ class _LabResultCard extends StatelessWidget {
                         vertical: 1,
                       ),
                       decoration: BoxDecoration(
-                        color: (_flagColor(value.flag, semantic) ??
-                                (isDark
-                                        ? Colors.white
-                                        : Colors.black)
-                                    .withValues(alpha: .06))
-                            .withValues(alpha: isDark ? .16 : .10),
+                        color:
+                            (_flagColor(value.flag, semantic) ??
+                                    (isDark ? Colors.white : Colors.black)
+                                        .withValues(alpha: .06))
+                                .withValues(alpha: isDark ? .16 : .10),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
@@ -424,7 +415,8 @@ class _LabResultCard extends StatelessWidget {
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
-                          color: _flagColor(value.flag, semantic) ??
+                          color:
+                              _flagColor(value.flag, semantic) ??
                               (isDark
                                   ? BrandColors.darkMuted
                                   : BrandColors.muted),
@@ -513,14 +505,11 @@ class _TrendCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(
-            switch (trend.direction) {
-              'up' => Icons.trending_up_rounded,
-              'down' => Icons.trending_down_rounded,
-              _ => Icons.trending_flat_rounded,
-            },
-            color: directionColor,
-          ),
+          Icon(switch (trend.direction) {
+            'up' => Icons.trending_up_rounded,
+            'down' => Icons.trending_down_rounded,
+            _ => Icons.trending_flat_rounded,
+          }, color: directionColor),
         ],
       ),
     );

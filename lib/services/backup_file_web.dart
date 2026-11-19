@@ -43,13 +43,19 @@ Future<String?> pickBackupJsonText() {
 
   // Listeners precisam ser síncronos para o .toJS (funções async não
   // podem ser convertidas — assinatura Future não é mapeável para JS).
-  input.addEventListener('change', (() {
-    _readSelectedFile(input, finish);
-  }).toJS);
+  input.addEventListener(
+    'change',
+    (() {
+      _readSelectedFile(input, finish);
+    }).toJS,
+  );
 
-  input.addEventListener('cancel', (() {
-    finish(null);
-  }).toJS);
+  input.addEventListener(
+    'cancel',
+    (() {
+      finish(null);
+    }).toJS,
+  );
 
   // Precisa estar no DOM para o click abrir o diálogo em todos os browsers.
   web.document.body?.appendChild(input);

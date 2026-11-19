@@ -49,8 +49,10 @@ AiConsultationContext buildConsultationContext(
   final medicationLines = <String>[];
   for (final treatment in treatments) {
     final times = treatment.doseTimes
-        .map((time) =>
-            '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}')
+        .map(
+          (time) =>
+              '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+        )
         .join(', ');
     final frequency = switch (treatment.frequency) {
       TreatmentFrequency.daily => 'todos os dias',
@@ -82,9 +84,11 @@ String _adherenceSummary(TherapyProvider therapy, DateTime now, int days) {
   var total = 0;
   var taken = 0;
   for (var offset = 0; offset < days; offset++) {
-    final day = DateTime(now.year, now.month, now.day).subtract(
-      Duration(days: offset),
-    );
+    final day = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: offset));
     final adherence = therapy.adherenceForDay(day);
     total += adherence.total;
     taken += adherence.taken;
@@ -98,7 +102,11 @@ String _adherenceSummary(TherapyProvider therapy, DateTime now, int days) {
 
 /// Faixas do dia com mais doses perdidas (puladas), em 30 dias — port das
 /// "dificuldades" do contexto de consulta do PWA.
-List<String> _bandDifficulties(TherapyProvider therapy, DateTime now, int days) {
+List<String> _bandDifficulties(
+  TherapyProvider therapy,
+  DateTime now,
+  int days,
+) {
   const bands = [
     (label: 'Madrugada (0h–6h)', min: 0, max: 6),
     (label: 'Manhã (6h–12h)', min: 6, max: 12),
@@ -109,12 +117,16 @@ List<String> _bandDifficulties(TherapyProvider therapy, DateTime now, int days) 
   final scheduled = List.filled(bands.length, 0);
 
   for (var offset = 0; offset < days; offset++) {
-    final day = DateTime(now.year, now.month, now.day).subtract(
-      Duration(days: offset),
-    );
+    final day = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: offset));
     for (final event in therapy.doseEventsForDay(day)) {
       final bandIndex = bands.indexWhere(
-        (band) => event.scheduledAt.hour >= band.min && event.scheduledAt.hour < band.max,
+        (band) =>
+            event.scheduledAt.hour >= band.min &&
+            event.scheduledAt.hour < band.max,
       );
       if (bandIndex < 0) continue;
       scheduled[bandIndex]++;
@@ -125,7 +137,9 @@ List<String> _bandDifficulties(TherapyProvider therapy, DateTime now, int days) 
   final result = <String>[];
   for (var i = 0; i < bands.length; i++) {
     if (missed[i] > 0) {
-      result.add('${bands[i].label}: ${missed[i]} doses não tomadas de ${scheduled[i]}');
+      result.add(
+        '${bands[i].label}: ${missed[i]} doses não tomadas de ${scheduled[i]}',
+      );
     }
   }
   return result;
@@ -153,10 +167,9 @@ class AiConsultationQuestionsView extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color:
-                  isDark
-                      ? BrandColors.teal700.withValues(alpha: .10)
-                      : BrandColors.accentSoft.withValues(alpha: .55),
+              color: isDark
+                  ? BrandColors.teal700.withValues(alpha: .10)
+                  : BrandColors.accentSoft.withValues(alpha: .55),
               borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(
                 color: BrandColors.teal700.withValues(alpha: .18),

@@ -58,8 +58,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('frequência Semenal mostra os sete dias para escolher',
-      (tester) async {
+  testWidgets('frequência Semenal mostra os sete dias para escolher', (
+    tester,
+  ) async {
     await openForm(tester);
 
     // Antes de escolher, os dias não aparecem.
@@ -74,8 +75,9 @@ void main() {
     expect(find.text('Dom'), findsOneWidget);
   });
 
-  testWidgets('salvar semanal sem dia nenhum é barrado com aviso',
-      (tester) async {
+  testWidgets('salvar semanal sem dia nenhum é barrado com aviso', (
+    tester,
+  ) async {
     await openForm(tester);
     await fillBasics(tester);
     await selectWeeklyFrequency(tester);
@@ -88,8 +90,9 @@ void main() {
     expect(find.text('Escolha pelo menos um dia da semana.'), findsOneWidget);
   });
 
-  testWidgets('semanal com dia escolhido salva o tratamento com os dias',
-      (tester) async {
+  testWidgets('semanal com dia escolhido salva o tratamento com os dias', (
+    tester,
+  ) async {
     await openForm(tester);
     await fillBasics(tester);
     await selectWeeklyFrequency(tester);

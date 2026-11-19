@@ -10,10 +10,7 @@ void main() {
   test('converte o JSON do proxy em sugestões', () async {
     final service = PlacesSearchService(
       client: MockClient((request) async {
-        expect(
-          request.url.host,
-          'remedios-app-flutter.vercel.app',
-        );
+        expect(request.url.host, 'remedios-app-flutter.vercel.app');
         expect(request.url.path, '/api/places');
         expect(request.url.queryParameters['q'], 'Rua Ada Pereira');
         return http.Response(

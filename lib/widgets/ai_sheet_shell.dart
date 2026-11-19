@@ -75,10 +75,9 @@ class AiDisclaimer extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color:
-            isDark
-                ? BrandColors.yellow.withValues(alpha: .10)
-                : BrandColors.yellow.withValues(alpha: .12),
+        color: isDark
+            ? BrandColors.yellow.withValues(alpha: .10)
+            : BrandColors.yellow.withValues(alpha: .12),
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: BrandColors.yellow.withValues(alpha: .45)),
       ),
@@ -95,8 +94,8 @@ class AiDisclaimer extends StatelessWidget {
             child: Text(
               text ??
                   'Análise educativa gerada por IA — não substitui médico, '
-                  'farmacêutico ou a bula do fabricante. Antes de mudar '
-                  'qualquer tratamento, confirme com um profissional.',
+                      'farmacêutico ou a bula do fabricante. Antes de mudar '
+                      'qualquer tratamento, confirme com um profissional.',
               style: theme.textTheme.bodySmall?.copyWith(
                 height: 1.35,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -155,13 +154,10 @@ class _AiSheetScaffoldState<T> extends State<AiSheetScaffold<T>> {
       setState(() => _state = AiSheetState.done(result));
     } catch (error) {
       if (!mounted) return;
-      final message =
-          error is Exception ? error.toString() : 'Falha inesperada na análise.';
-      setState(
-        () => _state = AiSheetState.error(
-          _friendlyMessage(message),
-        ),
-      );
+      final message = error is Exception
+          ? error.toString()
+          : 'Falha inesperada na análise.';
+      setState(() => _state = AiSheetState.error(_friendlyMessage(message)));
     }
   }
 
@@ -178,9 +174,7 @@ class _AiSheetScaffoldState<T> extends State<AiSheetScaffold<T>> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: DraggableScrollableSheet(
         expand: false,
         initialChildSize: 0.72,
@@ -268,10 +262,9 @@ class _AiSheetScaffoldState<T> extends State<AiSheetScaffold<T>> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color:
-                            theme.brightness == Brightness.dark
-                                ? BrandColors.red.withValues(alpha: .12)
-                                : BrandColors.red.withValues(alpha: .08),
+                        color: theme.brightness == Brightness.dark
+                            ? BrandColors.red.withValues(alpha: .12)
+                            : BrandColors.red.withValues(alpha: .08),
                         borderRadius: BorderRadius.circular(AppRadius.md),
                         border: Border.all(
                           color: BrandColors.red.withValues(alpha: .35),

@@ -11,7 +11,9 @@ void main() {
         intervalHours: 8,
       );
       expect(
-        times.map((time) => '${time.hour}:${time.minute.toString().padLeft(2, '0')}'),
+        times.map(
+          (time) => '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
+        ),
         ['8:00', '16:00', '0:00'],
       );
     });
@@ -48,7 +50,9 @@ void main() {
         timesPerDay: 3,
       );
       expect(
-        times.map((time) => '${time.hour}:${time.minute.toString().padLeft(2, '0')}'),
+        times.map(
+          (time) => '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
+        ),
         ['7:00', '15:00', '23:00'],
       );
     });
@@ -66,15 +70,12 @@ void main() {
         firstDose: const DoseTime(hour: 6, minute: 30),
         timesPerDay: 4,
       );
-      expect(
-        times,
-        const [
-          DoseTime(hour: 0, minute: 30),
-          DoseTime(hour: 6, minute: 30),
-          DoseTime(hour: 12, minute: 30),
-          DoseTime(hour: 18, minute: 30),
-        ],
-      );
+      expect(times, const [
+        DoseTime(hour: 0, minute: 30),
+        DoseTime(hour: 6, minute: 30),
+        DoseTime(hour: 12, minute: 30),
+        DoseTime(hour: 18, minute: 30),
+      ]);
     });
 
     test('uma toma ao dia é só a âncora e nenhuma grade repete horário', () {

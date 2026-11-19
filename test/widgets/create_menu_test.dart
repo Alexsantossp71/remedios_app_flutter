@@ -177,7 +177,9 @@ void main() {
     expect(find.text('Cadastrar manualmente'), findsOneWidget);
   });
 
-  testWidgets('Exame abre o formulário direto (IA já embutida)', (tester) async {
+  testWidgets('Exame abre o formulário direto (IA já embutida)', (
+    tester,
+  ) async {
     await pumpShell(tester);
     await openCreateMenu(tester);
 

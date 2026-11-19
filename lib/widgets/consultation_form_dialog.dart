@@ -201,11 +201,10 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
         // ── Passo 1: quem atende ───────────────────────────────────────────
         FormStep(
           title: 'Quem atende',
-          validate:
-              () =>
-                  (_selectedDoctorId == null || _selectedDoctorId!.isEmpty)
-                      ? 'Selecione um médico para a consulta.'
-                      : null,
+          validate: () =>
+              (_selectedDoctorId == null || _selectedDoctorId!.isEmpty)
+              ? 'Selecione um médico para a consulta.'
+              : null,
           children: [
             if (doctors.isEmpty) ...[
               // Consulta exige médico: em vez de um aviso sem saída, o
@@ -222,23 +221,22 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
               initialValue: _selectedDoctorId,
               isExpanded: true,
               decoration: _decoration('Médico', hint: 'Selecione'),
-              items:
-                  doctors.map((Doctor doctor) {
-                    final subtitle = [
-                      doctor.specialty,
-                      if (doctor.crm.isNotEmpty) 'CRM ${doctor.crm}',
-                    ].where((s) => s.isNotEmpty).join(' · ');
+              items: doctors.map((Doctor doctor) {
+                final subtitle = [
+                  doctor.specialty,
+                  if (doctor.crm.isNotEmpty) 'CRM ${doctor.crm}',
+                ].where((s) => s.isNotEmpty).join(' · ');
 
-                    return DropdownMenuItem<String>(
-                      value: doctor.id,
-                      child: Text(
-                        subtitle.isEmpty
-                            ? doctor.name
-                            : '${doctor.name} ($subtitle)',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }).toList(),
+                return DropdownMenuItem<String>(
+                  value: doctor.id,
+                  child: Text(
+                    subtitle.isEmpty
+                        ? doctor.name
+                        : '${doctor.name} ($subtitle)',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
               onChanged: (value) {
                 setState(() => _selectedDoctorId = value);
               },
@@ -339,22 +337,21 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Situação',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
               DropdownButtonFormField<String>(
                 initialValue: _status,
                 decoration: _decoration('Status da consulta'),
-                items:
-                    ConsultationStatus.values.map((status) {
-                      return DropdownMenuItem(
-                        value: status,
-                        child: Text(ConsultationStatus.label(status)),
-                      );
-                    }).toList(),
+                items: ConsultationStatus.values.map((status) {
+                  return DropdownMenuItem(
+                    value: status,
+                    child: Text(ConsultationStatus.label(status)),
+                  );
+                }).toList(),
                 onChanged: (value) {
                   if (value != null) setState(() => _status = value);
                 },
@@ -379,20 +376,19 @@ class _ConsultationFormDialogState extends State<ConsultationFormDialog> {
               duration: AppDurations.medium,
               curve: AppCurves.emphasized,
               alignment: Alignment.topCenter,
-              child:
-                  _hasReturn
-                      ? Padding(
-                        padding: const EdgeInsets.only(top: AppSpacing.xs),
-                        child: OutlinedButton.icon(
-                          onPressed: _pickReturnDate,
-                          icon: const Icon(Icons.event_repeat_outlined),
-                          label: Text(
-                            'Data de retorno\n${_formatDate(_returnDate!)}',
-                            textAlign: TextAlign.left,
-                          ),
+              child: _hasReturn
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: OutlinedButton.icon(
+                        onPressed: _pickReturnDate,
+                        icon: const Icon(Icons.event_repeat_outlined),
+                        label: Text(
+                          'Data de retorno\n${_formatDate(_returnDate!)}',
+                          textAlign: TextAlign.left,
                         ),
-                      )
-                      : const SizedBox(width: double.infinity),
+                      ),
+                    )
+                  : const SizedBox(width: double.infinity),
             ),
             const SizedBox(height: AppSpacing.md),
             TextFormField(

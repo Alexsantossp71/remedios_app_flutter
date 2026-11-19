@@ -35,11 +35,10 @@ class ConsultationsScreen extends StatelessWidget {
   }) async {
     final result = await showSteppedFormSheet<Consultation>(
       context: context,
-      builder:
-          (_) => ConsultationFormDialog(
-            initialConsultation: consultation,
-            initialDoctorId: initialDoctorId,
-          ),
+      builder: (_) => ConsultationFormDialog(
+        initialConsultation: consultation,
+        initialDoctorId: initialDoctorId,
+      ),
     );
     if (result == null || !context.mounted) return;
 
@@ -60,23 +59,22 @@ class ConsultationsScreen extends StatelessWidget {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (dialogContext) => AlertDialog(
-            title: const Text('Excluir consulta?'),
-            content: Text(
-              'A consulta de ${_formatDateTime(consultation.date)} será removida permanentemente.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton.tonal(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: const Text('Excluir'),
-              ),
-            ],
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Excluir consulta?'),
+        content: Text(
+          'A consulta de ${_formatDateTime(consultation.date)} será removida permanentemente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancelar'),
           ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
     );
     if (confirmed == true && context.mounted) {
       await context.read<ConsultationProvider>().removeConsultation(
@@ -217,10 +215,9 @@ class ConsultationsScreen extends StatelessWidget {
                   title: 'Nenhuma consulta agendada',
                   description:
                       'Agende sua primeira consulta médica e acompanhe o histórico de atendimentos.',
-                  actionLabel:
-                      doctorProvider.doctors.isEmpty
-                          ? 'Cadastrar médico'
-                          : 'Agendar consulta',
+                  actionLabel: doctorProvider.doctors.isEmpty
+                      ? 'Cadastrar médico'
+                      : 'Agendar consulta',
                   onAction: () {
                     if (doctorProvider.doctors.isEmpty) {
                       // Sem médico no catálogo, a consulta fica órfã —
@@ -260,12 +257,11 @@ class ConsultationsScreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Atenção: Consultas nos Próximos 5 Dias (${highlighted.length})',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: semantic.warning,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: semantic.warning,
+                                ),
                           ),
                         ),
                       ],
@@ -279,38 +275,33 @@ class ConsultationsScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final consultation = highlighted[index];
-                      final doctor =
-                          doctorProvider.doctors
-                              .where((d) => d.id == consultation.doctorId)
-                              .firstOrNull;
+                      final doctor = doctorProvider.doctors
+                          .where((d) => d.id == consultation.doctorId)
+                          .firstOrNull;
                       return _ConsultationTile(
                         consultation: consultation,
                         doctor: doctor,
                         isHighlighted: true,
-                        onEdit:
-                            () => _openConsultationForm(
-                              context,
-                              consultation: consultation,
-                            ),
+                        onEdit: () => _openConsultationForm(
+                          context,
+                          consultation: consultation,
+                        ),
                         onDelete: () => _confirmDelete(context, consultation),
-                        onComplete:
-                            () => _changeStatus(
-                              context,
-                              consultation,
-                              ConsultationStatus.completed,
-                            ),
-                        onCancel:
-                            () => _changeStatus(
-                              context,
-                              consultation,
-                              ConsultationStatus.cancelled,
-                            ),
-                        onReopen:
-                            () => _changeStatus(
-                              context,
-                              consultation,
-                              ConsultationStatus.scheduled,
-                            ),
+                        onComplete: () => _changeStatus(
+                          context,
+                          consultation,
+                          ConsultationStatus.completed,
+                        ),
+                        onCancel: () => _changeStatus(
+                          context,
+                          consultation,
+                          ConsultationStatus.cancelled,
+                        ),
+                        onReopen: () => _changeStatus(
+                          context,
+                          consultation,
+                          ConsultationStatus.scheduled,
+                        ),
                       );
                     },
                   ),
@@ -334,38 +325,33 @@ class ConsultationsScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final consultation = otherUpcoming[index];
-                      final doctor =
-                          doctorProvider.doctors
-                              .where((d) => d.id == consultation.doctorId)
-                              .firstOrNull;
+                      final doctor = doctorProvider.doctors
+                          .where((d) => d.id == consultation.doctorId)
+                          .firstOrNull;
                       return _ConsultationTile(
                         consultation: consultation,
                         doctor: doctor,
                         isHighlighted: false,
-                        onEdit:
-                            () => _openConsultationForm(
-                              context,
-                              consultation: consultation,
-                            ),
+                        onEdit: () => _openConsultationForm(
+                          context,
+                          consultation: consultation,
+                        ),
                         onDelete: () => _confirmDelete(context, consultation),
-                        onComplete:
-                            () => _changeStatus(
-                              context,
-                              consultation,
-                              ConsultationStatus.completed,
-                            ),
-                        onCancel:
-                            () => _changeStatus(
-                              context,
-                              consultation,
-                              ConsultationStatus.cancelled,
-                            ),
-                        onReopen:
-                            () => _changeStatus(
-                              context,
-                              consultation,
-                              ConsultationStatus.scheduled,
-                            ),
+                        onComplete: () => _changeStatus(
+                          context,
+                          consultation,
+                          ConsultationStatus.completed,
+                        ),
+                        onCancel: () => _changeStatus(
+                          context,
+                          consultation,
+                          ConsultationStatus.cancelled,
+                        ),
+                        onReopen: () => _changeStatus(
+                          context,
+                          consultation,
+                          ConsultationStatus.scheduled,
+                        ),
                       );
                     },
                   ),
@@ -387,38 +373,33 @@ class ConsultationsScreen extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final consultation = past[index];
-                      final doctor =
-                          doctorProvider.doctors
-                              .where((d) => d.id == consultation.doctorId)
-                              .firstOrNull;
+                      final doctor = doctorProvider.doctors
+                          .where((d) => d.id == consultation.doctorId)
+                          .firstOrNull;
                       return _ConsultationTile(
                         consultation: consultation,
                         doctor: doctor,
                         isHighlighted: false,
-                        onEdit:
-                            () => _openConsultationForm(
-                              context,
-                              consultation: consultation,
-                            ),
+                        onEdit: () => _openConsultationForm(
+                          context,
+                          consultation: consultation,
+                        ),
                         onDelete: () => _confirmDelete(context, consultation),
-                        onComplete:
-                            () => _changeStatus(
-                              context,
-                              consultation,
-                              ConsultationStatus.completed,
-                            ),
-                        onCancel:
-                            () => _changeStatus(
-                              context,
-                              consultation,
-                              ConsultationStatus.cancelled,
-                            ),
-                        onReopen:
-                            () => _changeStatus(
-                              context,
-                              consultation,
-                              ConsultationStatus.scheduled,
-                            ),
+                        onComplete: () => _changeStatus(
+                          context,
+                          consultation,
+                          ConsultationStatus.completed,
+                        ),
+                        onCancel: () => _changeStatus(
+                          context,
+                          consultation,
+                          ConsultationStatus.cancelled,
+                        ),
+                        onReopen: () => _changeStatus(
+                          context,
+                          consultation,
+                          ConsultationStatus.scheduled,
+                        ),
                       );
                     },
                   ),
@@ -428,14 +409,13 @@ class ConsultationsScreen extends StatelessWidget {
           ],
         ),
       ),
-      floatingActionButton:
-          hasConsultations
-              ? FloatingActionButton.extended(
-                onPressed: () => _openConsultationForm(context),
-                icon: const Icon(Icons.add),
-                label: const Text('Agendar'),
-              )
-              : null,
+      floatingActionButton: hasConsultations
+          ? FloatingActionButton.extended(
+              onPressed: () => _openConsultationForm(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Agendar'),
+            )
+          : null,
     );
   }
 }
@@ -459,8 +439,9 @@ class _ConsultationsStats extends StatelessWidget {
           child: StatCard(
             icon: Icons.event_available_rounded,
             value: '$upcomingCount',
-            label:
-                upcomingCount == 1 ? 'próxima consulta' : 'próximas consultas',
+            label: upcomingCount == 1
+                ? 'próxima consulta'
+                : 'próximas consultas',
           ),
         ),
         const SizedBox(width: 10),
@@ -468,10 +449,9 @@ class _ConsultationsStats extends StatelessWidget {
           child: StatCard(
             icon: Icons.history_rounded,
             value: '$pastCount',
-            label:
-                pastCount == 1
-                    ? 'consulta no histórico'
-                    : 'consultas no histórico',
+            label: pastCount == 1
+                ? 'consulta no histórico'
+                : 'consultas no histórico',
             iconColor: BrandColors.teal600,
           ),
         ),
@@ -590,8 +570,8 @@ class _ConsultationTile extends StatelessWidget {
                       consultation.title.isNotEmpty
                           ? consultation.title
                           : (doctorSpecialty.isNotEmpty
-                              ? 'Consulta de $doctorSpecialty'
-                              : 'Consulta médica'),
+                                ? 'Consulta de $doctorSpecialty'
+                                : 'Consulta médica'),
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),

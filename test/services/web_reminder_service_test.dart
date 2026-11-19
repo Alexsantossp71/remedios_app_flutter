@@ -7,12 +7,12 @@ void main() {
     final now = DateTime(2026, 11, 12, 14, 0);
 
     PlannedDose dose(String id, DateTime at) => PlannedDose(
-          treatmentId: id,
-          treatmentName: 'Remédio $id',
-          dosage: '10mg',
-          scheduledAt: at,
-          notificationId: id.hashCode & 0x7fffffff,
-        );
+      treatmentId: id,
+      treatmentName: 'Remédio $id',
+      dosage: '10mg',
+      scheduledAt: at,
+      notificationId: id.hashCode & 0x7fffffff,
+    );
 
     test('dispara a dose exatamente no horário', () {
       final planned = [dose('a', now)];
@@ -69,26 +69,29 @@ void main() {
       expect(due, isEmpty);
     });
 
-    test('ordena por horário e filtra misturando vencidas/futuras/avisadas',
-        () {
-      final planned = [
-        dose('futuro', now.add(const Duration(minutes: 30))),
-        dose('avisada', now.add(const Duration(minutes: -2))),
-        dose('tardia', now.add(const Duration(minutes: -30))),
-        dose('vencida-2', now.add(const Duration(minutes: -2))),
-        dose('vencida-1', now.add(const Duration(minutes: -4))),
-      ];
-      final fired = {
-        WebReminderService.keyOf(
-            planned.firstWhere((d) => d.treatmentId == 'avisada')),
-      };
-      final due = WebReminderService.dueDoses(
-        planned: planned,
-        now: now,
-        fired: fired,
-      );
-      expect(due.map((d) => d.treatmentId), ['vencida-1', 'vencida-2']);
-    });
+    test(
+      'ordena por horário e filtra misturando vencidas/futuras/avisadas',
+      () {
+        final planned = [
+          dose('futuro', now.add(const Duration(minutes: 30))),
+          dose('avisada', now.add(const Duration(minutes: -2))),
+          dose('tardia', now.add(const Duration(minutes: -30))),
+          dose('vencida-2', now.add(const Duration(minutes: -2))),
+          dose('vencida-1', now.add(const Duration(minutes: -4))),
+        ];
+        final fired = {
+          WebReminderService.keyOf(
+            planned.firstWhere((d) => d.treatmentId == 'avisada'),
+          ),
+        };
+        final due = WebReminderService.dueDoses(
+          planned: planned,
+          now: now,
+          fired: fired,
+        );
+        expect(due.map((d) => d.treatmentId), ['vencida-1', 'vencida-2']);
+      },
+    );
 
     test('keyOf é estável para o mesmo tratamento+instante', () {
       final a = dose('a', DateTime(2026, 11, 12, 8, 0));

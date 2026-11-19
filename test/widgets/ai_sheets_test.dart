@@ -14,8 +14,8 @@ void main() {
 
   group('AiSheetScaffold — estados', () {
     Widget host(Widget child) => MaterialApp(
-          home: Scaffold(body: Center(child: child)),
-        );
+      home: Scaffold(body: Center(child: child)),
+    );
 
     testWidgets('mostra carregando e depois o resultado', (tester) async {
       await tester.pumpWidget(
@@ -40,8 +40,9 @@ void main() {
       expect(find.textContaining('educativa'), findsOneWidget);
     });
 
-    testWidgets('erro exibe mensagem amigável com botão de tentar novamente',
-        (tester) async {
+    testWidgets('erro exibe mensagem amigável com botão de tentar novamente', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         host(
           AiSheetScaffold<String>(
@@ -49,8 +50,10 @@ void main() {
             subtitle: 'de teste',
             icon: Icons.auto_awesome_outlined,
             loadingMessage: 'Consultando…',
-            load: () async => throw AiException('Limite de solicitações '
-                'foi atingido. Aguarde alguns instantes e tente novamente.'),
+            load: () async => throw AiException(
+              'Limite de solicitações '
+              'foi atingido. Aguarde alguns instantes e tente novamente.',
+            ),
             buildResult: (context, result) => Text(result),
           ),
         ),
@@ -62,8 +65,9 @@ void main() {
       expect(find.text('resultado'), findsNothing);
     });
 
-    testWidgets('tentar novamente roda o carregador de novo e renderiza',
-        (tester) async {
+    testWidgets('tentar novamente roda o carregador de novo e renderiza', (
+      tester,
+    ) async {
       var attempts = 0;
       await tester.pumpWidget(
         host(
@@ -108,16 +112,13 @@ void main() {
         ChangeNotifierProvider<UserProfileProvider>.value(
           value: provider,
           child: MaterialApp(
-            home: Scaffold(
-              body: Center(
-                child: child,
-              ),
-            ),
+            home: Scaffold(body: Center(child: child)),
           ),
         );
 
-    testWidgets('sem consentimento: pergunta e grava ao aceitar',
-        (tester) async {
+    testWidgets('sem consentimento: pergunta e grava ao aceitar', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         host(
           Builder(
@@ -146,8 +147,9 @@ void main() {
       expect(provider.profile?.aiConsentAt, isNotNull);
     });
 
-    testWidgets('sem consentimento: "Agora não" não grava nada',
-        (tester) async {
+    testWidgets('sem consentimento: "Agora não" não grava nada', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         host(
           Builder(
@@ -167,8 +169,9 @@ void main() {
       expect(provider.profile?.aiConsentAt, isNull);
     });
 
-    testWidgets('com consentimento já concedido abre direto, sem diálogo',
-        (tester) async {
+    testWidgets('com consentimento já concedido abre direto, sem diálogo', (
+      tester,
+    ) async {
       // Escrita no SQLite é IO real: runAsync antes de qualquer frame.
       await tester.runAsync(() => provider.grantAiConsent());
       expect(provider.profile?.aiConsentAt, isNotNull);

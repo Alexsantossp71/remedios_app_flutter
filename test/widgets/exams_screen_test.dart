@@ -41,8 +41,9 @@ void main() {
     expect(find.text('Registrar exame'), findsOneWidget);
   });
 
-  testWidgets('lista pendentes e realizados com chips de status e stats',
-      (tester) async {
+  testWidgets('lista pendentes e realizados com chips de status e stats', (
+    tester,
+  ) async {
     await tester.runAsync(() async {
       await exams.saveExam(
         Exam(
@@ -80,8 +81,9 @@ void main() {
     expect(find.text('Traço normal'), findsOneWidget);
   });
 
-  testWidgets('exame agendado exibe horário e prefixo de agendamento',
-      (tester) async {
+  testWidgets('exame agendado exibe horário e prefixo de agendamento', (
+    tester,
+  ) async {
     await tester.runAsync(() async {
       await exams.saveExam(
         Exam(

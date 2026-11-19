@@ -18,8 +18,10 @@ Future<void> showAiInteractionsSheet(BuildContext context) async {
     icon: Icons.health_and_safety_outlined,
     loadingMessage: 'Analisando seus tratamentos…',
     load: () {
-      final treatments =
-          context.read<TherapyProvider>().activeTreatments.toList();
+      final treatments = context
+          .read<TherapyProvider>()
+          .activeTreatments
+          .toList();
       return AiService().analyzeInteractions(treatments);
     },
     buildResult: (context, report) => AiInteractionReportView(report: report),
@@ -145,10 +147,7 @@ class _InteractionAlertCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: _severityColor.withValues(alpha: .18),
                   borderRadius: BorderRadius.circular(999),
@@ -175,14 +174,11 @@ class _InteractionAlertCard extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        isDark
-                            ? BrandColors.darkInputFill
-                            : const Color(0xFFFFFFFF),
+                    color: isDark
+                        ? BrandColors.darkInputFill
+                        : const Color(0xFFFFFFFF),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: theme.colorScheme.outlineVariant,
-                    ),
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
                   ),
                   child: Text(
                     medication,

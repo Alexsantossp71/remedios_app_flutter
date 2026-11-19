@@ -17,9 +17,7 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<HealthPlanProvider>.value(
-            value: planProvider,
-          ),
+          ChangeNotifierProvider<HealthPlanProvider>.value(value: planProvider),
           ChangeNotifierProvider<UserProfileProvider>.value(
             value: userProvider,
           ),
@@ -43,22 +41,24 @@ void main() {
   });
 
   testWidgets(
-      'sem consentimento, enviar imagem exige autorização antes do seletor',
-      (tester) async {
-    await pumpScreen(tester);
+    'sem consentimento, enviar imagem exige autorização antes do seletor',
+    (tester) async {
+      await pumpScreen(tester);
 
-    await tester.tap(find.text('Adicionar plano'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Enviar imagem do cartão'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Adicionar plano'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Enviar imagem do cartão'));
+      await tester.pumpAndSettle();
 
-    // O diálogo de consentimento aparece ANTES do seletor de origem.
-    expect(find.text('Autorização necessária'), findsOneWidget);
-    expect(find.text('Tirar foto do cartão'), findsNothing);
-  });
+      // O diálogo de consentimento aparece ANTES do seletor de origem.
+      expect(find.text('Autorização necessária'), findsOneWidget);
+      expect(find.text('Tirar foto do cartão'), findsNothing);
+    },
+  );
 
-  testWidgets('cancelar o consentimento volta sem abrir o seletor',
-      (tester) async {
+  testWidgets('cancelar o consentimento volta sem abrir o seletor', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     await tester.tap(find.text('Adicionar plano'));
@@ -74,8 +74,9 @@ void main() {
     expect(userProvider.profile?.consentAt, isNull);
   });
 
-  testWidgets('aceitar registra o consentimento e abre o seletor',
-      (tester) async {
+  testWidgets('aceitar registra o consentimento e abre o seletor', (
+    tester,
+  ) async {
     await pumpScreen(tester);
 
     await tester.tap(find.text('Adicionar plano'));
@@ -100,8 +101,9 @@ void main() {
       await userProvider.grantConsent();
     });
 
-    testWidgets('com consentimento já registrado, o diálogo não volta',
-        (tester) async {
+    testWidgets('com consentimento já registrado, o diálogo não volta', (
+      tester,
+    ) async {
       await pumpScreen(tester);
 
       await tester.tap(find.text('Adicionar plano'));

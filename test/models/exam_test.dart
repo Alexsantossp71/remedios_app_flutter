@@ -31,10 +31,7 @@ void main() {
         exam.copyWith(status: ExamStatus.scheduled).datePrefix,
         'Agendado para',
       );
-      expect(
-        exam.copyWith(status: ExamStatus.done).datePrefix,
-        'Realizado em',
-      );
+      expect(exam.copyWith(status: ExamStatus.done).datePrefix, 'Realizado em');
     });
 
     test('fromJson descarta categoria e status desconhecidos', () {

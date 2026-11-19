@@ -46,21 +46,23 @@ http.Client _jsonClient(Object body, {int status = 200}) {
 
 void main() {
   group('CrmLookupService — SP', () {
-    test('success maps fields and title-cases name keeping particles lowercase',
-        () async {
-      final service = CrmLookupService(
-        client: _jsonClient(_activeJson),
-        isWebOverride: false,
-      );
+    test(
+      'success maps fields and title-cases name keeping particles lowercase',
+      () async {
+        final service = CrmLookupService(
+          client: _jsonClient(_activeJson),
+          isWebOverride: false,
+        );
 
-      final result = await service.lookup('33333', 'SP');
+        final result = await service.lookup('33333', 'SP');
 
-      expect(result.kind, CrmLookupKind.success);
-      expect(result.name, 'Sandra Lina dos Reis Alpendre');
-      expect(result.specialty, 'ENDOCRINOLOGIA E METABOLOGIA');
-      expect(result.statusText, 'Ativo');
-      expect(result.school, 'UNIVERSIDADE DE SAO PAULO');
-    });
+        expect(result.kind, CrmLookupKind.success);
+        expect(result.name, 'Sandra Lina dos Reis Alpendre');
+        expect(result.specialty, 'ENDOCRINOLOGIA E METABOLOGIA');
+        expect(result.statusText, 'Ativo');
+        expect(result.school, 'UNIVERSIDADE DE SAO PAULO');
+      },
+    );
 
     test('inactive CRM reports Inativo with mensagemStatus', () async {
       final service = CrmLookupService(
@@ -125,7 +127,10 @@ void main() {
 
       await service.lookup('33333', 'SP');
 
-      expect(hit.toString(), 'https://api.cremesp.org.br/guia-medico/medico-info/33333');
+      expect(
+        hit.toString(),
+        'https://api.cremesp.org.br/guia-medico/medico-info/33333',
+      );
     });
 
     test('web routes through AllOrigins proxy with encoded URL', () async {
@@ -172,5 +177,4 @@ void main() {
   });
 }
 
-bool resultIsSuccess(Uri? hit) =>
-    hit.toString().endsWith('/medico-info/33333');
+bool resultIsSuccess(Uri? hit) => hit.toString().endsWith('/medico-info/33333');

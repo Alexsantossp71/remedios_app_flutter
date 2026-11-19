@@ -88,7 +88,10 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
 
   /// Catálogo exibido no seletor: o entregue pelo chamador + quem nasceu
   /// inline aqui. O médico novo já entra selecionado via [_applyInlineDoctor].
-  List<Doctor> get _mergedCatalog => [...widget.doctorCatalog, ..._extraDoctors];
+  List<Doctor> get _mergedCatalog => [
+    ...widget.doctorCatalog,
+    ..._extraDoctors,
+  ];
 
   /// Rascunho para o cadastro inline de médico: aproveita o que o usuário
   /// já digitou em "Quem receitou" — nada de redigitar nome e CRM.
@@ -281,13 +284,12 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   /// "A cada Xh" é âncora na primeira dose (convenção médica), não no
   /// relógio: pergunta a 1ª toma e gera o dia inteiro de uma vez.
   Future<void> _applyInterval(int intervalHours) async {
-    final anchor =
-        _doseTimes.isNotEmpty
-            ? TimeOfDay(
-              hour: _doseTimes.first.hour,
-              minute: _doseTimes.first.minute,
-            )
-            : const TimeOfDay(hour: 8, minute: 0);
+    final anchor = _doseTimes.isNotEmpty
+        ? TimeOfDay(
+            hour: _doseTimes.first.hour,
+            minute: _doseTimes.first.minute,
+          )
+        : const TimeOfDay(hour: 8, minute: 0);
     final picked = await showTimePicker(
       context: context,
       initialTime: anchor,
@@ -332,8 +334,9 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
     }
     setState(() {
       _nameController.text = match.name;
-      final dosage =
-          match.dosage.isNotEmpty ? match.dosage : match.listedDosage;
+      final dosage = match.dosage.isNotEmpty
+          ? match.dosage
+          : match.listedDosage;
       if (dosage.isNotEmpty) _dosageController.text = dosage;
       if (match.presentation.isNotEmpty) {
         _presentationController.text = match.presentation;
@@ -345,8 +348,9 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
   void _selectMedicine(Medicine medicine) {
     setState(() {
       _nameController.text = medicine.name;
-      _dosageController.text =
-          medicine.dosage.isNotEmpty ? medicine.dosage : medicine.listedDosage;
+      _dosageController.text = medicine.dosage.isNotEmpty
+          ? medicine.dosage
+          : medicine.listedDosage;
       _presentationController.text = medicine.presentation;
       _medicineQuery = '';
     });
@@ -358,14 +362,13 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       hintText: 'Nome comercial ou princípio ativo',
       prefixIcon: const Icon(Icons.search),
       // Scanner de barras só existe onde existe câmera (APK).
-      suffixIcon:
-          kIsWeb
-              ? null
-              : IconButton(
-                tooltip: 'Escanear código de barras',
-                icon: const Icon(Icons.qr_code_scanner),
-                onPressed: _scanBarcode,
-              ),
+      suffixIcon: kIsWeb
+          ? null
+          : IconButton(
+              tooltip: 'Escanear código de barras',
+              icon: const Icon(Icons.qr_code_scanner),
+              onPressed: _scanBarcode,
+            ),
     );
   }
 
@@ -446,8 +449,8 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
 
   String? _validateMedicineName(String? value) =>
       value == null || value.trim().isEmpty
-          ? 'Informe o nome do remédio'
-          : null;
+      ? 'Informe o nome do remédio'
+      : null;
 
   void _save() {
     // Os passos já validam cada trecho; aqui re-checa o essencial antes de
@@ -477,24 +480,20 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       endDate: _endDate,
       frequency: _frequency,
       doseTimes: List.unmodifiable(_doseTimes),
-      weekdays:
-          _frequency == TreatmentFrequency.weekly
-              ? List.unmodifiable(_weekdays.toList()..sort())
-              : const [],
+      weekdays: _frequency == TreatmentFrequency.weekly
+          ? List.unmodifiable(_weekdays.toList()..sort())
+          : const [],
       stock: parseOptionalInt(_stockController.text),
       refillThreshold: parseOptionalInt(_thresholdController.text),
       isArchived: existing?.isArchived ?? false,
       // Quem receitou: só entra quando há nome — CRM e UF acompanham o
       // que foi digitado, e a data da receita fica à disposição.
-      prescriberDoctorId:
-          hasPrescriber ? existing?.prescriberDoctorId : null,
+      prescriberDoctorId: hasPrescriber ? existing?.prescriberDoctorId : null,
       prescriberName: prescriberName,
-      prescriberCrm:
-          hasPrescriber ? _prescriberCrmController.text.trim() : '',
-      prescriberCrmState:
-          hasPrescriber
-              ? _prescriberUfController.text.trim().toUpperCase()
-              : '',
+      prescriberCrm: hasPrescriber ? _prescriberCrmController.text.trim() : '',
+      prescriberCrmState: hasPrescriber
+          ? _prescriberUfController.text.trim().toUpperCase()
+          : '',
       prescribedOn: hasPrescriber ? _prescribedOn : null,
     );
     Navigator.of(context).pop(treatment);
@@ -512,12 +511,11 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
         // ── Passo 1: o medicamento ─────────────────────────────────────────
         FormStep(
           title: 'Medicamento',
-          validate:
-              () =>
-                  _validateMedicineName(_nameController.text) ??
-                  (_frequency == TreatmentFrequency.weekly && _weekdays.isEmpty
-                      ? 'Escolha pelo menos um dia da semana.'
-                      : null),
+          validate: () =>
+              _validateMedicineName(_nameController.text) ??
+              (_frequency == TreatmentFrequency.weekly && _weekdays.isEmpty
+                  ? 'Escolha pelo menos um dia da semana.'
+                  : null),
           children: [
             _buildMedicineSearch(),
             const SizedBox(height: AppSpacing.md),
@@ -572,42 +570,38 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
               duration: AppDurations.medium,
               curve: AppCurves.emphasized,
               alignment: Alignment.topCenter,
-              child:
-                  _frequency == TreatmentFrequency.weekly
-                      ? Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.sm),
-                          child: Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: 4,
-                            children: [
-                              for (var day = 1; day <= 7; day++)
-                                FilterChip(
-                                  label: Text(_weekdayLabels[day - 1]),
-                                  selected: _weekdays.contains(day),
-                                  onSelected:
-                                      (selected) => setState(
-                                        () =>
-                                            selected
-                                                ? _weekdays.add(day)
-                                                : _weekdays.remove(day),
-                                      ),
+              child: _frequency == TreatmentFrequency.weekly
+                  ? Align(
+                      alignment: Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.sm),
+                        child: Wrap(
+                          spacing: AppSpacing.sm,
+                          runSpacing: 4,
+                          children: [
+                            for (var day = 1; day <= 7; day++)
+                              FilterChip(
+                                label: Text(_weekdayLabels[day - 1]),
+                                selected: _weekdays.contains(day),
+                                onSelected: (selected) => setState(
+                                  () => selected
+                                      ? _weekdays.add(day)
+                                      : _weekdays.remove(day),
                                 ),
-                            ],
-                          ),
+                              ),
+                          ],
                         ),
-                      )
-                      : const SizedBox(width: double.infinity),
+                      ),
+                    )
+                  : const SizedBox(width: double.infinity),
             ),
           ],
         ),
         // ── Passo 2: horários ──────────────────────────────────────────────
         FormStep(
           title: 'Horários',
-          validate:
-              () =>
-                  _doseTimes.isEmpty ? 'Adicione pelo menos um horário.' : null,
+          validate: () =>
+              _doseTimes.isEmpty ? 'Adicione pelo menos um horário.' : null,
           children: [
             Align(
               alignment: Alignment.centerLeft,
@@ -659,11 +653,10 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
         // ── Passo 3: duração, estoque e quem receitou ──────────────────────
         FormStep(
           title: 'Duração, estoque e receita',
-          validate:
-              () =>
-                  _validNumber(_stockController.text) ??
-                  _validNumber(_thresholdController.text) ??
-                  _validatePrescriber(),
+          validate: () =>
+              _validNumber(_stockController.text) ??
+              _validNumber(_thresholdController.text) ??
+              _validatePrescriber(),
           children: [
             Row(
               children: [
@@ -933,10 +926,9 @@ class _TreatmentFormDialogState extends State<TreatmentFormDialog> {
       endDate: _endDate,
       frequency: _frequency,
       doseTimes: List.unmodifiable(_doseTimes),
-      weekdays:
-          _frequency == TreatmentFrequency.weekly
-              ? List.unmodifiable(_weekdays.toList())
-              : const [],
+      weekdays: _frequency == TreatmentFrequency.weekly
+          ? List.unmodifiable(_weekdays.toList())
+          : const [],
       stock: null,
       refillThreshold: null,
     );
@@ -994,12 +986,11 @@ class _PresetChip extends StatelessWidget {
           color: active ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
         ),
         backgroundColor: active ? colorScheme.primary : null,
-        side:
-            active
-                ? BorderSide.none
-                : BorderSide(
-                  color: colorScheme.outlineVariant.withValues(alpha: .5),
-                ),
+        side: active
+            ? BorderSide.none
+            : BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: .5),
+              ),
         onPressed: onPressed,
       ),
     );

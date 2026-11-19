@@ -8,7 +8,7 @@ import 'database_service.dart';
 /// ler (a IA nunca classifica resultado).
 class LabResultStorageService {
   LabResultStorageService({DatabaseService? dbService})
-      : _dbService = dbService ?? DatabaseService.instance;
+    : _dbService = dbService ?? DatabaseService.instance;
 
   final DatabaseService _dbService;
 
@@ -25,12 +25,9 @@ class LabResultStorageService {
         date: dateUtc.toLocal(),
         labName: row['lab_name'] as String? ?? '',
         photo: row['photo'] as String?,
-        values: LabResult.valuesFromJsonText(
-          row['values_json'] as String?,
-        ),
+        values: LabResult.valuesFromJsonText(row['values_json'] as String?),
         notes: row['notes'] as String? ?? '',
-        createdAt:
-            createdAtRaw != null ? DateTime.parse(createdAtRaw) : null,
+        createdAt: createdAtRaw != null ? DateTime.parse(createdAtRaw) : null,
       );
     }).toList();
   }
@@ -67,14 +64,13 @@ class LabResultStorageService {
   }
 
   Map<String, Object?> _rowOf(LabResult result, String nowIso) => {
-        'id': result.id,
-        'date': result.date.toUtc().toIso8601String(),
-        'lab_name': result.labName,
-        'photo': result.photo,
-        'values_json': result.valuesJson,
-        'notes': result.notes,
-        'created_at':
-            result.createdAt?.toUtc().toIso8601String() ?? nowIso,
-        'updated_at': nowIso,
-      };
+    'id': result.id,
+    'date': result.date.toUtc().toIso8601String(),
+    'lab_name': result.labName,
+    'photo': result.photo,
+    'values_json': result.valuesJson,
+    'notes': result.notes,
+    'created_at': result.createdAt?.toUtc().toIso8601String() ?? nowIso,
+    'updated_at': nowIso,
+  };
 }
