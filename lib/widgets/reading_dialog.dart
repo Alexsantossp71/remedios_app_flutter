@@ -76,15 +76,14 @@ class _ReadingDialogState extends State<ReadingDialog>
                 height: 92,
                 child: AnimatedBuilder(
                   animation: _scan,
-                  builder:
-                      (context, _) => CustomPaint(
-                        painter: _ScanningPrescriptionPainter(
-                          scanY: _scan.value,
-                          stroke: theme.colorScheme.primary,
-                          fill: theme.colorScheme.primaryContainer,
-                          scanColor: semantic.success,
-                        ),
-                      ),
+                  builder: (context, _) => CustomPaint(
+                    painter: _ScanningPrescriptionPainter(
+                      scanY: _scan.value,
+                      stroke: theme.colorScheme.primary,
+                      fill: theme.colorScheme.primaryContainer,
+                      scanColor: semantic.success,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -119,13 +118,12 @@ class _ScanningPrescriptionPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final strokePaint =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.6
-          ..strokeCap = StrokeCap.round
-          ..strokeJoin = StrokeJoin.round
-          ..color = stroke;
+    final strokePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.6
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..color = stroke;
 
     // Corpo do frasco.
     final body = RRect.fromRectAndRadius(
@@ -144,23 +142,21 @@ class _ScanningPrescriptionPainter extends CustomPainter {
     canvas.drawRRect(cap, strokePaint);
 
     // Linhas de texto no rótulo.
-    final textPaint =
-        Paint()
-          ..color = stroke.withValues(alpha: .45)
-          ..strokeWidth = 2
-          ..strokeCap = StrokeCap.round;
+    final textPaint = Paint()
+      ..color = stroke.withValues(alpha: .45)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
     canvas.drawLine(const Offset(32, 46), const Offset(60, 46), textPaint);
     canvas.drawLine(const Offset(32, 56), const Offset(52, 56), textPaint);
     canvas.drawLine(const Offset(32, 66), const Offset(58, 66), textPaint);
 
     // Linha de escaneamento (verde-saúde) varrendo o frasco.
     final y = 20 + scanY * 70;
-    final glow =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
-          ..strokeCap = StrokeCap.round
-          ..color = scanColor;
+    final glow = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..color = scanColor;
     canvas.drawLine(Offset(14, y), Offset(78, y), glow);
     canvas.drawCircle(Offset(78, y), 3, Paint()..color = scanColor);
   }

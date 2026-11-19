@@ -4,11 +4,7 @@
 /// médico NOVO para conferência humana — a leitura só preenche, quem salva
 /// é o usuário. Nunca usado quando existe `initialDoctor` (edição).
 class DoctorDraft {
-  const DoctorDraft({
-    this.name = '',
-    this.crm = '',
-    this.crmState = '',
-  });
+  const DoctorDraft({this.name = '', this.crm = '', this.crmState = ''});
 
   /// Nome sem prefixo Dr./Dra., como veio da receita.
   final String name;

@@ -19,8 +19,9 @@ Future<void> goToStep2(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('rascunho da receita preenche nome em Title Case, CRM e UF',
-      (tester) async {
+  testWidgets('rascunho da receita preenche nome em Title Case, CRM e UF', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _wrap(
         DoctorFormDialog(
@@ -51,8 +52,9 @@ void main() {
     expect(find.widgetWithText(TextFormField, '33333'), findsOneWidget);
   });
 
-  testWidgets('rascunho só com CRM preenche o registro sem inventar nome',
-      (tester) async {
+  testWidgets('rascunho só com CRM preenche o registro sem inventar nome', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _wrap(DoctorFormDialog(draft: const DoctorDraft(crm: '123456'))),
     );
@@ -72,8 +74,9 @@ void main() {
     expect(find.textContaining('SANDRA'), findsNothing);
   });
 
-  testWidgets('sem rascunho o formulário abre vazio e sem aviso',
-      (tester) async {
+  testWidgets('sem rascunho o formulário abre vazio e sem aviso', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(const DoctorFormDialog()));
     await tester.pumpAndSettle();
 

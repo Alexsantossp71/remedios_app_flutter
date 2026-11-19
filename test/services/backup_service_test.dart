@@ -69,18 +69,22 @@ void main() {
   /// (a coluna `weekdays` é a mais delicada do round-trip).
   Future<void> seedAll() async {
     await therapyService.saveTreatment(buildTreatment());
-    await therapyService.saveTreatment(buildTreatment(
-      id: 'treat-weekly',
-      frequency: TreatmentFrequency.weekly,
-      weekdays: const [DateTime.saturday],
-    ));
-    await therapyService.saveDoseEvent(DoseEvent(
-      id: 'dose-1',
-      treatmentId: 'treat-1',
-      scheduledAt: DateTime.utc(2026, 11, 12, 8, 0),
-      status: DoseStatus.taken,
-      completedAt: DateTime.utc(2026, 11, 12, 8, 5),
-    ));
+    await therapyService.saveTreatment(
+      buildTreatment(
+        id: 'treat-weekly',
+        frequency: TreatmentFrequency.weekly,
+        weekdays: const [DateTime.saturday],
+      ),
+    );
+    await therapyService.saveDoseEvent(
+      DoseEvent(
+        id: 'dose-1',
+        treatmentId: 'treat-1',
+        scheduledAt: DateTime.utc(2026, 11, 12, 8, 0),
+        status: DoseStatus.taken,
+        completedAt: DateTime.utc(2026, 11, 12, 8, 5),
+      ),
+    );
 
     const doctor = Doctor(
       id: 'doc-1',
@@ -92,35 +96,43 @@ void main() {
       city: 'São Paulo',
     );
     await doctorService.saveDoctor(doctor);
-    await consultationService.saveConsultation(Consultation(
-      id: 'cons-1',
-      doctorId: 'doc-1',
-      date: DateTime.utc(2026, 12, 1, 14, 30),
-      title: 'Retorno cardiológico',
-    ));
+    await consultationService.saveConsultation(
+      Consultation(
+        id: 'cons-1',
+        doctorId: 'doc-1',
+        date: DateTime.utc(2026, 12, 1, 14, 30),
+        title: 'Retorno cardiológico',
+      ),
+    );
 
-    await healthPlanService.saveHealthPlan(HealthPlan(
-      id: 'plan-1',
-      name: 'Unimed Nacional',
-      provider: 'Unimed',
-      cardNumber: '0011223344',
-      specialties: const ['Cardiologia', 'Clínica geral'],
-      createdAt: DateTime.now().toUtc().toIso8601String(),
-      updatedAt: DateTime.now().toUtc().toIso8601String(),
-    ));
+    await healthPlanService.saveHealthPlan(
+      HealthPlan(
+        id: 'plan-1',
+        name: 'Unimed Nacional',
+        provider: 'Unimed',
+        cardNumber: '0011223344',
+        specialties: const ['Cardiologia', 'Clínica geral'],
+        createdAt: DateTime.now().toUtc().toIso8601String(),
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+      ),
+    );
 
-    await profileProvider.saveProfile(UserProfile(
-      nome: 'Alex Silva',
-      alergias: const ['penicilina'],
-      createdAt: DateTime.now().toUtc().toIso8601String(),
-      updatedAt: DateTime.now().toUtc().toIso8601String(),
-    ));
-    await profileProvider.addEmergencyContact(EmergencyContact(
-      id: 'ec-1',
-      nome: 'Maria Silva',
-      parentesco: 'Esposa',
-      telefone: '(11) 98888-7777',
-    ));
+    await profileProvider.saveProfile(
+      UserProfile(
+        nome: 'Alex Silva',
+        alergias: const ['penicilina'],
+        createdAt: DateTime.now().toUtc().toIso8601String(),
+        updatedAt: DateTime.now().toUtc().toIso8601String(),
+      ),
+    );
+    await profileProvider.addEmergencyContact(
+      EmergencyContact(
+        id: 'ec-1',
+        nome: 'Maria Silva',
+        parentesco: 'Esposa',
+        telefone: '(11) 98888-7777',
+      ),
+    );
 
     final db = await dbService.database;
     final now = DateTime.utc(2026, 11, 16).toIso8601String();
@@ -171,8 +183,7 @@ void main() {
   }
 
   group('BackupService', () {
-    test('exportAll devolve estrutura completa com todas as tabelas',
-        () async {
+    test('exportAll devolve estrutura completa com todas as tabelas', () async {
       await seedAll();
       final backup = await backupService.exportAll();
 
@@ -182,18 +193,21 @@ void main() {
       expect(backup['exportedAt'], isA<String>());
 
       final tables = backup['tables'] as Map<String, dynamic>;
-      expect(tables.keys, containsAll([
-        'treatments',
-        'dose_events',
-        'treatment_prescriptions',
-        'doctors',
-        'consultations',
-        'health_plans',
-        'user_profile',
-        'emergency_contacts',
-        'exams',
-        'lab_results',
-      ]));
+      expect(
+        tables.keys,
+        containsAll([
+          'treatments',
+          'dose_events',
+          'treatment_prescriptions',
+          'doctors',
+          'consultations',
+          'health_plans',
+          'user_profile',
+          'emergency_contacts',
+          'exams',
+          'lab_results',
+        ]),
+      );
       expect(tables['treatments'], hasLength(2));
       expect(tables['dose_events'], hasLength(1));
       expect(tables['doctors'], hasLength(1));
@@ -228,13 +242,19 @@ void main() {
       final restoredDb = await dbService.database;
       expect(await restoredDb.query('exams'), hasLength(1));
       expect(await restoredDb.query('lab_results'), hasLength(1));
-      expect((await restoredDb.query('exams')).single['name'],
-          'Hemograma completo');
-      expect((await restoredDb.query('lab_results')).single['lab_name'],
-          'Laboratório Central');
-      expect(summary.describe(),
-          '2 tratamentos, 1 doses, 1 médicos, 1 consultas, 1 planos, perfil, '
-          '1 exames, 1 laudos, 1 contatos de emergência');
+      expect(
+        (await restoredDb.query('exams')).single['name'],
+        'Hemograma completo',
+      );
+      expect(
+        (await restoredDb.query('lab_results')).single['lab_name'],
+        'Laboratório Central',
+      );
+      expect(
+        summary.describe(),
+        '2 tratamentos, 1 doses, 1 médicos, 1 consultas, 1 planos, perfil, '
+        '1 exames, 1 laudos, 1 contatos de emergência',
+      );
 
       // Tudo volta, incluindo a parte mais delicada: o semanal.
       final treatments = await therapyService.loadTreatments();
@@ -283,23 +303,30 @@ void main() {
         throwsA(isA<BackupFormatException>()),
       );
       expect(
-        () => backupService
-            .restore({'app': 'outro-app', 'tables': {}}),
+        () => backupService.restore({'app': 'outro-app', 'tables': {}}),
         throwsA(isA<BackupFormatException>()),
       );
       expect(
-        () => backupService.restore(jsonDecode(
-            '{"app": "remedios-app", "formatVersion": 1, '
-            '"schemaVersion": 99, "tables": {}}') as Map<String, dynamic>),
+        () => backupService.restore(
+          jsonDecode(
+                '{"app": "remedios-app", "formatVersion": 1, '
+                '"schemaVersion": 99, "tables": {}}',
+              )
+              as Map<String, dynamic>,
+        ),
         throwsA(isA<BackupFormatException>()),
       );
     });
 
     test('backup de formato mais novo que o app é rejeitado', () async {
       expect(
-        () => backupService.restore(jsonDecode(
-            '{"app": "remedios-app", "formatVersion": 2, '
-            '"schemaVersion": 7, "tables": {}}') as Map<String, dynamic>),
+        () => backupService.restore(
+          jsonDecode(
+                '{"app": "remedios-app", "formatVersion": 2, '
+                '"schemaVersion": 7, "tables": {}}',
+              )
+              as Map<String, dynamic>,
+        ),
         throwsA(isA<BackupFormatException>()),
       );
     });
@@ -321,8 +348,7 @@ void main() {
       );
     });
 
-    test('tabela ausente no backup restaura vazia (compatibilidade)',
-        () async {
+    test('tabela ausente no backup restaura vazia (compatibilidade)', () async {
       final backup = {
         'app': BackupService.appMarker,
         'formatVersion': BackupService.backupFormatVersion,

@@ -32,10 +32,12 @@ class PrescriptionMedication {
   final String apresentacao;
   final int? intervaloHoras;
   final int? vezesAoDia;
+
   /// Horários sugeridos "HH:MM" derivados da posologia pelo parser.
   final List<String> horarios;
   final int? duracaoDias;
   final bool usoContinuo;
+
   /// A receita diz "dia sim, dia não" ou "em dias alternados": vira frequência
   /// no rascunho (o formulário abre com ela, o usuário confere).
   final bool diasAlternados;
@@ -102,8 +104,10 @@ class PrescriptionMedication {
       times[hour * 60 + minute] = DoseTime(hour: hour, minute: minute);
     }
     final values = times.values.toList(growable: false)
-      ..sort((first, second) =>
-          first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight));
+      ..sort(
+        (first, second) =>
+            first.minutesSinceMidnight.compareTo(second.minutesSinceMidnight),
+      );
     return values;
   }
 
@@ -133,8 +137,8 @@ class PrescriptionMedication {
       frequency: isWeekly
           ? TreatmentFrequency.weekly
           : diasAlternados
-              ? TreatmentFrequency.everyOtherDay
-              : null,
+          ? TreatmentFrequency.everyOtherDay
+          : null,
       weekdays: isWeekly ? diasDaSemana : const [],
     );
   }
@@ -156,11 +160,7 @@ class PrescriptionMedication {
 /// o OCR pode falhar em parte. Nunca salvo direto: preenche o formulário
 /// de médico para conferência (padrão do rascunho de tratamento).
 class PrescriptionDoctor {
-  const PrescriptionDoctor({
-    this.nome = '',
-    this.crm = '',
-    this.uf = '',
-  });
+  const PrescriptionDoctor({this.nome = '', this.crm = '', this.uf = ''});
 
   final String nome;
   final String crm;
@@ -218,14 +218,13 @@ class PrescriptionReaderException implements Exception {
 /// `flutter run --dart-define=RECEITA_PROXY_URL=http://localhost:3000/api/read-receita`.
 class PrescriptionReaderService {
   PrescriptionReaderService({http.Client? client, String? proxyUrl})
-      : _client = client ?? http.Client(),
-        proxyUrl = (proxyUrl ?? defaultProxyUrl).trim();
+    : _client = client ?? http.Client(),
+      proxyUrl = (proxyUrl ?? defaultProxyUrl).trim();
 
   /// URL padrão do proxy (sobreponível por `--dart-define=RECEITA_PROXY_URL=`).
   static const defaultProxyUrl = String.fromEnvironment(
     'RECEITA_PROXY_URL',
-    defaultValue:
-        'https://remedios-app-flutter.vercel.app/api/read-receita',
+    defaultValue: 'https://remedios-app-flutter.vercel.app/api/read-receita',
   );
 
   final http.Client _client;
@@ -242,7 +241,10 @@ class PrescriptionReaderService {
     required Uint8List imageBytes,
     String mimeType = 'image/jpeg',
   }) async {
-    final content = await _readImage(imageBytes: imageBytes, mimeType: mimeType);
+    final content = await _readImage(
+      imageBytes: imageBytes,
+      mimeType: mimeType,
+    );
     return parseContent(content);
   }
 
@@ -254,7 +256,10 @@ class PrescriptionReaderService {
     required Uint8List imageBytes,
     String mimeType = 'image/jpeg',
   }) async {
-    final content = await _readImage(imageBytes: imageBytes, mimeType: mimeType);
+    final content = await _readImage(
+      imageBytes: imageBytes,
+      mimeType: mimeType,
+    );
 
     final jsonText = _extractJsonObject(content);
     if (jsonText.isEmpty) {

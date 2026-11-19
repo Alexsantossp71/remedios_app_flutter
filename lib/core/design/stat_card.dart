@@ -35,10 +35,9 @@ class StatCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors:
-              isDark
-                  ? const [BrandColors.darkSurface, Color(0xFF192A32)]
-                  : const [Colors.white, Color(0xFFFBFEFE)],
+          colors: isDark
+              ? const [BrandColors.darkSurface, Color(0xFF192A32)]
+              : const [Colors.white, Color(0xFFFBFEFE)],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
@@ -46,10 +45,9 @@ class StatCard extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color:
-                isDark
-                    ? Colors.black.withValues(alpha: .14)
-                    : BrandColors.shadowSoft.withValues(alpha: .35),
+            color: isDark
+                ? Colors.black.withValues(alpha: .14)
+                : BrandColors.shadowSoft.withValues(alpha: .35),
             offset: const Offset(0, 8),
             blurRadius: 28,
           ),
@@ -86,11 +84,7 @@ class StatCard extends StatelessWidget {
             label,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12.5,
-              height: 1.2,
-              color: labelColor,
-            ),
+            style: TextStyle(fontSize: 12.5, height: 1.2, color: labelColor),
           ),
         ],
       ),

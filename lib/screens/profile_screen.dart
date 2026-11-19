@@ -91,10 +91,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _nomeController.text = profile?.nome ?? '';
     _cpfController.text = profile?.cpf ?? '';
     _telefoneController.text = profile?.telefone ?? '';
-    _pesoController.text =
-        profile?.peso != null ? _formatNumber(profile!.peso!) : '';
-    _alturaController.text =
-        profile?.altura != null ? _formatNumber(profile!.altura!) : '';
+    _pesoController.text = profile?.peso != null
+        ? _formatNumber(profile!.peso!)
+        : '';
+    _alturaController.text = profile?.altura != null
+        ? _formatNumber(profile!.altura!)
+        : '';
     _observacoesController.text = profile?.observacoes ?? '';
     _dataNascimento = profile?.dataNascimento;
     _tipoSanguineo = profile?.tipoSanguineo;
@@ -179,10 +181,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await provider.saveProfile(
       UserProfile(
         nome: _nomeController.text.trim(),
-        cpf:
-            _cpfController.text.trim().isNotEmpty
-                ? _cpfController.text.trim()
-                : null,
+        cpf: _cpfController.text.trim().isNotEmpty
+            ? _cpfController.text.trim()
+            : null,
         dataNascimento: _dataNascimento,
         fotoPath: provider.profile?.fotoPath,
         tipoSanguineo: _tipoSanguineo,
@@ -190,14 +191,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         condicoesCronicas: _condicoesCronicas,
         peso: _parseNumber(_pesoController.text),
         altura: _parseNumber(_alturaController.text),
-        telefone:
-            _telefoneController.text.trim().isNotEmpty
-                ? _telefoneController.text.trim()
-                : null,
-        observacoes:
-            _observacoesController.text.trim().isNotEmpty
-                ? _observacoesController.text.trim()
-                : null,
+        telefone: _telefoneController.text.trim().isNotEmpty
+            ? _telefoneController.text.trim()
+            : null,
+        observacoes: _observacoesController.text.trim().isNotEmpty
+            ? _observacoesController.text.trim()
+            : null,
         consentAt: consentAt,
         createdAt: provider.profile?.createdAt ?? now,
         updatedAt: now,
@@ -331,25 +330,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _restoreBackup() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Restaurar backup'),
-            content: const Text(
-              'Restaurar substitui TUDO que está no app hoje (tratamentos, '
-              'doses, médicos, consultas, planos e perfil) pelo conteúdo do '
-              'arquivo escolhido. Esta ação não pode ser desfeita. Continuar?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Escolher arquivo e restaurar'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Restaurar backup'),
+        content: const Text(
+          'Restaurar substitui TUDO que está no app hoje (tratamentos, '
+          'doses, médicos, consultas, planos e perfil) pelo conteúdo do '
+          'arquivo escolhido. Esta ação não pode ser desfeita. Continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
           ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Escolher arquivo e restaurar'),
+          ),
+        ],
+      ),
     );
     if (confirmed != true || !mounted) return;
 
@@ -435,29 +433,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _confirmDeleteAllData() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Apagar meus dados'),
-            content: const Text(
-              'Seu perfil e seus contatos de emergência serão apagados '
-              'permanentemente deste dispositivo. Esta ação não pode ser '
-              'desfeita. Deseja continuar?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Theme.of(context).colorScheme.onError,
-                ),
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Apagar tudo'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Apagar meus dados'),
+        content: const Text(
+          'Seu perfil e seus contatos de emergência serão apagados '
+          'permanentemente deste dispositivo. Esta ação não pode ser '
+          'desfeita. Deseja continuar?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
           ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Apagar tudo'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true && mounted) {
@@ -611,15 +608,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _dataNascimento != null
                               ? _dateFormat.format(_dataNascimento!)
                               : 'Toque para selecionar',
-                          style:
-                              _dataNascimento != null
-                                  ? null
-                                  : TextStyle(
-                                    color:
-                                        Theme.of(
-                                          context,
-                                        ).colorScheme.onSurfaceVariant,
-                                  ),
+                          style: _dataNascimento != null
+                              ? null
+                              : TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
                         ),
                       ),
                     ),
@@ -643,15 +638,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         labelText: 'Tipo sanguíneo',
                         prefixIcon: Icon(Icons.bloodtype_outlined),
                       ),
-                      items:
-                          TipoSanguineo.values
-                              .map(
-                                (tipo) => DropdownMenuItem(
-                                  value: tipo,
-                                  child: Text(tipo.value),
-                                ),
-                              )
-                              .toList(),
+                      items: TipoSanguineo.values
+                          .map(
+                            (tipo) => DropdownMenuItem(
+                              value: tipo,
+                              child: Text(tipo.value),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (value) {
                         setState(() => _tipoSanguineo = value);
                       },
@@ -670,9 +664,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.monitor_heart_outlined,
                       hint: 'Ex: Hipertensão, diabetes',
                       values: _condicoesCronicas,
-                      onChanged:
-                          (values) =>
-                              setState(() => _condicoesCronicas = values),
+                      onChanged: (values) =>
+                          setState(() => _condicoesCronicas = values),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -760,12 +753,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           'Nenhum contato cadastrado. Adicione alguém de '
                           'confiança.',
                           textAlign: TextAlign.center,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                       )
                     else ...[
@@ -862,7 +855,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       isDark: isDark,
                     ),
                     title: const Text('Exames'),
-                    subtitle: const Text('Do pedido do médico ao laudo, com leitura por IA'),
+                    subtitle: const Text(
+                      'Do pedido do médico ao laudo, com leitura por IA',
+                    ),
                     trailing: Icon(
                       Icons.chevron_right,
                       color: Theme.of(context).colorScheme.outline,
@@ -971,16 +966,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(
                           child: FilledButton.icon(
                             onPressed: _backupBusy ? null : _exportBackup,
-                            icon:
-                                _backupBusy
-                                    ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                    : const Icon(Icons.download_outlined),
+                            icon: _backupBusy
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.download_outlined),
                             label: const Text('Exportar'),
                           ),
                         ),
@@ -1236,8 +1230,9 @@ class _EmergencyCardState extends State<_EmergencyCard> {
     final textTheme = Theme.of(context).textTheme;
     final inkColor = isDark ? BrandColors.darkInk : BrandColors.ink;
     final mutedColor = isDark ? BrandColors.darkMuted : BrandColors.muted;
-    final mainContact =
-        widget.contacts.isNotEmpty ? widget.contacts.first : null;
+    final mainContact = widget.contacts.isNotEmpty
+        ? widget.contacts.first
+        : null;
 
     return RecordCard(
       // Acento vermelho da marca: cartão de emergência pede atenção —
@@ -1294,10 +1289,9 @@ class _EmergencyCardState extends State<_EmergencyCard> {
                   const SizedBox(height: 6),
                   _EmergencyRow(
                     label: 'Contato de emergência',
-                    value:
-                        mainContact != null
-                            ? '${mainContact.nome} — ${mainContact.telefone}'
-                            : 'Nenhum cadastrado',
+                    value: mainContact != null
+                        ? '${mainContact.nome} — ${mainContact.telefone}'
+                        : 'Nenhum cadastrado',
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -1314,22 +1308,21 @@ class _EmergencyCardState extends State<_EmergencyCard> {
           Positioned(
             top: 8,
             right: 8,
-            child:
-                _compartilhando
-                    ? const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.4),
-                      ),
-                    )
-                    : IconButton(
-                      tooltip: 'Compartilhar como imagem',
-                      icon: const Icon(Icons.ios_share_outlined),
-                      color: BrandColors.red,
-                      onPressed: _compartilharComoImagem,
+            child: _compartilhando
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2.4),
                     ),
+                  )
+                : IconButton(
+                    tooltip: 'Compartilhar como imagem',
+                    icon: const Icon(Icons.ios_share_outlined),
+                    color: BrandColors.red,
+                    onPressed: _compartilharComoImagem,
+                  ),
           ),
         ],
       ),
@@ -1452,21 +1445,17 @@ class _StringListEditorState extends State<_StringListEditor> {
               child: Wrap(
                 spacing: 8,
                 runSpacing: 4,
-                children:
-                    widget.values
-                        .map(
-                          (value) => InputChip(
-                            label: Text(value),
-                            onDeleted:
-                                () => widget.onChanged(
-                                  widget.values
-                                      .where((v) => v != value)
-                                      .toList(),
-                                ),
-                            deleteIcon: const Icon(Icons.close, size: 18),
-                          ),
-                        )
-                        .toList(),
+                children: widget.values
+                    .map(
+                      (value) => InputChip(
+                        label: Text(value),
+                        onDeleted: () => widget.onChanged(
+                          widget.values.where((v) => v != value).toList(),
+                        ),
+                        deleteIcon: const Icon(Icons.close, size: 18),
+                      ),
+                    )
+                    .toList(),
               ),
             )
           else
@@ -1510,10 +1499,9 @@ class _CadastroIconBox extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color:
-            isDark
-                ? BrandColors.teal700.withValues(alpha: .18)
-                : BrandColors.accentSoft,
+        color: isDark
+            ? BrandColors.teal700.withValues(alpha: .18)
+            : BrandColors.accentSoft,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: BrandColors.teal700.withValues(alpha: .07)),
       ),
@@ -1563,18 +1551,17 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
-    final contact =
-        _isEditing
-            ? widget.contact!.copyWith(
-              nome: _nomeController.text.trim(),
-              parentesco: _parentescoController.text.trim(),
-              telefone: _telefoneController.text.trim(),
-            )
-            : EmergencyContact.create(
-              nome: _nomeController.text.trim(),
-              parentesco: _parentescoController.text.trim(),
-              telefone: _telefoneController.text.trim(),
-            );
+    final contact = _isEditing
+        ? widget.contact!.copyWith(
+            nome: _nomeController.text.trim(),
+            parentesco: _parentescoController.text.trim(),
+            telefone: _telefoneController.text.trim(),
+          )
+        : EmergencyContact.create(
+            nome: _nomeController.text.trim(),
+            parentesco: _parentescoController.text.trim(),
+            telefone: _telefoneController.text.trim(),
+          );
     Navigator.of(context).pop(contact);
   }
 
@@ -1679,7 +1666,7 @@ class _WebReminderCardState extends State<_WebReminderCard> {
       granted
           ? 'Lembretes ativos neste navegador.'
           : 'O navegador não concedeu a permissão. Libere as notificações '
-              'deste site e tente novamente.',
+                'deste site e tente novamente.',
       type: granted ? AppSnackType.success : AppSnackType.error,
     );
   }
@@ -1701,26 +1688,25 @@ class _WebReminderCardState extends State<_WebReminderCard> {
                   _granted
                       ? Icons.notifications_active_outlined
                       : Icons.notifications_outlined,
-                  color:
-                      _granted
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurfaceVariant,
+                  color: _granted
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     _granted
                         ? 'Lembretes ativos neste navegador: enquanto o app '
-                            'estiver aberto, você recebe o aviso na hora da '
-                            'dose, mesmo com a aba em segundo plano.'
+                              'estiver aberto, você recebe o aviso na hora da '
+                              'dose, mesmo com a aba em segundo plano.'
                         : _denied
                         ? 'As notificações estão bloqueadas para este '
-                            'site. Libere nas permissões do navegador e '
-                            'recarregue a página para ativar.'
+                              'site. Libere nas permissões do navegador e '
+                              'recarregue a página para ativar.'
                         : 'O navegador pode avisar na hora da dose '
-                            'enquanto o app estiver aberto — mesmo com '
-                            'a aba em segundo plano. No celular (APK), '
-                            'os avisos já funcionam com o app fechado.',
+                              'enquanto o app estiver aberto — mesmo com '
+                              'a aba em segundo plano. No celular (APK), '
+                              'os avisos já funcionam com o app fechado.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -1732,14 +1718,13 @@ class _WebReminderCardState extends State<_WebReminderCard> {
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _busy ? null : _activate,
-                icon:
-                    _busy
-                        ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                        : const Icon(Icons.notifications_on_outlined),
+                icon: _busy
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.notifications_on_outlined),
                 label: const Text('Ativar lembretes'),
               ),
             ],

@@ -14,8 +14,8 @@ class TherapyProvider extends ChangeNotifier {
   TherapyProvider({
     TherapyStorageService? storage,
     NotificationService? notifications,
-  })  : _storage = storage ?? TherapyStorageService(),
-        _notifications = notifications ?? NotificationService.instance;
+  }) : _storage = storage ?? TherapyStorageService(),
+       _notifications = notifications ?? NotificationService.instance;
 
   final TherapyStorageService _storage;
   final NotificationService _notifications;
@@ -28,8 +28,9 @@ class TherapyProvider extends ChangeNotifier {
 
   UnmodifiableListView<Treatment> get treatments =>
       UnmodifiableListView(_treatments);
-  UnmodifiableListView<Treatment> get activeTreatments =>
-      UnmodifiableListView(_treatments.where((treatment) => !treatment.isArchived));
+  UnmodifiableListView<Treatment> get activeTreatments => UnmodifiableListView(
+    _treatments.where((treatment) => !treatment.isArchived),
+  );
 
   /// Histórico de "quem receitou e em que dia", mais recente primeiro.
   UnmodifiableListView<PrescriptionRecord> get prescriptionRecords =>
@@ -52,8 +53,13 @@ class TherapyProvider extends ChangeNotifier {
 
   List<DoseEvent> doseEventsForDay(DateTime date) {
     final day = _dateOnly(date);
-    final events = _doseEvents.where((event) => _isSameDay(event.scheduledAt, day)).toList()
-      ..sort((first, second) => first.scheduledAt.compareTo(second.scheduledAt));
+    final events =
+        _doseEvents
+            .where((event) => _isSameDay(event.scheduledAt, day))
+            .toList()
+          ..sort(
+            (first, second) => first.scheduledAt.compareTo(second.scheduledAt),
+          );
     return events;
   }
 
@@ -69,8 +75,9 @@ class TherapyProvider extends ChangeNotifier {
       _prescriptionRecords
           .where((record) => record.treatmentId == treatmentId)
           .toList()
-        ..sort((first, second) => second.prescribedOn
-            .compareTo(first.prescribedOn));
+        ..sort(
+          (first, second) => second.prescribedOn.compareTo(first.prescribedOn),
+        );
 
   /// Registra uma receita no histórico do tratamento ("quem receitou e em
   /// que dia"). Só-append: cada renovação vira um registro novo.
@@ -167,7 +174,10 @@ class TherapyProvider extends ChangeNotifier {
         .map((event) => event.id == updatedEvent.id ? updatedEvent : event)
         .toList();
     _treatments = _treatments
-        .map((current) => current.id == updatedTreatment.id ? updatedTreatment : current)
+        .map(
+          (current) =>
+              current.id == updatedTreatment.id ? updatedTreatment : current,
+        )
         .toList();
 
     await Future.wait([
@@ -180,9 +190,17 @@ class TherapyProvider extends ChangeNotifier {
 
   DayAdherence adherenceForDay(DateTime date) {
     final events = doseEventsForDay(date);
-    final completed = events.where((event) => event.status != DoseStatus.pending).length;
-    final taken = events.where((event) => event.status == DoseStatus.taken).length;
-    return DayAdherence(total: events.length, completed: completed, taken: taken);
+    final completed = events
+        .where((event) => event.status != DoseStatus.pending)
+        .length;
+    final taken = events
+        .where((event) => event.status == DoseStatus.taken)
+        .length;
+    return DayAdherence(
+      total: events.length,
+      completed: completed,
+      taken: taken,
+    );
   }
 
   /// Keeps system alarms aligned with the current treatment rules and dose

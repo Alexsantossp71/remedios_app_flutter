@@ -65,14 +65,19 @@ class _SkeletonCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: .3)),
+        border: Border.all(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: .3),
+        ),
       ),
       child: Row(
         children: [
           Container(
             width: 56,
             height: 56,
-            decoration: BoxDecoration(color: shape, borderRadius: BorderRadius.circular(AppRadius.iconBox)),
+            decoration: BoxDecoration(
+              color: shape,
+              borderRadius: BorderRadius.circular(AppRadius.iconBox),
+            ),
           ),
           const SizedBox(width: AppSpacing.lg),
           Expanded(

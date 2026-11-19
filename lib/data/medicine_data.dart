@@ -12,8 +12,9 @@ class MedicineData {
   }
 
   static Future<List<Medicine>> _loadCatalog() async {
-    final json =
-        await rootBundle.loadString('assets/data/medicine_catalog.json');
+    final json = await rootBundle.loadString(
+      'assets/data/medicine_catalog.json',
+    );
     final catalog = jsonDecode(json) as Map<String, dynamic>;
     final items = catalog['items'] as List<dynamic>;
     return items

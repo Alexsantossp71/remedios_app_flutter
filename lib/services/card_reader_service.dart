@@ -34,14 +34,14 @@ class CardReadResult {
 
   /// Quantidade de campos preenchidos pela leitura.
   int get filledFields => [
-        name,
-        provider,
-        cardNumber ?? '',
-        groupNumber ?? '',
-        beneficiaryCode ?? '',
-        validity ?? '',
-        coverageType ?? '',
-      ].where((value) => value.isNotEmpty).length;
+    name,
+    provider,
+    cardNumber ?? '',
+    groupNumber ?? '',
+    beneficiaryCode ?? '',
+    validity ?? '',
+    coverageType ?? '',
+  ].where((value) => value.isNotEmpty).length;
 }
 
 /// Erro de leitura do cartão com mensagem pronta para o usuário.
@@ -64,15 +64,13 @@ class CardReaderException implements Exception {
 /// `flutter run --dart-define=CARD_PROXY_URL=http://localhost:3000/api/read-card`.
 class CardReaderService {
   CardReaderService({http.Client? client, String? proxyUrl})
-      : _client = client ?? http.Client(),
-        proxyUrl =
-            (proxyUrl ?? defaultProxyUrl).trim();
+    : _client = client ?? http.Client(),
+      proxyUrl = (proxyUrl ?? defaultProxyUrl).trim();
 
   /// URL padrão do proxy (sobreponível por `--dart-define=CARD_PROXY_URL=`).
   static const defaultProxyUrl = String.fromEnvironment(
     'CARD_PROXY_URL',
-    defaultValue:
-        'https://remedios-app-flutter.vercel.app/api/read-card',
+    defaultValue: 'https://remedios-app-flutter.vercel.app/api/read-card',
   );
 
   final http.Client _client;
@@ -113,8 +111,7 @@ class CardReaderService {
     }
 
     final body = jsonDecode(response.body);
-    final content =
-        body is Map<String, dynamic> ? body['content'] : null;
+    final content = body is Map<String, dynamic> ? body['content'] : null;
     if (content is! String || content.trim().isEmpty) {
       throw const CardReaderException(
         'A leitura do cartão não retornou dados. Tente outra foto ou '
@@ -184,8 +181,7 @@ class CardReaderService {
     return digits.isEmpty ? null : digits;
   }
 
-  static String? _nullIfEmpty(String value) =>
-      value.isEmpty ? null : value;
+  static String? _nullIfEmpty(String value) => value.isEmpty ? null : value;
 
   /// Recorta o primeiro objeto JSON presente no texto.
   static String _extractJsonObject(String content) {

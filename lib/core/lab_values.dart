@@ -39,30 +39,31 @@ class LabValue {
   final String flag; // '' | 'low' | 'normal' | 'high'
 
   Map<String, dynamic> toJson() => {
-        'examName': examName,
-        'valueText': valueText,
-        'numericValue': numericValue,
-        'unit': unit,
-        'referenceLow': referenceLow,
-        'referenceHigh': referenceHigh,
-        'referenceText': referenceText,
-        'flag': flag,
-      };
+    'examName': examName,
+    'valueText': valueText,
+    'numericValue': numericValue,
+    'unit': unit,
+    'referenceLow': referenceLow,
+    'referenceHigh': referenceHigh,
+    'referenceText': referenceText,
+    'flag': flag,
+  };
 
   static LabValue fromJson(Map<String, dynamic> json) {
-    double? numOf(Object? value) =>
-        value is num ? value.toDouble() : null;
+    double? numOf(Object? value) => value is num ? value.toDouble() : null;
 
-    final valueText = json['valueText'] is String ? json['valueText'] as String : '';
+    final valueText = json['valueText'] is String
+        ? json['valueText'] as String
+        : '';
     final numericValue = numOf(json['numericValue']);
-    final referenceText =
-        json['referenceText'] is String ? json['referenceText'] as String : '';
+    final referenceText = json['referenceText'] is String
+        ? json['referenceText'] as String
+        : '';
     final low = numOf(json['referenceLow']);
     final high = numOf(json['referenceHigh']);
 
     return LabValue(
-      examName:
-          json['examName'] is String ? json['examName'] as String : '',
+      examName: json['examName'] is String ? json['examName'] as String : '',
       valueText: valueText,
       numericValue: numericValue,
       unit: json['unit'] is String ? json['unit'] as String : '',
@@ -133,13 +134,13 @@ double? parseNumericValue(String text) {
   } else if (hasDot) {
     final groups = trimmed.split('.');
     // "10.200" → milhar quando todos os grupos após o primeiro têm 3 dígitos.
-    final looksThousands = groups.length > 1 &&
+    final looksThousands =
+        groups.length > 1 &&
         groups.skip(1).every((group) => RegExp(r'^\d{3}$').hasMatch(group));
     normalized = looksThousands ? trimmed.replaceAll('.', '') : trimmed;
   }
 
-  final parsed =
-      double.tryParse(normalized.replaceAll(RegExp(r'[^\d.-]'), ''));
+  final parsed = double.tryParse(normalized.replaceAll(RegExp(r'[^\d.-]'), ''));
   return parsed?.isFinite ?? false ? parsed : null;
 }
 
@@ -235,8 +236,8 @@ LabScanResult sanitizeLabScan(Object? value) {
   final listRaw = record['resultados'] is List
       ? record['resultados'] as List
       : record['values'] is List
-          ? record['values'] as List
-          : const [];
+      ? record['values'] as List
+      : const [];
 
   final values = <LabValue>[];
   for (final raw in listRaw.take(maxLabValuesPerResult)) {
@@ -245,8 +246,9 @@ LabScanResult sanitizeLabScan(Object? value) {
     if (examName.isEmpty) continue;
     final valueText = _clip(raw['value'], 60);
     final referenceText = _clip(raw['reference'], 80);
-    final numericValue =
-        valueText.isNotEmpty ? parseNumericValue(valueText) : null;
+    final numericValue = valueText.isNotEmpty
+        ? parseNumericValue(valueText)
+        : null;
     final parsed = parseReferenceText(referenceText);
     values.add(
       LabValue(
@@ -281,11 +283,22 @@ String _clip(Object? value, int max) {
 /// Dart não tem NFD nativo, então acentos PT-BR viram tabela fixa).
 String normalizeExamName(String name) {
   const accents = {
-    'á': 'a', 'à': 'a', 'ã': 'a', 'â': 'a', 'ä': 'a',
-    'é': 'e', 'ê': 'e', 'ë': 'e',
-    'í': 'i', 'ï': 'i',
-    'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
-    'ú': 'u', 'ü': 'u',
+    'á': 'a',
+    'à': 'a',
+    'ã': 'a',
+    'â': 'a',
+    'ä': 'a',
+    'é': 'e',
+    'ê': 'e',
+    'ë': 'e',
+    'í': 'i',
+    'ï': 'i',
+    'ó': 'o',
+    'ô': 'o',
+    'õ': 'o',
+    'ö': 'o',
+    'ú': 'u',
+    'ü': 'u',
     'ç': 'c',
     'ñ': 'n',
   };
@@ -391,14 +404,13 @@ List<ExamTrend> computeTrends(List<LabResultLike> results) {
     final first = entries.first;
     final last = entries.last;
     final pctChange = first.value != 0
-        ? ((last.value - first.value) / first.value.abs() * 100)
-            .roundToDouble()
+        ? ((last.value - first.value) / first.value.abs() * 100).roundToDouble()
         : null;
     final direction = pctChange == null || pctChange.abs() < _minChangePct
         ? 'stable'
         : pctChange > 0
-            ? 'up'
-            : 'down';
+        ? 'up'
+        : 'down';
     trends.add(
       ExamTrend(
         examName: group.displayName,
@@ -411,7 +423,6 @@ List<ExamTrend> computeTrends(List<LabResultLike> results) {
     );
   });
 
-  trends.sort((a, b) =>
-      (b.last?.date ?? '').compareTo(a.last?.date ?? ''));
+  trends.sort((a, b) => (b.last?.date ?? '').compareTo(a.last?.date ?? ''));
   return trends.take(_maxTrends).toList();
 }

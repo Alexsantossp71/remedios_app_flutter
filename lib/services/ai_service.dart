@@ -19,7 +19,7 @@ import 'ai_proxy_client.dart';
 /// e intervalo mínimo) que não dependem da honestidade do modelo.
 class AiService {
   AiService({AiProxyClient? proxyClient})
-      : _proxy = proxyClient ?? AiProxyClient();
+    : _proxy = proxyClient ?? AiProxyClient();
 
   final AiProxyClient _proxy;
 
@@ -31,12 +31,7 @@ class AiService {
     List<Treatment> treatments,
   ) async {
     final list = treatments
-        .map(
-          (item) => (
-            name: item.name.trim(),
-            dosage: item.dosage.trim(),
-          ),
-        )
+        .map((item) => (name: item.name.trim(), dosage: item.dosage.trim()))
         .where((item) => item.name.isNotEmpty)
         .toList();
     if (list.length < 2) {
@@ -47,7 +42,9 @@ class AiService {
 
     final medicationLines = <String>[];
     for (var index = 0; index < list.length; index++) {
-      final dosage = list[index].dosage.isEmpty ? '' : ' — ${list[index].dosage}';
+      final dosage = list[index].dosage.isEmpty
+          ? ''
+          : ' — ${list[index].dosage}';
       medicationLines.add('${index + 1}. ${list[index].name}$dosage');
     }
 
@@ -116,8 +113,7 @@ class AiService {
       messages: [
         {
           'role': 'user',
-          'content':
-              '$schedulePrompt\n\n${buildScheduleDataBlock(meds)}',
+          'content': '$schedulePrompt\n\n${buildScheduleDataBlock(meds)}',
         },
       ],
       model: 'z-ai/glm-5.3-flash',
@@ -183,9 +179,7 @@ class AiService {
           'content': [
             {
               'type': 'image_url',
-              'image_url': {
-                'url': 'data:$mimeType;base64,$base64Image',
-              },
+              'image_url': {'url': 'data:$mimeType;base64,$base64Image'},
             },
             {'type': 'text', 'text': examScanPrompt},
           ],
@@ -236,9 +230,7 @@ class AiService {
           'content': [
             {
               'type': 'image_url',
-              'image_url': {
-                'url': 'data:$mimeType;base64,$base64Image',
-              },
+              'image_url': {'url': 'data:$mimeType;base64,$base64Image'},
             },
             {'type': 'text', 'text': labScanPrompt},
           ],
@@ -478,10 +470,7 @@ class AiScheduleSuggestion {
 }
 
 class AiScheduleAdvice {
-  const AiScheduleAdvice({
-    required this.summary,
-    required this.suggestions,
-  });
+  const AiScheduleAdvice({required this.summary, required this.suggestions});
 
   final String summary;
   final List<AiScheduleSuggestion> suggestions;
@@ -502,7 +491,15 @@ AiScheduleMed scheduleMedFromTreatment(Treatment treatment) {
         'apenas de segunda a sexta',
       ].join(' — ');
     case TreatmentFrequency.weekly:
-      const labels = ['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'];
+      const labels = [
+        'segunda',
+        'terça',
+        'quarta',
+        'quinta',
+        'sexta',
+        'sábado',
+        'domingo',
+      ];
       final days = treatment.weekdays.map((day) => labels[day - 1]).join(', ');
       instructions = [
         if (instructions.isNotEmpty) instructions,
@@ -523,8 +520,10 @@ AiScheduleMed scheduleMedFromTreatment(Treatment treatment) {
     dosage: treatment.dosage.trim(),
     instructions: instructions,
     times: treatment.doseTimes
-        .map((time) =>
-            '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}')
+        .map(
+          (time) =>
+              '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+        )
         .toList(),
     frequencyDays: frequencyDays,
     continuous: treatment.endDate == null,
@@ -540,10 +539,10 @@ String buildScheduleDataBlock(List<AiScheduleMed> medications) {
         : 'todos os dias';
     final duration = med.continuous ? 'uso contínuo' : 'por prazo determinado';
     final dosage = med.dosage.isEmpty ? 'dosagem não informada' : med.dosage;
-    final instructions =
-        med.instructions.isEmpty ? 'nenhuma' : med.instructions;
-    final times =
-        med.times.isNotEmpty ? med.times.join(', ') : 'nenhum';
+    final instructions = med.instructions.isEmpty
+        ? 'nenhuma'
+        : med.instructions;
+    final times = med.times.isNotEmpty ? med.times.join(', ') : 'nenhum';
     final parts = [
       '[${med.id}]',
       med.name,
@@ -683,7 +682,10 @@ List<String> aiStringList(Object? raw, int maxItems, int maxLen) {
 /// Extrai o primeiro objeto JSON da resposta do modelo, tolerante a blocos
 /// de código e texto ao redor (mesma regra do `extractJson` do PWA).
 Map<String, dynamic> aiExtractJson(String text) {
-  final cleaned = text.replaceAll(RegExp(r'```(?:json)?', caseSensitive: false), '');
+  final cleaned = text.replaceAll(
+    RegExp(r'```(?:json)?', caseSensitive: false),
+    '',
+  );
   final start = cleaned.indexOf('{');
   final end = cleaned.lastIndexOf('}');
   if (start == -1 || end <= start) {
@@ -827,8 +829,7 @@ int? aiTimeToMinutes(String time) {
 /// meia-noite (última → primeira do dia seguinte) — o que importa para
 /// esquemas tipo "8/8h".
 int? aiMinGapMinutes(List<String> times) {
-  final minutes =
-      times.map(aiTimeToMinutes).whereType<int>().toList()..sort();
+  final minutes = times.map(aiTimeToMinutes).whereType<int>().toList()..sort();
   if (minutes.length < 2) return null;
   var min = minutes[1] - minutes[0];
   for (var i = 1; i < minutes.length - 1; i++) {
@@ -853,12 +854,25 @@ bool _aiSameTimes(List<String> a, List<String> b) {
 /// `normalizeMedicationName` do PWA): minúsculas, sem acentos, sem pontuação.
 String aiNormalizeMedicationName(String name) {
   const diacritics = {
-    'á': 'a', 'à': 'a', 'ã': 'a', 'â': 'a', 'ä': 'a',
-    'é': 'e', 'ê': 'e', 'ë': 'e',
-    'í': 'i', 'ï': 'i',
-    'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
-    'ú': 'u', 'û': 'u', 'ü': 'u',
-    'ç': 'c', 'ñ': 'n',
+    'á': 'a',
+    'à': 'a',
+    'ã': 'a',
+    'â': 'a',
+    'ä': 'a',
+    'é': 'e',
+    'ê': 'e',
+    'ë': 'e',
+    'í': 'i',
+    'ï': 'i',
+    'ó': 'o',
+    'ô': 'o',
+    'õ': 'o',
+    'ö': 'o',
+    'ú': 'u',
+    'û': 'u',
+    'ü': 'u',
+    'ç': 'c',
+    'ñ': 'n',
   };
   final lowered = name.trim().toLowerCase();
   final buffer = StringBuffer();
@@ -1134,7 +1148,9 @@ DoctorAiData sanitizeDoctorData(Object? value) {
 
   final crm = aiClipText(record['crm'], 12).replaceAll(RegExp(r'\D'), '');
   final uf = aiClipText(record['uf'], 2).trim().toUpperCase();
-  final specialty = matchFixedSpecialty(aiClipText(record['especialidade'], 80));
+  final specialty = matchFixedSpecialty(
+    aiClipText(record['especialidade'], 80),
+  );
 
   return DoctorAiData(
     name: _cleanAiDoctorName(aiClipText(record['nome'], 120)),
@@ -1169,9 +1185,6 @@ String matchFixedSpecialty(String raw) {
 /// rascunho lido da receita).
 String _cleanAiDoctorName(String raw) {
   var value = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
-  value = value.replaceFirst(
-    RegExp(r'^dra?\.?\s*', caseSensitive: false),
-    '',
-  );
+  value = value.replaceFirst(RegExp(r'^dra?\.?\s*', caseSensitive: false), '');
   return value.trim();
 }

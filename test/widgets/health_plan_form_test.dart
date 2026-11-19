@@ -16,23 +16,19 @@ Future<void> pumpDialog(
     MaterialApp(
       home: Scaffold(
         body: Builder(
-          builder:
-              (context) => Center(
-                child: FilledButton(
-                  onPressed: () async {
-                    final result = await showDialog<HealthPlan>(
-                      context: context,
-                      builder:
-                          (_) => HealthPlanFormDialog(
-                            healthPlan: existing,
-                            draft: draft,
-                          ),
-                    );
-                    _popped = result;
-                  },
-                  child: const Text('abrir'),
-                ),
-              ),
+          builder: (context) => Center(
+            child: FilledButton(
+              onPressed: () async {
+                final result = await showDialog<HealthPlan>(
+                  context: context,
+                  builder: (_) =>
+                      HealthPlanFormDialog(healthPlan: existing, draft: draft),
+                );
+                _popped = result;
+              },
+              child: const Text('abrir'),
+            ),
+          ),
         ),
       ),
     ),

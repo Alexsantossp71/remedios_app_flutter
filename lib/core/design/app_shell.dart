@@ -16,10 +16,9 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final glow =
-        isDark
-            ? BrandColors.teal600.withValues(alpha: .12)
-            : const Color(0xFF14B8A6).withValues(alpha: .07);
+    final glow = isDark
+        ? BrandColors.teal600.withValues(alpha: .12)
+        : const Color(0xFF14B8A6).withValues(alpha: .07);
 
     return DecoratedBox(
       decoration: BoxDecoration(

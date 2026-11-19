@@ -22,14 +22,13 @@ class CrmLookupResult {
     required String specialty,
     required String statusText,
     required String school,
-  }) =>
-      CrmLookupResult._(
-        kind: CrmLookupKind.success,
-        name: name,
-        specialty: specialty,
-        statusText: statusText,
-        school: school,
-      );
+  }) => CrmLookupResult._(
+    kind: CrmLookupKind.success,
+    name: name,
+    specialty: specialty,
+    statusText: statusText,
+    school: school,
+  );
 
   factory CrmLookupResult.notFound() =>
       const CrmLookupResult._(kind: CrmLookupKind.notFound);
@@ -67,8 +66,8 @@ String titleCaseName(String raw) {
 
 class CrmLookupService {
   CrmLookupService({http.Client? client, bool? isWebOverride})
-      : _client = client ?? http.Client(),
-        _isWeb = isWebOverride ?? kIsWeb;
+    : _client = client ?? http.Client(),
+      _isWeb = isWebOverride ?? kIsWeb;
 
   final http.Client _client;
   final bool _isWeb;
@@ -92,8 +91,9 @@ class CrmLookupService {
         : Uri.parse(target);
 
     try {
-      final response =
-          await _client.get(url).timeout(const Duration(seconds: 10));
+      final response = await _client
+          .get(url)
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 404) return CrmLookupResult.notFound();
       if (response.statusCode != 200) {
         return CrmLookupResult.error('Erro ${response.statusCode}');

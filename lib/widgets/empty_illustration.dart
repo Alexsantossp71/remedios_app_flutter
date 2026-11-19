@@ -64,28 +64,24 @@ class _EmptyIllustrationPainter extends CustomPainter {
 
   static const _strokeWidth = 2.6;
 
-  Paint get _strokePaint =>
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = _strokeWidth
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round
-        ..color = stroke;
+  Paint get _strokePaint => Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = _strokeWidth
+    ..strokeCap = StrokeCap.round
+    ..strokeJoin = StrokeJoin.round
+    ..color = stroke;
 
-  Paint get _fillPaint =>
-      Paint()
-        ..style = PaintingStyle.fill
-        ..color = fill;
+  Paint get _fillPaint => Paint()
+    ..style = PaintingStyle.fill
+    ..color = fill;
 
-  Paint get _surfacePaint =>
-      Paint()
-        ..style = PaintingStyle.fill
-        ..color = surface;
+  Paint get _surfacePaint => Paint()
+    ..style = PaintingStyle.fill
+    ..color = surface;
 
-  Paint get _accentPaint =>
-      Paint()
-        ..style = PaintingStyle.fill
-        ..color = accent;
+  Paint get _accentPaint => Paint()
+    ..style = PaintingStyle.fill
+    ..color = accent;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -134,13 +130,12 @@ class _EmptyIllustrationPainter extends CustomPainter {
 
     // Faísca: pequena estrela de quatro pontas no alto à direita.
     final spark = Offset(size.width * 0.86, size.height * 0.18);
-    final star =
-        Path()
-          ..moveTo(spark.dx, spark.dy - 7)
-          ..quadraticBezierTo(spark.dx, spark.dy, spark.dx + 7, spark.dy)
-          ..quadraticBezierTo(spark.dx, spark.dy, spark.dx, spark.dy + 7)
-          ..quadraticBezierTo(spark.dx, spark.dy, spark.dx - 7, spark.dy)
-          ..quadraticBezierTo(spark.dx, spark.dy, spark.dx, spark.dy - 7);
+    final star = Path()
+      ..moveTo(spark.dx, spark.dy - 7)
+      ..quadraticBezierTo(spark.dx, spark.dy, spark.dx + 7, spark.dy)
+      ..quadraticBezierTo(spark.dx, spark.dy, spark.dx, spark.dy + 7)
+      ..quadraticBezierTo(spark.dx, spark.dy, spark.dx - 7, spark.dy)
+      ..quadraticBezierTo(spark.dx, spark.dy, spark.dx, spark.dy - 7);
     canvas.drawPath(star, _accentPaint);
   }
 
@@ -256,25 +251,24 @@ class _EmptyIllustrationPainter extends CustomPainter {
       rect.top + rect.height * 0.62,
     );
     final r = 13.0;
-    final heart =
-        Path()
-          ..moveTo(center.dx, center.dy + r * 0.85)
-          ..cubicTo(
-            center.dx - r * 1.3,
-            center.dy - r * 0.2,
-            center.dx - r * 0.6,
-            center.dy - r * 1.1,
-            center.dx,
-            center.dy - r * 0.35,
-          )
-          ..cubicTo(
-            center.dx + r * 0.6,
-            center.dy - r * 1.1,
-            center.dx + r * 1.3,
-            center.dy - r * 0.2,
-            center.dx,
-            center.dy + r * 0.85,
-          );
+    final heart = Path()
+      ..moveTo(center.dx, center.dy + r * 0.85)
+      ..cubicTo(
+        center.dx - r * 1.3,
+        center.dy - r * 0.2,
+        center.dx - r * 0.6,
+        center.dy - r * 1.1,
+        center.dx,
+        center.dy - r * 0.35,
+      )
+      ..cubicTo(
+        center.dx + r * 0.6,
+        center.dy - r * 1.1,
+        center.dx + r * 1.3,
+        center.dy - r * 0.2,
+        center.dx,
+        center.dy + r * 0.85,
+      );
     canvas.drawPath(heart, _accentPaint);
 
     // Pontinhos de agenda no cabeçalho.
@@ -292,31 +286,29 @@ class _EmptyIllustrationPainter extends CustomPainter {
     final halfWidth = size.width * 0.26;
     final bottom = size.height * 0.92;
 
-    final shield =
-        Path()
-          ..moveTo(cx, top)
-          ..lineTo(cx + halfWidth, top + 14)
-          ..lineTo(cx + halfWidth, size.height * 0.52)
-          ..quadraticBezierTo(cx + halfWidth, size.height * 0.80, cx, bottom)
-          ..quadraticBezierTo(
-            cx - halfWidth,
-            size.height * 0.80,
-            cx - halfWidth,
-            size.height * 0.52,
-          )
-          ..lineTo(cx - halfWidth, top + 14)
-          ..close();
+    final shield = Path()
+      ..moveTo(cx, top)
+      ..lineTo(cx + halfWidth, top + 14)
+      ..lineTo(cx + halfWidth, size.height * 0.52)
+      ..quadraticBezierTo(cx + halfWidth, size.height * 0.80, cx, bottom)
+      ..quadraticBezierTo(
+        cx - halfWidth,
+        size.height * 0.80,
+        cx - halfWidth,
+        size.height * 0.52,
+      )
+      ..lineTo(cx - halfWidth, top + 14)
+      ..close();
 
     canvas.drawPath(shield, _fillPaint);
     canvas.drawPath(shield, _strokePaint);
 
     // Cruz de saúde no centro, em destaque.
-    final cross =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 4
-          ..strokeCap = StrokeCap.round
-          ..color = accent;
+    final cross = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..color = accent;
     canvas.drawLine(Offset(cx, top + 34), Offset(cx, top + 62), cross);
     canvas.drawLine(
       Offset(cx - 14, top + 48),
@@ -339,11 +331,10 @@ class _EmptyIllustrationPainter extends CustomPainter {
     );
     canvas.drawRRect(card, _surfacePaint);
     canvas.drawRRect(card, _strokePaint);
-    final line =
-        Paint()
-          ..color = stroke.withValues(alpha: .4)
-          ..strokeWidth = 2
-          ..strokeCap = StrokeCap.round;
+    final line = Paint()
+      ..color = stroke.withValues(alpha: .4)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
     canvas.drawLine(
       Offset(card.left + 12, card.top + 18),
       Offset(card.right - 12, card.top + 18),
@@ -356,25 +347,24 @@ class _EmptyIllustrationPainter extends CustomPainter {
     );
 
     // Tubo em U do estetoscópio.
-    final tube =
-        Path()
-          ..moveTo(size.width * 0.20, size.height * 0.10)
-          ..cubicTo(
-            size.width * 0.16,
-            size.height * 0.46,
-            size.width * 0.34,
-            size.height * 0.52,
-            size.width * 0.44,
-            size.height * 0.62,
-          )
-          ..cubicTo(
-            size.width * 0.56,
-            size.height * 0.74,
-            size.width * 0.62,
-            size.height * 0.78,
-            size.width * 0.60,
-            size.height * 0.88,
-          );
+    final tube = Path()
+      ..moveTo(size.width * 0.20, size.height * 0.10)
+      ..cubicTo(
+        size.width * 0.16,
+        size.height * 0.46,
+        size.width * 0.34,
+        size.height * 0.52,
+        size.width * 0.44,
+        size.height * 0.62,
+      )
+      ..cubicTo(
+        size.width * 0.56,
+        size.height * 0.74,
+        size.width * 0.62,
+        size.height * 0.78,
+        size.width * 0.60,
+        size.height * 0.88,
+      );
     canvas.drawPath(tube, _strokePaint);
 
     // Arautos metálicos (olivas) no topo.

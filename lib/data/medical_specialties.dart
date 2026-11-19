@@ -104,7 +104,10 @@ bool isValidCrmNumber(String value) {
   return digits.length >= 4 && digits.length <= 7;
 }
 
-List<String> suggestSpecialties(String query, {Iterable<String> extra = const []}) {
+List<String> suggestSpecialties(
+  String query, {
+  Iterable<String> extra = const [],
+}) {
   final seen = <String>{};
   final pool = <String>[
     ...extra.where((item) => item.trim().isNotEmpty),

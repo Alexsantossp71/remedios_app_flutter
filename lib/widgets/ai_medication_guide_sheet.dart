@@ -66,19 +66,13 @@ class AiMedicationGuideView extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        theme.brightness == Brightness.dark
-                            ? BrandColors.darkInputFill
-                            : const Color(0xFFF1F5F6),
+                    color: theme.brightness == Brightness.dark
+                        ? BrandColors.darkInputFill
+                        : const Color(0xFFF1F5F6),
                     borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(
-                      color: theme.colorScheme.outlineVariant,
-                    ),
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
                   ),
-                  child: Text(
-                    effect,
-                    style: theme.textTheme.labelMedium,
-                  ),
+                  child: Text(effect, style: theme.textTheme.labelMedium),
                 ),
             ],
           ),
@@ -107,9 +101,7 @@ class AiMedicationGuideView extends StatelessWidget {
                   Expanded(
                     child: Text(
                       warning,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        height: 1.4,
-                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
                     ),
                   ),
                 ],

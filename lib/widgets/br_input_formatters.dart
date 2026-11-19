@@ -33,10 +33,9 @@ class CepInputFormatter extends TextInputFormatter {
   ) {
     final digits = digitsOnly(newValue.text);
     final clipped = digits.length > 8 ? digits.substring(0, 8) : digits;
-    final formatted =
-        clipped.length > 5
-            ? '${clipped.substring(0, 5)}-${clipped.substring(5)}'
-            : clipped;
+    final formatted = clipped.length > 5
+        ? '${clipped.substring(0, 5)}-${clipped.substring(5)}'
+        : clipped;
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),

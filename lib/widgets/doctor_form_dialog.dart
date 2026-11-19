@@ -120,10 +120,9 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
     final doctor = widget.initialDoctor;
     _nameController = TextEditingController(text: doctor?.name ?? '');
     _specialtyController = TextEditingController(text: doctor?.specialty ?? '');
-    _specialtyValue =
-        _specialtyController.text.trim().isEmpty
-            ? null
-            : _specialtyController.text.trim();
+    _specialtyValue = _specialtyController.text.trim().isEmpty
+        ? null
+        : _specialtyController.text.trim();
     _aiPasteController = TextEditingController(text: '');
     _crmController = TextEditingController(text: doctor?.crm ?? '');
     _phoneController = TextEditingController(text: doctor?.phone ?? '');
@@ -262,23 +261,22 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
       replace =
           await showDialog<bool>(
             context: context,
-            builder:
-                (dialogContext) => AlertDialog(
-                  title: const Text('Substituir os dados atuais?'),
-                  content: Text(
-                    'Encontrado: ${result.name}. Substitui os campos preenchidos?',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(false),
-                      child: const Text('Manter'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.of(dialogContext).pop(true),
-                      child: const Text('Substituir'),
-                    ),
-                  ],
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('Substituir os dados atuais?'),
+              content: Text(
+                'Encontrado: ${result.name}. Substitui os campos preenchidos?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Manter'),
                 ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  child: const Text('Substituir'),
+                ),
+              ],
+            ),
           ) ??
           false;
     }
@@ -293,8 +291,9 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
         // grava o valor canônico da lista; sem casar, mantém o texto do
         // conselho como opção extra para o usuário conferir.
         final matched = matchFixedSpecialty(result.specialty);
-        _specialtyController.text =
-            matched.isNotEmpty ? matched : result.specialty;
+        _specialtyController.text = matched.isNotEmpty
+            ? matched
+            : result.specialty;
         _specialtyValue = _specialtyController.text;
       }
     });
@@ -489,12 +488,11 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
   // ── Convênios, validação e salvamento ─────────────────────────────────────
 
   void _toggleHealthPlan(String plan) {
-    final current =
-        _healthPlansController.text
-            .split(RegExp(r'[,;]'))
-            .map((item) => item.trim())
-            .where((item) => item.isNotEmpty)
-            .toList();
+    final current = _healthPlansController.text
+        .split(RegExp(r'[,;]'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
     final exists = current.any(
       (item) => item.toLowerCase() == plan.toLowerCase(),
     );
@@ -596,10 +594,9 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
         // ── Passo 1: quem é ────────────────────────────────────────────────
         FormStep(
           title: 'Quem atende você',
-          validate:
-              () =>
-                  _validateName(_nameController.text) ??
-                  _validatePhone(_phoneController.text),
+          validate: () =>
+              _validateName(_nameController.text) ??
+              _validatePhone(_phoneController.text),
           children: [
             // Atalho de preenchimento: colar/digitar e deixar a IA
             // sugerir. Preencher não é salvar — a conferência é do
@@ -642,13 +639,11 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
               isExpanded: true,
               hint: const Text('Selecione'),
               decoration: _decoration('Especialidade'),
-              items:
-                  _specialtyItems
-                      .map(
-                        (item) =>
-                            DropdownMenuItem(value: item, child: Text(item)),
-                      )
-                      .toList(),
+              items: _specialtyItems
+                  .map(
+                    (item) => DropdownMenuItem(value: item, child: Text(item)),
+                  )
+                  .toList(),
               onChanged: _setSpecialty,
             ),
             const SizedBox(height: AppSpacing.md),
@@ -727,14 +722,13 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                 IconButton(
                   tooltip: 'Buscar dados pelo CRM no conselho',
                   onPressed: _lookingUpCrm ? null : _lookupCrm,
-                  icon:
-                      _lookingUpCrm
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Icon(Icons.search_outlined),
+                  icon: _lookingUpCrm
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.search_outlined),
                 ),
               ],
             ),
@@ -779,21 +773,20 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
               decoration: _decoration(
                 'CEP',
                 hint: '00000-000',
-                suffix:
-                    _lookingUpCep
-                        ? const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        )
-                        : IconButton(
-                          tooltip: 'Buscar endereço',
-                          onPressed: () => _lookupCep(force: true),
-                          icon: const Icon(Icons.search),
+                suffix: _lookingUpCep
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
+                      )
+                    : IconButton(
+                        tooltip: 'Buscar endereço',
+                        onPressed: () => _lookupCep(force: true),
+                        icon: const Icon(Icons.search),
+                      ),
               ),
               onChanged: (_) => _lookupCep(),
             ),
@@ -812,85 +805,83 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
               duration: AppDurations.medium,
               curve: AppCurves.emphasized,
               alignment: Alignment.topCenter,
-              child:
-                  !_showAddress
-                      ? Padding(
-                        padding: const EdgeInsets.only(top: AppSpacing.sm),
-                        child: TextButton.icon(
-                          onPressed: () => setState(() => _showAddress = true),
-                          icon: const Icon(Icons.add_location_alt_outlined),
-                          label: const Text('Preencher endereço sem CEP'),
-                        ),
-                      )
-                      : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: AppSpacing.md),
-                          TextFormField(
-                            controller: _streetController,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: _decoration('Rua ou avenida'),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _numberController,
-                                  decoration: _decoration('Número'),
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _complementController,
-                                  decoration: _decoration('Complemento'),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          TextFormField(
-                            controller: _neighborhoodController,
-                            textCapitalization: TextCapitalization.words,
-                            decoration: _decoration('Bairro'),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextFormField(
-                                  controller: _cityController,
-                                  textCapitalization: TextCapitalization.words,
-                                  decoration: _decoration('Cidade'),
-                                ),
-                              ),
-                              const SizedBox(width: AppSpacing.sm),
-                              SizedBox(
-                                width: 120,
-                                child: DropdownButtonFormField<String>(
-                                  key: const ValueKey('addressUf'),
-                                  initialValue: _addressState,
-                                  isExpanded: true,
-                                  hint: const Text('Selecione'),
-                                  decoration: _decoration('UF'),
-                                  items: [
-                                    ...kBrazilianStates.map(
-                                      (uf) => DropdownMenuItem(
-                                        value: uf,
-                                        child: Text(uf),
-                                      ),
-                                    ),
-                                  ],
-                                  onChanged:
-                                      (value) =>
-                                          setState(() => _addressState = value),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+              child: !_showAddress
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.sm),
+                      child: TextButton.icon(
+                        onPressed: () => setState(() => _showAddress = true),
+                        icon: const Icon(Icons.add_location_alt_outlined),
+                        label: const Text('Preencher endereço sem CEP'),
                       ),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: AppSpacing.md),
+                        TextFormField(
+                          controller: _streetController,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: _decoration('Rua ou avenida'),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _numberController,
+                                decoration: _decoration('Número'),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _complementController,
+                                decoration: _decoration('Complemento'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        TextFormField(
+                          controller: _neighborhoodController,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: _decoration('Bairro'),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _cityController,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: _decoration('Cidade'),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            SizedBox(
+                              width: 120,
+                              child: DropdownButtonFormField<String>(
+                                key: const ValueKey('addressUf'),
+                                initialValue: _addressState,
+                                isExpanded: true,
+                                hint: const Text('Selecione'),
+                                decoration: _decoration('UF'),
+                                items: [
+                                  ...kBrazilianStates.map(
+                                    (uf) => DropdownMenuItem(
+                                      value: uf,
+                                      child: Text(uf),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (value) =>
+                                    setState(() => _addressState = value),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
             ),
             const SizedBox(height: AppSpacing.sm),
             TextButton.icon(
@@ -919,16 +910,15 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
               Wrap(
                 spacing: AppSpacing.sm,
                 runSpacing: 6,
-                children:
-                    kCommonHealthPlans
-                        .map(
-                          (plan) => FilterChip(
-                            label: Text(plan),
-                            selected: _hasHealthPlan(plan),
-                            onSelected: (_) => _toggleHealthPlan(plan),
-                          ),
-                        )
-                        .toList(),
+                children: kCommonHealthPlans
+                    .map(
+                      (plan) => FilterChip(
+                        label: Text(plan),
+                        selected: _hasHealthPlan(plan),
+                        onSelected: (_) => _toggleHealthPlan(plan),
+                      ),
+                    )
+                    .toList(),
               ),
               const SizedBox(height: AppSpacing.md - 2),
               TextFormField(
@@ -964,17 +954,16 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
         labelText: 'Buscar endereço',
         hintText: 'Ex.: Rua Ada Pereira, Campinas',
         prefixIcon: const Icon(Icons.travel_explore),
-        suffixIcon:
-            _searchingPlaces
-                ? const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-                : null,
+        suffixIcon: _searchingPlaces
+            ? const Padding(
+                padding: EdgeInsets.all(12),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : null,
       ),
       onChanged: _onPlaceQueryChanged,
     );
@@ -1010,14 +999,13 @@ class _DoctorFormDialogState extends State<DoctorFormDialog> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                subtitle:
-                    subtitle.isEmpty
-                        ? null
-                        : Text(
-                          subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                subtitle: subtitle.isEmpty
+                    ? null
+                    : Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                 onTap: () => _selectPlace(place),
               );
             },

@@ -16,7 +16,10 @@ void main() {
 
     test('criptografa e restaura sem expor dados no envelope', () async {
       final service = BackupCryptoService.instance;
-      final encrypted = await service.encrypt(backup, 'senha-forte-de-teste-123');
+      final encrypted = await service.encrypt(
+        backup,
+        'senha-forte-de-teste-123',
+      );
 
       expect(service.isEncrypted(encrypted), isTrue);
       expect(encrypted.toString(), isNot(contains('Medicamento de teste')));
@@ -40,7 +43,10 @@ void main() {
 
     test('senha incorreta é rejeitada sem retornar conteúdo', () async {
       final service = BackupCryptoService.instance;
-      final encrypted = await service.encrypt(backup, 'senha-forte-de-teste-123');
+      final encrypted = await service.encrypt(
+        backup,
+        'senha-forte-de-teste-123',
+      );
 
       await expectLater(
         service.decrypt(encrypted, 'senha-errada-123'),
@@ -50,7 +56,10 @@ void main() {
 
     test('alteração no ciphertext falha na autenticação', () async {
       final service = BackupCryptoService.instance;
-      final encrypted = await service.encrypt(backup, 'senha-forte-de-teste-123');
+      final encrypted = await service.encrypt(
+        backup,
+        'senha-forte-de-teste-123',
+      );
       final tampered = Map<String, dynamic>.from(encrypted);
       final bytes = tampered['ciphertext'] as String;
       tampered['ciphertext'] = bytes.substring(0, bytes.length - 4) + 'AAAA';

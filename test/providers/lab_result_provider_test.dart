@@ -71,12 +71,12 @@ void main() {
       ),
     );
 
+    expect(provider.resultsByDate.map((r) => r.id).toList(), ['l2', 'l1']);
     expect(
-      provider.resultsByDate.map((r) => r.id).toList(),
-      ['l2', 'l1'],
+      provider.alteredCount,
+      1,
+      reason: '95 na faixa não conta; 110 acima conta',
     );
-    expect(provider.alteredCount, 1,
-        reason: '95 na faixa não conta; 110 acima conta');
   });
 
   test('trends deriva evolução dos marcadores repetidos', () async {
@@ -140,8 +140,7 @@ void main() {
         valueOf('Hemoglobina', 14.5, 'normal'),
       ],
     );
-    final restored =
-        LabResult.valuesFromJsonText(result.valuesJson);
+    final restored = LabResult.valuesFromJsonText(result.valuesJson);
     expect(restored.length, 2);
     expect(restored[0].examName, 'Glicemia');
     expect(restored[0].numericValue, 115);

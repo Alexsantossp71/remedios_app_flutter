@@ -7,7 +7,7 @@ import '../services/health_plan_storage_service.dart';
 /// Follows the same pattern as DoctorProvider and TherapyProvider.
 class HealthPlanProvider extends ChangeNotifier {
   HealthPlanProvider({HealthPlanStorageService? storage})
-      : _storage = storage ?? HealthPlanStorageService();
+    : _storage = storage ?? HealthPlanStorageService();
 
   final HealthPlanStorageService _storage;
 
@@ -32,8 +32,7 @@ class HealthPlanProvider extends ChangeNotifier {
   /// Saves a health plan (insert or update).
   /// If a plan with the same ID exists, it will be replaced.
   Future<void> saveHealthPlan(HealthPlan plan) async {
-    final existingIndex =
-        _healthPlans.indexWhere((item) => item.id == plan.id);
+    final existingIndex = _healthPlans.indexWhere((item) => item.id == plan.id);
 
     if (existingIndex == -1) {
       _healthPlans = [..._healthPlans, plan];
@@ -85,7 +84,9 @@ class HealthPlanProvider extends ChangeNotifier {
   }
 
   void _sortHealthPlans() {
-    _healthPlans.sort((first, second) =>
-        first.name.toLowerCase().compareTo(second.name.toLowerCase()));
+    _healthPlans.sort(
+      (first, second) =>
+          first.name.toLowerCase().compareTo(second.name.toLowerCase()),
+    );
   }
 }

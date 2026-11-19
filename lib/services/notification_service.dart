@@ -44,8 +44,10 @@ class NotificationService {
       // v20 do plugin recebe os parâmetros por nome (era posicional antes).
       await _plugin.initialize(settings: initializationSettings);
 
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       // Android 13+ gates notifications behind a runtime permission; on
       // older versions this call is a no-op.
       await android?.requestNotificationsPermission();

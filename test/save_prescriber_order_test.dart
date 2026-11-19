@@ -66,20 +66,20 @@ void main() {
     String id = 'tx-losartana-1',
     String doctorName = 'Dr. Regressão',
   }) => Treatment(
-        id: id,
-        name: 'LOSARTANA POTASSICA',
-        dosage: '50 mg',
-        presentation: 'COM REV CT BL AL OPC X 30',
-        instructions: '',
-        startDate: DateTime(2026, 11, 15),
-        endDate: null,
-        frequency: TreatmentFrequency.daily,
-        doseTimes: const [DoseTime(hour: 8, minute: 0)],
-        stock: null,
-        refillThreshold: null,
-        prescriberName: doctorName,
-        prescribedOn: DateTime(2026, 11, 10),
-      );
+    id: id,
+    name: 'LOSARTANA POTASSICA',
+    dosage: '50 mg',
+    presentation: 'COM REV CT BL AL OPC X 30',
+    instructions: '',
+    startDate: DateTime(2026, 11, 15),
+    endDate: null,
+    frequency: TreatmentFrequency.daily,
+    doseTimes: const [DoseTime(hour: 8, minute: 0)],
+    stock: null,
+    refillThreshold: null,
+    prescriberName: doctorName,
+    prescribedOn: DateTime(2026, 11, 10),
+  );
 
   testWidgets(
     'cadastro novo com prescritor grava tratamento e registro de receita',
@@ -110,89 +110,83 @@ void main() {
     },
   );
 
-  testWidgets(
-    'edição sem mudar a receita não multiplica registros',
-    (tester) async {
-      final treatment = losartanaWithPrescriber();
-      final context = await pumpHost(tester);
+  testWidgets('edição sem mudar a receita não multiplica registros', (
+    tester,
+  ) async {
+    final treatment = losartanaWithPrescriber();
+    final context = await pumpHost(tester);
 
-      await tester.runAsync(
-        () => saveTreatmentWithPrescriber(context, treatment),
-      );
-      await tester.pumpAndSettle();
-      expect(therapy.prescriptionRecordsFor(treatment.id), hasLength(1));
+    await tester.runAsync(
+      () => saveTreatmentWithPrescriber(context, treatment),
+    );
+    await tester.pumpAndSettle();
+    expect(therapy.prescriptionRecordsFor(treatment.id), hasLength(1));
 
-      // Mesma receita: quem receitou e o dia não mudaram — só as instruções.
-      final untouched = treatment.copyWith(instructions: 'após o almoço');
-      await tester.runAsync(
-        () => saveTreatmentWithPrescriber(context, untouched,
-            previous: treatment),
-      );
-      await tester.pumpAndSettle();
+    // Mesma receita: quem receitou e o dia não mudaram — só as instruções.
+    final untouched = treatment.copyWith(instructions: 'após o almoço');
+    await tester.runAsync(
+      () =>
+          saveTreatmentWithPrescriber(context, untouched, previous: treatment),
+    );
+    await tester.pumpAndSettle();
 
-      expect(therapy.prescriptionRecordsFor(treatment.id), hasLength(1));
-      expect(
-        therapy.treatments.firstWhere((t) => t.id == treatment.id).instructions,
-        'após o almoço',
-      );
-    },
-  );
+    expect(therapy.prescriptionRecordsFor(treatment.id), hasLength(1));
+    expect(
+      therapy.treatments.firstWhere((t) => t.id == treatment.id).instructions,
+      'após o almoço',
+    );
+  });
 
-  testWidgets(
-    'renovação de receita na edição cria registro novo',
-    (tester) async {
-      final treatment = losartanaWithPrescriber();
-      final context = await pumpHost(tester);
+  testWidgets('renovação de receita na edição cria registro novo', (
+    tester,
+  ) async {
+    final treatment = losartanaWithPrescriber();
+    final context = await pumpHost(tester);
 
-      await tester.runAsync(
-        () => saveTreatmentWithPrescriber(context, treatment),
-      );
-      await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => saveTreatmentWithPrescriber(context, treatment),
+    );
+    await tester.pumpAndSettle();
 
-      final renewed = treatment.copyWith(
-        prescriberName: 'Dra. Renovada',
-        prescribedOn: DateTime(2026, 11, 15),
-      );
-      await tester.runAsync(
-        () => saveTreatmentWithPrescriber(context, renewed,
-            previous: treatment),
-      );
-      await tester.pumpAndSettle();
+    final renewed = treatment.copyWith(
+      prescriberName: 'Dra. Renovada',
+      prescribedOn: DateTime(2026, 11, 15),
+    );
+    await tester.runAsync(
+      () => saveTreatmentWithPrescriber(context, renewed, previous: treatment),
+    );
+    await tester.pumpAndSettle();
 
-      final records = therapy.prescriptionRecordsFor(treatment.id);
-      expect(records, hasLength(2));
-      // Mais recente primeiro — a receita atual vem antes da antiga.
-      expect(records.first.doctorName, 'Dra. Renovada');
-      expect(records.last.doctorName, 'Dr. Regressão');
-    },
-  );
+    final records = therapy.prescriptionRecordsFor(treatment.id);
+    expect(records, hasLength(2));
+    // Mais recente primeiro — a receita atual vem antes da antiga.
+    expect(records.first.doctorName, 'Dra. Renovada');
+    expect(records.last.doctorName, 'Dr. Regressão');
+  });
 
-  testWidgets(
-    'cadastro sem prescritor não cria registro',
-    (tester) async {
-      final treatment = Treatment(
-        id: 'tx-sem-prescritor',
-        name: 'LOSARTANA POTASSICA',
-        dosage: '50 mg',
-        presentation: 'COM REV CT BL AL OPC X 30',
-        instructions: '',
-        startDate: DateTime(2026, 11, 15),
-        endDate: null,
-        frequency: TreatmentFrequency.daily,
-        doseTimes: const [DoseTime(hour: 8, minute: 0)],
-        stock: null,
-        refillThreshold: null,
-      );
-      final context = await pumpHost(tester);
+  testWidgets('cadastro sem prescritor não cria registro', (tester) async {
+    final treatment = Treatment(
+      id: 'tx-sem-prescritor',
+      name: 'LOSARTANA POTASSICA',
+      dosage: '50 mg',
+      presentation: 'COM REV CT BL AL OPC X 30',
+      instructions: '',
+      startDate: DateTime(2026, 11, 15),
+      endDate: null,
+      frequency: TreatmentFrequency.daily,
+      doseTimes: const [DoseTime(hour: 8, minute: 0)],
+      stock: null,
+      refillThreshold: null,
+    );
+    final context = await pumpHost(tester);
 
-      await tester.runAsync(
-        () => saveTreatmentWithPrescriber(context, treatment),
-      );
-      await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => saveTreatmentWithPrescriber(context, treatment),
+    );
+    await tester.pumpAndSettle();
 
-      expect(therapy.treatments, hasLength(1));
-      expect(therapy.prescriptionRecordsFor(treatment.id), isEmpty);
-      expect(doctors.doctors, isEmpty);
-    },
-  );
+    expect(therapy.treatments, hasLength(1));
+    expect(therapy.prescriptionRecordsFor(treatment.id), isEmpty);
+    expect(doctors.doctors, isEmpty);
+  });
 }

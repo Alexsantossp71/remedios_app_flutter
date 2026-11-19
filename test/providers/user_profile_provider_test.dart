@@ -75,8 +75,7 @@ void main() {
       expect(provider.profile?.consentAt, isNull);
 
       final consentAt = DateTime.utc(2026, 3, 10, 9, 30);
-      await provider.saveProfile(
-          buildProfile().copyWith(consentAt: consentAt));
+      await provider.saveProfile(buildProfile().copyWith(consentAt: consentAt));
 
       expect(provider.profile?.consentAt, consentAt);
 
@@ -92,8 +91,7 @@ void main() {
       expect(fresh.profile, isNull);
     });
 
-    test('saveProfile substitui a linha única e preserva createdAt',
-        () async {
+    test('saveProfile substitui a linha única e preserva createdAt', () async {
       final provider = UserProfileProvider();
       await provider.initialize();
       await provider.saveProfile(buildProfile());
@@ -114,18 +112,25 @@ void main() {
       await provider.initialize();
 
       final ana = EmergencyContact.create(
-          nome: 'Ana', parentesco: 'Irmã', telefone: '1111');
+        nome: 'Ana',
+        parentesco: 'Irmã',
+        telefone: '1111',
+      );
       final bruno = EmergencyContact.create(
-          nome: 'Bruno', parentesco: 'Pai', telefone: '2222');
+        nome: 'Bruno',
+        parentesco: 'Pai',
+        telefone: '2222',
+      );
       await provider.addEmergencyContact(bruno);
       await provider.addEmergencyContact(ana);
 
       // ordenados por nome (case-insensitive)
-      expect(provider.emergencyContacts.map((c) => c.nome).toList(),
-          ['Ana', 'Bruno']);
+      expect(provider.emergencyContacts.map((c) => c.nome).toList(), [
+        'Ana',
+        'Bruno',
+      ]);
 
-      await provider.updateEmergencyContact(
-          ana.copyWith(telefone: '3333'));
+      await provider.updateEmergencyContact(ana.copyWith(telefone: '3333'));
       expect(provider.emergencyContacts.first.telefone, '3333');
 
       final reloaded = UserProfileProvider();
@@ -144,7 +149,8 @@ void main() {
       await provider.initialize();
       await provider.saveProfile(buildProfile());
       await provider.addEmergencyContact(
-          EmergencyContact.create(nome: 'Ana', telefone: '1111'));
+        EmergencyContact.create(nome: 'Ana', telefone: '1111'),
+      );
 
       await provider.deleteAllData();
 

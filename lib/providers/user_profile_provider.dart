@@ -12,7 +12,7 @@ import '../services/database_service.dart';
 /// emergência. Segue o mesmo padrão do HealthPlanProvider.
 class UserProfileProvider extends ChangeNotifier {
   UserProfileProvider({DatabaseService? dbService})
-      : _dbService = dbService ?? DatabaseService.instance;
+    : _dbService = dbService ?? DatabaseService.instance;
 
   final DatabaseService _dbService;
 
@@ -35,13 +35,17 @@ class UserProfileProvider extends ChangeNotifier {
     final db = await _dbService.database;
 
     final profileRows = await db.query('user_profile', limit: 1);
-    _profile =
-        profileRows.isEmpty ? null : _rowToUserProfile(profileRows.first);
+    _profile = profileRows.isEmpty
+        ? null
+        : _rowToUserProfile(profileRows.first);
 
-    final contactRows =
-        await db.query('emergency_contacts', orderBy: 'nome ASC');
-    _emergencyContacts =
-        contactRows.map((row) => _rowToEmergencyContact(row)).toList();
+    final contactRows = await db.query(
+      'emergency_contacts',
+      orderBy: 'nome ASC',
+    );
+    _emergencyContacts = contactRows
+        .map((row) => _rowToEmergencyContact(row))
+        .toList();
 
     _isLoading = false;
     notifyListeners();
@@ -54,29 +58,24 @@ class UserProfileProvider extends ChangeNotifier {
 
     final createdAt = _profile?.createdAt ?? profile.createdAt;
 
-    await db.insert(
-      'user_profile',
-      {
-        'id': 1,
-        'nome': profile.nome,
-        'cpf': profile.cpf,
-        'data_nascimento':
-            profile.dataNascimento?.toUtc().toIso8601String(),
-        'foto_path': profile.fotoPath,
-        'tipo_sanguineo': profile.tipoSanguineo?.value,
-        'alergias': jsonEncode(profile.alergias),
-        'condicoes_cronicas': jsonEncode(profile.condicoesCronicas),
-        'peso': profile.peso,
-        'altura': profile.altura,
-        'telefone': profile.telefone,
-        'observacoes': profile.observacoes,
-        'consent_at': profile.consentAt?.toUtc().toIso8601String(),
-        'ai_consent_at': profile.aiConsentAt?.toUtc().toIso8601String(),
-        'created_at': createdAt,
-        'updated_at': now,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('user_profile', {
+      'id': 1,
+      'nome': profile.nome,
+      'cpf': profile.cpf,
+      'data_nascimento': profile.dataNascimento?.toUtc().toIso8601String(),
+      'foto_path': profile.fotoPath,
+      'tipo_sanguineo': profile.tipoSanguineo?.value,
+      'alergias': jsonEncode(profile.alergias),
+      'condicoes_cronicas': jsonEncode(profile.condicoesCronicas),
+      'peso': profile.peso,
+      'altura': profile.altura,
+      'telefone': profile.telefone,
+      'observacoes': profile.observacoes,
+      'consent_at': profile.consentAt?.toUtc().toIso8601String(),
+      'ai_consent_at': profile.aiConsentAt?.toUtc().toIso8601String(),
+      'created_at': createdAt,
+      'updated_at': now,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
 
     _profile = UserProfile(
       nome: profile.nome,
@@ -170,11 +169,9 @@ class UserProfileProvider extends ChangeNotifier {
   /// Remove um contato de emergência pelo ID.
   Future<void> removeEmergencyContact(String id) async {
     final db = await _dbService.database;
-    await db
-        .delete('emergency_contacts', where: 'id = ?', whereArgs: [id]);
+    await db.delete('emergency_contacts', where: 'id = ?', whereArgs: [id]);
 
-    _emergencyContacts =
-        _emergencyContacts.where((c) => c.id != id).toList();
+    _emergencyContacts = _emergencyContacts.where((c) => c.id != id).toList();
     notifyListeners();
   }
 
@@ -192,8 +189,10 @@ class UserProfileProvider extends ChangeNotifier {
   }
 
   void _sortContacts() {
-    _emergencyContacts.sort((first, second) =>
-        first.nome.toLowerCase().compareTo(second.nome.toLowerCase()));
+    _emergencyContacts.sort(
+      (first, second) =>
+          first.nome.toLowerCase().compareTo(second.nome.toLowerCase()),
+    );
   }
 
   UserProfile _rowToUserProfile(Map<String, dynamic> row) {
@@ -217,8 +216,7 @@ class UserProfileProvider extends ChangeNotifier {
           ? DateTime.tryParse(row['data_nascimento'] as String)
           : null,
       fotoPath: nullIfEmpty(row['foto_path'] as String?),
-      tipoSanguineo:
-          TipoSanguineo.fromValue(row['tipo_sanguineo'] as String?),
+      tipoSanguineo: TipoSanguineo.fromValue(row['tipo_sanguineo'] as String?),
       alergias: decodeList(row['alergias']),
       condicoesCronicas: decodeList(row['condicoes_cronicas']),
       peso: (row['peso'] as num?)?.toDouble(),

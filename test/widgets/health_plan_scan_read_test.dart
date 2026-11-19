@@ -41,9 +41,9 @@ void main() {
   /// em disco para o `readAsBytes` do ImagePicker.
   Future<String> writeFakeCard() async {
     final path = '${tempDir.path}/cartao.png';
-    await File(path).writeAsBytes([
-      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-    ]);
+    await File(
+      path,
+    ).writeAsBytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
     return path;
   }
 
@@ -73,13 +73,13 @@ void main() {
   /// Body que o proxy devolveria para um cartão legível, no mesmo formato que
   /// `api/read-card.ts` usa.
   String readableCardPayload() => jsonEncode({
-        'content': jsonEncode({
-          'name': 'PLANO SAUDE FAMILIA',
-          'provider': 'UNIMED',
-          'cardNumber': '1234567890123456',
-          'validity': '12/2030',
-        }),
-      });
+    'content': jsonEncode({
+      'name': 'PLANO SAUDE FAMILIA',
+      'provider': 'UNIMED',
+      'cardNumber': '1234567890123456',
+      'validity': '12/2030',
+    }),
+  });
 
   Future<void> pumpScreen(
     WidgetTester tester,
@@ -88,9 +88,7 @@ void main() {
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          ChangeNotifierProvider<HealthPlanProvider>.value(
-            value: planProvider,
-          ),
+          ChangeNotifierProvider<HealthPlanProvider>.value(value: planProvider),
           ChangeNotifierProvider<UserProfileProvider>.value(
             value: userProvider,
           ),
@@ -116,9 +114,9 @@ void main() {
   Future<void> pickFromGallery(WidgetTester tester, String imagePath) async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(pickerChannel, (call) async {
-      if (call.method == 'pickImage') return imagePath;
-      return null;
-    });
+          if (call.method == 'pickImage') return imagePath;
+          return null;
+        });
     await tester.runAsync(() async {
       await tester.tap(find.text('Escolher imagem da galeria'));
       for (var i = 0; i < 10; i++) {
@@ -129,8 +127,9 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('leitura bem-sucedida envia a imagem e abre a conferência',
-      (tester) async {
+  testWidgets('leitura bem-sucedida envia a imagem e abre a conferência', (
+    tester,
+  ) async {
     final requests = <http.Request>[];
 
     final service = CardReaderService(
@@ -171,8 +170,9 @@ void main() {
     expect(find.text('Conferir dados do cartão'), findsOneWidget);
   });
 
-  testWidgets('falha de rede fecha o diálogo e oferece o cadastro manual',
-      (tester) async {
+  testWidgets('falha de rede fecha o diálogo e oferece o cadastro manual', (
+    tester,
+  ) async {
     final service = CardReaderService(
       client: MockClient((_) async => throw const SocketException('sem rede')),
     );

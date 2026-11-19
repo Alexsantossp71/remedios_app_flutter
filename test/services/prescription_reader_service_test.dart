@@ -214,21 +214,23 @@ Aqui está o resultado:
 
     test('readDoctorFromImage devolve o médico da receita', () async {
       final service = PrescriptionReaderService(
-        client: MockClient((_) async => http.Response(
-              jsonEncode({
-                'content': jsonEncode({
-                  'medicamentos': [],
-                  'medico': {
-                    'nome': 'DRA. HELENA COSTA',
-                    'crm': '987654',
-                    'uf': 'SP',
-                  },
-                  'rawText': 'DRA. HELENA COSTA CRM/SP 987654',
-                }),
-                'model': 'tesseract-ocr',
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'content': jsonEncode({
+                'medicamentos': [],
+                'medico': {
+                  'nome': 'DRA. HELENA COSTA',
+                  'crm': '987654',
+                  'uf': 'SP',
+                },
+                'rawText': 'DRA. HELENA COSTA CRM/SP 987654',
               }),
-              200,
-            )),
+              'model': 'tesseract-ocr',
+            }),
+            200,
+          ),
+        ),
       );
 
       final medico = await service.readDoctorFromImage(
@@ -241,22 +243,22 @@ Aqui está o resultado:
 
     test('readDoctorFromImage reclama quando não há médico legível', () async {
       final service = PrescriptionReaderService(
-        client: MockClient((_) async => http.Response(
-              jsonEncode({
-                'content': jsonEncode({
-                  'medicamentos': [],
-                  'rawText': 'nada de médico aqui',
-                }),
-                'model': 'tesseract-ocr',
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'content': jsonEncode({
+                'medicamentos': [],
+                'rawText': 'nada de médico aqui',
               }),
-              200,
-            )),
+              'model': 'tesseract-ocr',
+            }),
+            200,
+          ),
+        ),
       );
 
       expect(
-        () => service.readDoctorFromImage(
-          imageBytes: Uint8List.fromList([1]),
-        ),
+        () => service.readDoctorFromImage(imageBytes: Uint8List.fromList([1])),
         throwsA(isA<PrescriptionReaderException>()),
       );
     });

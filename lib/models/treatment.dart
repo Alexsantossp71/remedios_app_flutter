@@ -5,14 +5,11 @@ class DoseTime {
   final int minute;
 
   const DoseTime({required this.hour, required this.minute})
-      : assert(hour >= 0 && hour < 24),
-        assert(minute >= 0 && minute < 60);
+    : assert(hour >= 0 && hour < 24),
+      assert(minute >= 0 && minute < 60);
 
   factory DoseTime.fromJson(Map<String, dynamic> json) {
-    return DoseTime(
-      hour: json['hour'] as int,
-      minute: json['minute'] as int,
-    );
+    return DoseTime(hour: json['hour'] as int, minute: json['minute'] as int);
   }
 
   Map<String, dynamic> toJson() => {'hour': hour, 'minute': minute};
@@ -146,10 +143,10 @@ class Treatment {
 
   /// Rótulo de CRM igual ao do catálogo (Doctor.crmLabel): "CRM 123456/SP".
   String get prescriberCrmLabel => [
-        if (prescriberCrm.trim().isNotEmpty) 'CRM ${prescriberCrm.trim()}',
-        if (prescriberCrmState.trim().isNotEmpty)
-          prescriberCrmState.trim().toUpperCase(),
-      ].join('/');
+    if (prescriberCrm.trim().isNotEmpty) 'CRM ${prescriberCrm.trim()}',
+    if (prescriberCrmState.trim().isNotEmpty)
+      prescriberCrmState.trim().toUpperCase(),
+  ].join('/');
 
   /// Comparação de identidade do prescritor entre duas versões do
   /// tratamento — muda nome, CRM ou data da receita => renovação nova.
@@ -215,9 +212,7 @@ class Treatment {
       prescriberName: clearPrescriber
           ? ''
           : prescriberName ?? this.prescriberName,
-      prescriberCrm: clearPrescriber
-          ? ''
-          : prescriberCrm ?? this.prescriberCrm,
+      prescriberCrm: clearPrescriber ? '' : prescriberCrm ?? this.prescriberCrm,
       prescriberCrmState: clearPrescriber
           ? ''
           : prescriberCrmState ?? this.prescriberCrmState,
@@ -228,29 +223,33 @@ class Treatment {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'dosage': dosage,
-        'presentation': presentation,
-        'instructions': instructions,
-        'startDate': startDate.toIso8601String(),
-        'endDate': endDate?.toIso8601String(),
-        'frequency': frequency.name,
-        'doseTimes': doseTimes.map((time) => time.toJson()).toList(),
-        'weekdays': weekdays,
-        'stock': stock,
-        'refillThreshold': refillThreshold,
-        'isArchived': isArchived,
-        'prescriberDoctorId': prescriberDoctorId,
-        'prescriberName': prescriberName,
-        'prescriberCrm': prescriberCrm,
-        'prescriberCrmState': prescriberCrmState,
-        'prescribedOn': prescribedOn?.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'dosage': dosage,
+    'presentation': presentation,
+    'instructions': instructions,
+    'startDate': startDate.toIso8601String(),
+    'endDate': endDate?.toIso8601String(),
+    'frequency': frequency.name,
+    'doseTimes': doseTimes.map((time) => time.toJson()).toList(),
+    'weekdays': weekdays,
+    'stock': stock,
+    'refillThreshold': refillThreshold,
+    'isArchived': isArchived,
+    'prescriberDoctorId': prescriberDoctorId,
+    'prescriberName': prescriberName,
+    'prescriberCrm': prescriberCrm,
+    'prescriberCrmState': prescriberCrmState,
+    'prescribedOn': prescribedOn?.toIso8601String(),
+  };
 
   bool isScheduledOn(DateTime date) {
     final normalizedDate = DateTime(date.year, date.month, date.day);
-    final normalizedStart = DateTime(startDate.year, startDate.month, startDate.day);
+    final normalizedStart = DateTime(
+      startDate.year,
+      startDate.month,
+      startDate.day,
+    );
     final normalizedEnd = endDate == null
         ? null
         : DateTime(endDate!.year, endDate!.month, endDate!.day);

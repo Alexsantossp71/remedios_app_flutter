@@ -26,10 +26,10 @@ class FakeClient extends http.BaseClient {
 }
 
 http.Response _json(Object body, {int status = 200}) => http.Response(
-      jsonEncode(body),
-      status,
-      headers: {'content-type': 'application/json'},
-    );
+  jsonEncode(body),
+  status,
+  headers: {'content-type': 'application/json'},
+);
 
 /// Responde ao catálogo com os modelos esperados e ao chat com [content].
 Future<http.Response> Function(http.Request) _catalogAndChat(String content) {
@@ -127,8 +127,9 @@ void main() {
         AiProxyClient.defaultVisionModel,
         reason: 'leitura de documento usa o modelo de visão',
       );
-      final content = (body['messages'][0]['content'] as List).first
-          as Map<String, dynamic>;
+      final content =
+          (body['messages'][0]['content'] as List).first
+              as Map<String, dynamic>;
       expect(content['type'], 'image_url');
       expect(
         (content['image_url'] as Map)['url'],
@@ -138,7 +139,8 @@ void main() {
 
     test('not_a_request devolve mensagem amigável', () async {
       final client = FakeClient(
-        (request) async => _catalogAndChat('{"error":"not_a_request"}')(request),
+        (request) async =>
+            _catalogAndChat('{"error":"not_a_request"}')(request),
       );
       final service = AiService(
         proxyClient: AiProxyClient(client: client, isWebOverride: false),
@@ -149,11 +151,13 @@ void main() {
           imageBytes: Uint8List.fromList([1]),
           mimeType: 'image/jpeg',
         ),
-        throwsA(isA<AiException>().having(
-          (e) => e.message,
-          'message',
-          contains('não parece ser um pedido de exame'),
-        )),
+        throwsA(
+          isA<AiException>().having(
+            (e) => e.message,
+            'message',
+            contains('não parece ser um pedido de exame'),
+          ),
+        ),
       );
     });
 
@@ -172,39 +176,44 @@ void main() {
           imageBytes: Uint8List.fromList([1]),
           mimeType: 'image/jpeg',
         ),
-        throwsA(isA<AiException>().having(
-          (e) => e.message,
-          'message',
-          contains('não reconheceu os dados'),
-        )),
+        throwsA(
+          isA<AiException>().having(
+            (e) => e.message,
+            'message',
+            contains('não reconheceu os dados'),
+          ),
+        ),
       );
     });
 
-    test('pedido de visão usa max_tokens alto (raciocínio do VL não esgota o limite)', () async {
-      // Regressão: com max_tokens 500, o nemotron-super-vl gastava tudo no
-      // raciocínio e devolvia content vazio — a leitura falhava sempre.
-      final requests = <http.Request>[];
-      final client = FakeClient((request) async {
-        requests.add(request);
-        return _catalogAndChat(
-          '{"name":"Hemograma completo","category":"Laboratório",'
-          '"doctorName":"","place":"","date":""}',
-        )(request);
-      });
-      final service = AiService(
-        proxyClient: AiProxyClient(client: client, isWebOverride: false),
-      );
-      await service.scanExamRequest(
-        imageBytes: Uint8List.fromList([1]),
-        mimeType: 'image/jpeg',
-      );
+    test(
+      'pedido de visão usa max_tokens alto (raciocínio do VL não esgota o limite)',
+      () async {
+        // Regressão: com max_tokens 500, o nemotron-super-vl gastava tudo no
+        // raciocínio e devolvia content vazio — a leitura falhava sempre.
+        final requests = <http.Request>[];
+        final client = FakeClient((request) async {
+          requests.add(request);
+          return _catalogAndChat(
+            '{"name":"Hemograma completo","category":"Laboratório",'
+            '"doctorName":"","place":"","date":""}',
+          )(request);
+        });
+        final service = AiService(
+          proxyClient: AiProxyClient(client: client, isWebOverride: false),
+        );
+        await service.scanExamRequest(
+          imageBytes: Uint8List.fromList([1]),
+          mimeType: 'image/jpeg',
+        );
 
-      final chat = requests.firstWhere(
-        (r) => r.method == 'POST' && r.url.path.endsWith('/chat/completions'),
-      );
-      final body = jsonDecode(chat.body) as Map<String, dynamic>;
-      expect(body['max_tokens'] as int, greaterThanOrEqualTo(2000));
-    });
+        final chat = requests.firstWhere(
+          (r) => r.method == 'POST' && r.url.path.endsWith('/chat/completions'),
+        );
+        final body = jsonDecode(chat.body) as Map<String, dynamic>;
+        expect(body['max_tokens'] as int, greaterThanOrEqualTo(2000));
+      },
+    );
 
     test('modelo de visão padrão e fallbacks começam com modelos de visão', () {
       // O padrão precisa ser um VL de verdade e rápido; os candidatos de
@@ -214,8 +223,10 @@ void main() {
         contains('vl'),
         reason: 'modelo padrão de visão deve ser vision-language',
       );
-      expect(AiProxyClient.visionFallbacks.first,
-          AiProxyClient.defaultVisionModel);
+      expect(
+        AiProxyClient.visionFallbacks.first,
+        AiProxyClient.defaultVisionModel,
+      );
       expect(
         AiProxyClient.visionFallbacks
             .take(2)

@@ -18,8 +18,10 @@ Future<void> showAiScheduleAdvisorSheet(BuildContext context) async {
     icon: Icons.schedule_rounded,
     loadingMessage: 'Organizando seus horários…',
     load: () {
-      final treatments =
-          context.read<TherapyProvider>().activeTreatments.toList();
+      final treatments = context
+          .read<TherapyProvider>()
+          .activeTreatments
+          .toList();
       return AiService().suggestSchedule(treatments);
     },
     buildResult: (context, advice) => AiScheduleAdviceView(advice: advice),
@@ -75,10 +77,9 @@ class _ScheduleSuggestionCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(
-          color:
-              suggestion.changed
-                  ? BrandColors.teal600.withValues(alpha: .40)
-                  : theme.colorScheme.outlineVariant,
+          color: suggestion.changed
+              ? BrandColors.teal600.withValues(alpha: .40)
+              : theme.colorScheme.outlineVariant,
         ),
       ),
       child: Column(
@@ -95,27 +96,22 @@ class _ScheduleSuggestionCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 3,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color:
-                      suggestion.changed
-                          ? BrandColors.teal600.withValues(alpha: .15)
-                          : (isDark
-                              ? Colors.white.withValues(alpha: .06)
-                              : Colors.black.withValues(alpha: .05)),
+                  color: suggestion.changed
+                      ? BrandColors.teal600.withValues(alpha: .15)
+                      : (isDark
+                            ? Colors.white.withValues(alpha: .06)
+                            : Colors.black.withValues(alpha: .05)),
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   suggestion.changed ? 'Horário novo' : 'Mantidos',
                   style: theme.textTheme.labelSmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color:
-                        suggestion.changed
-                            ? BrandColors.teal700
-                            : theme.colorScheme.onSurfaceVariant,
+                    color: suggestion.changed
+                        ? BrandColors.teal700
+                        : theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -135,10 +131,9 @@ class _ScheduleSuggestionCard extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        isDark
-                            ? BrandColors.teal700.withValues(alpha: .18)
-                            : BrandColors.accentSoft,
+                    color: isDark
+                        ? BrandColors.teal700.withValues(alpha: .18)
+                        : BrandColors.accentSoft,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

@@ -38,19 +38,19 @@ class Doctor {
   final String notes;
 
   String get fullAddress => [
-        if (street.isNotEmpty) street,
-        if (number.isNotEmpty) number,
-        if (complement.isNotEmpty) complement,
-        if (neighborhood.isNotEmpty) neighborhood,
-        if (city.isNotEmpty) city,
-        if (state.isNotEmpty) state,
-        if (postalCode.isNotEmpty) postalCode,
-      ].join(', ');
+    if (street.isNotEmpty) street,
+    if (number.isNotEmpty) number,
+    if (complement.isNotEmpty) complement,
+    if (neighborhood.isNotEmpty) neighborhood,
+    if (city.isNotEmpty) city,
+    if (state.isNotEmpty) state,
+    if (postalCode.isNotEmpty) postalCode,
+  ].join(', ');
 
   String get crmLabel => [
-        if (crm.isNotEmpty) 'CRM $crm',
-        if (crmState.isNotEmpty) crmState.toUpperCase(),
-      ].join('/');
+    if (crm.isNotEmpty) 'CRM $crm',
+    if (crmState.isNotEmpty) crmState.toUpperCase(),
+  ].join('/');
 
   factory Doctor.fromJson(Map<String, dynamic> json) {
     return Doctor(
@@ -114,22 +114,22 @@ class Doctor {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'specialty': specialty,
-        'crm': crm,
-        'crmState': crmState,
-        'phone': phone,
-        'email': email,
-        'clinic': clinic,
-        'street': street,
-        'number': number,
-        'complement': complement,
-        'neighborhood': neighborhood,
-        'city': city,
-        'state': state,
-        'postalCode': postalCode,
-        'healthPlans': healthPlans,
-        'notes': notes,
-      };
+    'id': id,
+    'name': name,
+    'specialty': specialty,
+    'crm': crm,
+    'crmState': crmState,
+    'phone': phone,
+    'email': email,
+    'clinic': clinic,
+    'street': street,
+    'number': number,
+    'complement': complement,
+    'neighborhood': neighborhood,
+    'city': city,
+    'state': state,
+    'postalCode': postalCode,
+    'healthPlans': healthPlans,
+    'notes': notes,
+  };
 }

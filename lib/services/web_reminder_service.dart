@@ -86,11 +86,7 @@ class WebReminderService {
   }
 
   void _tick() {
-    final due = dueDoses(
-      planned: _planned,
-      now: DateTime.now(),
-      fired: _fired,
-    );
+    final due = dueDoses(planned: _planned, now: DateTime.now(), fired: _fired);
     for (final dose in due) {
       _fired.add(keyOf(dose));
       try {

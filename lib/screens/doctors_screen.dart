@@ -55,23 +55,22 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
   Future<void> _deleteDoctor(DoctorProvider provider, Doctor doctor) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Excluir médico?'),
-            content: Text(
-              'Os dados de ${doctor.name} serão removidos deste aparelho.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Excluir'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir médico?'),
+        content: Text(
+          'Os dados de ${doctor.name} serão removidos deste aparelho.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
           ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
     );
     if (confirmed == true) await provider.removeDoctor(doctor.id);
   }
@@ -174,14 +173,12 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                         Expanded(
                           child: Text(
                             '${provider.doctors.length} ${provider.doctors.length == 1 ? 'contato salvo' : 'contatos salvos'}',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodyMedium?.copyWith(
-                              color:
-                                  Theme.of(
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(
                                     context,
                                   ).colorScheme.onSurfaceVariant,
-                            ),
+                                ),
                           ),
                         ),
                         Wrap(
@@ -190,7 +187,8 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                           runSpacing: 8,
                           children: [
                             FilledButton.tonalIcon(
-                              onPressed: () => createDoctorFromPrescription(context),
+                              onPressed: () =>
+                                  createDoctorFromPrescription(context),
                               icon: const Icon(Icons.photo_camera_outlined),
                               label: const Text('Foto da receita'),
                             ),
@@ -210,17 +208,16 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                       decoration: InputDecoration(
                         hintText: 'Buscar nome, especialidade, CRM ou endereço',
                         prefixIcon: const Icon(Icons.search),
-                        suffixIcon:
-                            _searchController.text.isEmpty
-                                ? null
-                                : IconButton(
-                                  tooltip: 'Limpar busca',
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() {});
-                                  },
-                                  icon: const Icon(Icons.close),
-                                ),
+                        suffixIcon: _searchController.text.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Limpar busca',
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() {});
+                                },
+                                icon: const Icon(Icons.close),
+                              ),
                       ),
                     ),
                     if (specialties.isNotEmpty) ...[
@@ -243,10 +240,8 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                             ),
                           ),
                         ],
-                        onChanged:
-                            (value) => setState(
-                              () => _selectedSpecialty = value ?? '',
-                            ),
+                        onChanged: (value) =>
+                            setState(() => _selectedSpecialty = value ?? ''),
                       ),
                     ],
                     const SizedBox(height: 18),
@@ -261,8 +256,8 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
                         actionIcon: Icons.person_add_alt_1,
                         onAction: () => _editDoctor(provider),
                         secondaryActionLabel: 'Foto da receita',
-                        onSecondaryAction:
-                            () => createDoctorFromPrescription(context),
+                        onSecondaryAction: () =>
+                            createDoctorFromPrescription(context),
                       )
                     else if (doctors.isEmpty)
                       const _NoSearchResults()
@@ -293,12 +288,11 @@ class _DoctorsScreenState extends State<DoctorsScreen> {
 
 /// Iniciais para o avatar do crachá ("Ana Silva" → "AS").
 String _initials(String name) {
-  final parts =
-      name
-          .trim()
-          .split(RegExp(r'\s+'))
-          .where((part) => part.isNotEmpty)
-          .toList();
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
   if (parts.isEmpty) return '?';
   if (parts.length == 1) return parts.first.characters.first.toUpperCase();
   final first = parts.first.characters.first;
@@ -437,10 +431,9 @@ class _DoctorTile extends StatelessWidget {
             ),
             IconButton(
               tooltip: 'Abrir no Google Maps',
-              onPressed:
-                  doctor.fullAddress.isEmpty && doctor.clinic.isEmpty
-                      ? null
-                      : onMaps,
+              onPressed: doctor.fullAddress.isEmpty && doctor.clinic.isEmpty
+                  ? null
+                  : onMaps,
               icon: const Icon(Icons.map_outlined),
             ),
             PopupMenuButton<String>(
@@ -449,11 +442,10 @@ class _DoctorTile extends StatelessWidget {
                 if (value == 'edit') onEdit();
                 if (value == 'delete') onDelete();
               },
-              itemBuilder:
-                  (context) => const [
-                    PopupMenuItem(value: 'edit', child: Text('Editar')),
-                    PopupMenuItem(value: 'delete', child: Text('Excluir')),
-                  ],
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: 'edit', child: Text('Editar')),
+                PopupMenuItem(value: 'delete', child: Text('Excluir')),
+              ],
             ),
           ],
         ),

@@ -34,20 +34,19 @@ class HealthPlansScreen extends StatelessWidget {
           appBar: AppBar(title: const Text('Meus Planos de Saúde')),
           floatingActionButton:
               provider.isLoading || provider.healthPlans.isEmpty
-                  ? null
-                  : FloatingActionButton.extended(
-                    onPressed: () => _addPlan(context),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Adicionar plano'),
-                  ),
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () => _addPlan(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Adicionar plano'),
+                ),
           body: SafeArea(
-            child:
-                provider.isLoading
-                    ? const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                      child: Center(child: SkeletonList()),
-                    )
-                    : _buildList(context, provider),
+            child: provider.isLoading
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                    child: Center(child: SkeletonList()),
+                  )
+                : _buildList(context, provider),
           ),
         );
       },
@@ -138,24 +137,23 @@ class HealthPlansScreen extends StatelessWidget {
   ) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Excluir plano?'),
-            content: Text('Deseja realmente excluir "${plan.name}"?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                ),
-                child: const Text('Excluir'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Excluir plano?'),
+        content: Text('Deseja realmente excluir "${plan.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
           ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
     );
 
     if (confirmed == true) {
@@ -283,39 +281,37 @@ class _HealthPlanCard extends StatelessWidget {
                         if (value == 'edit') onEdit();
                         if (value == 'delete') onDelete();
                       },
-                      itemBuilder:
-                          (context) => [
-                            const PopupMenuItem(
-                              value: 'edit',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.edit_outlined, size: 20),
-                                  SizedBox(width: 12),
-                                  Text('Editar'),
-                                ],
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 20),
+                              SizedBox(width: 12),
+                              Text('Editar'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: AppSemanticColors.of(context).danger,
                               ),
-                            ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.delete_outline,
-                                    size: 20,
-                                    color: AppSemanticColors.of(context).danger,
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Excluir',
-                                    style: TextStyle(
-                                      color:
-                                          AppSemanticColors.of(context).danger,
-                                    ),
-                                  ),
-                                ],
+                              const SizedBox(width: 12),
+                              Text(
+                                'Excluir',
+                                style: TextStyle(
+                                  color: AppSemanticColors.of(context).danger,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -352,16 +348,15 @@ class _HealthPlanCard extends StatelessWidget {
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
-                    children:
-                        plan.specialties.take(5).map((s) {
-                          return Chip(
-                            label: Text(
-                              s,
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                            visualDensity: VisualDensity.compact,
-                          );
-                        }).toList(),
+                    children: plan.specialties.take(5).map((s) {
+                      return Chip(
+                        label: Text(
+                          s,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                      );
+                    }).toList(),
                   ),
                 ],
               ],

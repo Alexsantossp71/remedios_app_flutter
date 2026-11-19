@@ -88,15 +88,15 @@ class Consultation {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'doctorId': doctorId,
-        'date': date.toIso8601String(),
-        'title': title,
-        'notes': notes,
-        'status': status,
-        'returnDate': returnDate?.toIso8601String(),
-        'completedAt': completedAt?.toIso8601String(),
-      };
+    'id': id,
+    'doctorId': doctorId,
+    'date': date.toIso8601String(),
+    'title': title,
+    'notes': notes,
+    'status': status,
+    'returnDate': returnDate?.toIso8601String(),
+    'completedAt': completedAt?.toIso8601String(),
+  };
 
   Consultation copyWith({
     String? doctorId,
@@ -110,8 +110,9 @@ class Consultation {
     bool clearCompletedAt = false,
   }) {
     final newStatus = status ?? this.status;
-    final newReturnDate =
-        clearReturnDate ? null : (returnDate ?? this.returnDate);
+    final newReturnDate = clearReturnDate
+        ? null
+        : (returnDate ?? this.returnDate);
 
     // returnDate is only meaningful when the consultation is completed.
     // Reverting to a non-completed status clears it.
@@ -130,7 +131,9 @@ class Consultation {
         notes: notes ?? this.notes,
         status: newStatus,
         returnDate: null,
-        completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
+        completedAt: clearCompletedAt
+            ? null
+            : (completedAt ?? this.completedAt),
       );
     }
 

@@ -10,22 +10,20 @@ import '../services/lab_result_storage_service.dart';
 /// exame (o PWA mostra a evolução dos marcadores repetidos).
 class LabResultProvider extends ChangeNotifier {
   LabResultProvider({LabResultStorageService? storage})
-      : _storage = storage ?? LabResultStorageService();
+    : _storage = storage ?? LabResultStorageService();
 
   final LabResultStorageService _storage;
 
   List<LabResult> _results = [];
   bool _isLoading = true;
 
-  UnmodifiableListView<LabResult> get results =>
-      UnmodifiableListView(_results);
+  UnmodifiableListView<LabResult> get results => UnmodifiableListView(_results);
   bool get isLoading => _isLoading;
   bool get isEmpty => _results.isEmpty;
 
   /// Laudos do mais recente para o mais antigo.
   List<LabResult> get resultsByDate {
-    return [..._results]
-      ..sort((a, b) => b.date.compareTo(a.date));
+    return [..._results]..sort((a, b) => b.date.compareTo(a.date));
   }
 
   /// Evolução dos marcadores repetidos entre laudos (máximo 12, igual
@@ -57,8 +55,7 @@ class LabResultProvider extends ChangeNotifier {
   }
 
   Future<void> saveResult(LabResult result) async {
-    final existingIndex =
-        _results.indexWhere((item) => item.id == result.id);
+    final existingIndex = _results.indexWhere((item) => item.id == result.id);
     if (existingIndex == -1) {
       _results = [..._results, result];
     } else {

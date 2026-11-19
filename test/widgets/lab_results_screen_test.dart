@@ -47,8 +47,7 @@ void main() {
     );
   }
 
-  testWidgets('estado vazio mostra as duas chamadas de ação',
-      (tester) async {
+  testWidgets('estado vazio mostra as duas chamadas de ação', (tester) async {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
@@ -64,10 +63,7 @@ void main() {
           id: 'l1',
           date: DateTime(2026, 3, 12),
           labName: 'Lab Central',
-          values: [
-            glicemia(115, 'high'),
-            glicemia(90, 'normal'),
-          ],
+          values: [glicemia(115, 'high'), glicemia(90, 'normal')],
           notes: 'Coleta em jejum',
         ),
       );
@@ -88,8 +84,9 @@ void main() {
     expect(find.text('Histórico'), findsOneWidget);
   });
 
-  testWidgets('seção Evolução aparece quando há marcador repetido',
-      (tester) async {
+  testWidgets('seção Evolução aparece quando há marcador repetido', (
+    tester,
+  ) async {
     await tester.runAsync(() async {
       await labs.saveResult(
         LabResult(

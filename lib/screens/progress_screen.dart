@@ -41,12 +41,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       children: [
                         Text(
                           'Acompanhe sua constância e cuide da sua saúde.',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                         const SizedBox(height: 22),
                         _StatsRow(
@@ -64,16 +64,16 @@ class _ProgressScreenState extends State<ProgressScreen> {
                               firstDay: DateTime.utc(2020, 1, 1),
                               lastDay: DateTime.utc(2100, 12, 31),
                               focusedDay: _focusedDay,
-                              selectedDayPredicate:
-                                  (day) => isSameDay(_selectedDay, day),
+                              selectedDayPredicate: (day) =>
+                                  isSameDay(_selectedDay, day),
                               onDaySelected: (selectedDay, focusedDay) {
                                 setState(() {
                                   _selectedDay = selectedDay;
                                   _focusedDay = focusedDay;
                                 });
                               },
-                              onPageChanged:
-                                  (focusedDay) => _focusedDay = focusedDay,
+                              onPageChanged: (focusedDay) =>
+                                  _focusedDay = focusedDay,
                               calendarFormat: CalendarFormat.month,
                               headerStyle: const HeaderStyle(
                                 formatButtonVisible: false,
@@ -87,8 +87,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                   shape: BoxShape.circle,
                                 ),
                                 todayTextStyle: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
                                   fontWeight: FontWeight.w800,
                                 ),
                                 selectedDecoration: BoxDecoration(
@@ -107,12 +108,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                   if (adherence.total == 0) return null;
                                   final color =
                                       adherence.taken == adherence.total
-                                          ? semantic.success
-                                          : adherence.completed == 0
-                                          ? semantic.warning
-                                          : Theme.of(
-                                            context,
-                                          ).colorScheme.primary;
+                                      ? semantic.success
+                                      : adherence.completed == 0
+                                      ? semantic.warning
+                                      : Theme.of(context).colorScheme.primary;
                                   return Positioned(
                                     bottom: 3,
                                     child: Container(
@@ -143,14 +142,12 @@ class _ProgressScreenState extends State<ProgressScreen> {
                                 Text(
                                   'Últimos 14 dias: flor cheia = dia completo, '
                                   'broto = parcial, vaso vazio = sem doses.',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodySmall?.copyWith(
-                                    color:
-                                        Theme.of(
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(
                                           context,
                                         ).colorScheme.onSurfaceVariant,
-                                  ),
+                                      ),
                                 ),
                               ],
                             ),
@@ -188,10 +185,9 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: _StatCard(
             icon: Icons.check_circle_outline,
-            value:
-                todayAdherence.total == 0
-                    ? '—'
-                    : '${(todayAdherence.adherenceRate * 100).round()}%',
+            value: todayAdherence.total == 0
+                ? '—'
+                : '${(todayAdherence.adherenceRate * 100).round()}%',
             label: 'hoje',
             color: AppSemanticColors.of(context).success,
           ),
@@ -264,10 +260,9 @@ class _SelectedDayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = DateFormat("d 'de' MMMM", 'pt_BR').format(day);
-    final message =
-        adherence.total == 0
-            ? 'Nenhuma dose programada para este dia.'
-            : '${adherence.taken} de ${adherence.total} doses tomadas';
+    final message = adherence.total == 0
+        ? 'Nenhuma dose programada para este dia.'
+        : '${adherence.taken} de ${adherence.total} doses tomadas';
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -367,12 +362,11 @@ class _GardenPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final strokePaint =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.2
-          ..strokeCap = StrokeCap.round
-          ..color = stroke;
+    final strokePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..strokeCap = StrokeCap.round
+      ..color = stroke;
 
     final cellWidth = size.width / kinds.length;
     final baseY = size.height * 0.86;
@@ -436,13 +430,12 @@ class _GardenPainter extends CustomPainter {
     double baseY,
     Paint strokePaint,
   ) {
-    final pot =
-        Path()
-          ..moveTo(cx - 7, baseY - 2)
-          ..lineTo(cx + 7, baseY - 2)
-          ..lineTo(cx + 5, baseY - 14)
-          ..lineTo(cx - 5, baseY - 14)
-          ..close();
+    final pot = Path()
+      ..moveTo(cx - 7, baseY - 2)
+      ..lineTo(cx + 7, baseY - 2)
+      ..lineTo(cx + 5, baseY - 14)
+      ..lineTo(cx - 5, baseY - 14)
+      ..close();
     canvas.drawPath(pot, strokePaint..color = soil.withValues(alpha: .45));
   }
 

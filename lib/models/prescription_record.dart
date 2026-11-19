@@ -10,9 +10,9 @@ enum PrescriptionSource {
   prescriptionPhoto;
 
   String get label => switch (this) {
-        PrescriptionSource.manual => 'Cadastro manual',
-        PrescriptionSource.prescriptionPhoto => 'Foto da receita',
-      };
+    PrescriptionSource.manual => 'Cadastro manual',
+    PrescriptionSource.prescriptionPhoto => 'Foto da receita',
+  };
 
   static PrescriptionSource fromName(String? name) =>
       PrescriptionSource.values.firstWhere(
@@ -70,10 +70,9 @@ class PrescriptionRecord {
 
   /// Rótulo de CRM igual ao do catálogo (Doctor.crmLabel): "CRM 123456/SP".
   String get crmLabel => [
-        if (doctorCrm.trim().isNotEmpty) 'CRM ${doctorCrm.trim()}',
-        if (doctorCrmState.trim().isNotEmpty)
-          doctorCrmState.trim().toUpperCase(),
-      ].join('/');
+    if (doctorCrm.trim().isNotEmpty) 'CRM ${doctorCrm.trim()}',
+    if (doctorCrmState.trim().isNotEmpty) doctorCrmState.trim().toUpperCase(),
+  ].join('/');
 
   factory PrescriptionRecord.fromJson(Map<String, dynamic> json) {
     return PrescriptionRecord(
@@ -92,16 +91,16 @@ class PrescriptionRecord {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'treatmentId': treatmentId,
-        'doctorId': doctorId,
-        'doctorName': doctorName,
-        'doctorCrm': doctorCrm,
-        'doctorCrmState': doctorCrmState,
-        'prescribedOn': prescribedOn.toIso8601String(),
-        'source': source.name,
-        'createdAt': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'treatmentId': treatmentId,
+    'doctorId': doctorId,
+    'doctorName': doctorName,
+    'doctorCrm': doctorCrm,
+    'doctorCrmState': doctorCrmState,
+    'prescribedOn': prescribedOn.toIso8601String(),
+    'source': source.name,
+    'createdAt': createdAt.toIso8601String(),
+  };
 
   /// O registro corresponde à receita atual do tratamento? (mesma
   /// identidade de prescritor e data) — usado para não duplicar registros

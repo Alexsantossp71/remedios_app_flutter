@@ -167,8 +167,9 @@ void main() {
       expect(updated.createdAt, original.createdAt);
       expect(updated.updatedAt, isNot(original.updatedAt));
       expect(
-        DateTime.parse(updated.updatedAt)
-                .isAfter(DateTime.parse(original.updatedAt)) ||
+        DateTime.parse(
+              updated.updatedAt,
+            ).isAfter(DateTime.parse(original.updatedAt)) ||
             updated.updatedAt != original.updatedAt,
         isTrue,
       );

@@ -46,28 +46,27 @@ class _RecordCardState extends State<RecordCard> {
     } else if (_hovered) {
       borderColor = BrandColors.teal600.withValues(alpha: .30);
     } else {
-      borderColor =
-          isDark
-              ? const Color(0xFF3A5153)
-              : const Color(0xFFD2E1DF).withValues(alpha: .9);
+      borderColor = isDark
+          ? const Color(0xFF3A5153)
+          : const Color(0xFFD2E1DF).withValues(alpha: .9);
     }
 
     // Com acento, a superfície é chapada (véu de ~8% sobre a base) —
     // o mesmo papel do `background-color` com alpha nas variações de
     // destaque do CSS. Sem acento, mantém o gradiente 145° de assinatura.
-    final Color? flatSurface =
-        accent == null
-            ? null
-            : Color.alphaBlend(
-              accent.withValues(alpha: .08),
-              isDark ? BrandColors.darkSurface : Colors.white,
-            );
+    final Color? flatSurface = accent == null
+        ? null
+        : Color.alphaBlend(
+            accent.withValues(alpha: .08),
+            isDark ? BrandColors.darkSurface : Colors.white,
+          );
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
-      cursor:
-          widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : MouseCursor.defer,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOut,
@@ -76,25 +75,22 @@ class _RecordCardState extends State<RecordCard> {
           // linear-gradient(145deg, ...) — claro #fff → #fbfefe,
           // escuro #1e293b → #1a2a34.
           color: flatSurface,
-          gradient:
-              flatSurface == null
-                  ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors:
-                        isDark
-                            ? const [BrandColors.darkSurface, Color(0xFF1A2A34)]
-                            : const [Colors.white, Color(0xFFFBFEFE)],
-                  )
-                  : null,
+          gradient: flatSurface == null
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? const [BrandColors.darkSurface, Color(0xFF1A2A34)]
+                      : const [Colors.white, Color(0xFFFBFEFE)],
+                )
+              : null,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: borderColor),
           boxShadow: [
             BoxShadow(
-              color:
-                  isDark
-                      ? Colors.black.withValues(alpha: .14)
-                      : const Color(0xFF0F3234).withValues(alpha: .05),
+              color: isDark
+                  ? Colors.black.withValues(alpha: .14)
+                  : const Color(0xFF0F3234).withValues(alpha: .05),
               offset: Offset(0, isDark ? 6 : 5),
               blurRadius: isDark ? 20 : 18,
             ),

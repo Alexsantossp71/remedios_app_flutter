@@ -46,10 +46,10 @@ class DoseEvent {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'treatmentId': treatmentId,
-        'scheduledAt': scheduledAt.toIso8601String(),
-        'status': status.name,
-        'completedAt': completedAt?.toIso8601String(),
-      };
+    'id': id,
+    'treatmentId': treatmentId,
+    'scheduledAt': scheduledAt.toIso8601String(),
+    'status': status.name,
+    'completedAt': completedAt?.toIso8601String(),
+  };
 }

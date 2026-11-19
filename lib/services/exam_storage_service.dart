@@ -7,7 +7,7 @@ import 'database_service.dart';
 /// linha (base64 JPEG) — mesma decisão do PWA, sem novo arquivo no disco.
 class ExamStorageService {
   ExamStorageService({DatabaseService? dbService})
-      : _dbService = dbService ?? DatabaseService.instance;
+    : _dbService = dbService ?? DatabaseService.instance;
 
   final DatabaseService _dbService;
 
@@ -31,8 +31,7 @@ class ExamStorageService {
         doctorName: row['doctor_name'] as String? ?? '',
         place: row['place'] as String? ?? '',
         results: row['results'] as String? ?? '',
-        createdAt:
-            createdAtRaw != null ? DateTime.parse(createdAtRaw) : null,
+        createdAt: createdAtRaw != null ? DateTime.parse(createdAtRaw) : null,
       );
     }).toList();
   }
@@ -69,18 +68,18 @@ class ExamStorageService {
   }
 
   Map<String, Object?> _rowOf(Exam exam, String nowIso) => {
-        'id': exam.id,
-        'name': exam.name,
-        'category': exam.category,
-        'status': exam.status,
-        'date': exam.date.toUtc().toIso8601String(),
-        'time': exam.time,
-        'photo': exam.photo,
-        'doctor_id': exam.doctorId,
-        'doctor_name': exam.doctorName,
-        'place': exam.place,
-        'results': exam.results,
-        'created_at': exam.createdAt?.toUtc().toIso8601String() ?? nowIso,
-        'updated_at': nowIso,
-      };
+    'id': exam.id,
+    'name': exam.name,
+    'category': exam.category,
+    'status': exam.status,
+    'date': exam.date.toUtc().toIso8601String(),
+    'time': exam.time,
+    'photo': exam.photo,
+    'doctor_id': exam.doctorId,
+    'doctor_name': exam.doctorName,
+    'place': exam.place,
+    'results': exam.results,
+    'created_at': exam.createdAt?.toUtc().toIso8601String() ?? nowIso,
+    'updated_at': nowIso,
+  };
 }

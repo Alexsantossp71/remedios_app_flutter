@@ -27,10 +27,7 @@ import '../widgets/stepped_form_sheet.dart';
 class ExamsScreen extends StatelessWidget {
   const ExamsScreen({super.key});
 
-  Future<void> _openExamForm(
-    BuildContext context, {
-    Exam? exam,
-  }) async {
+  Future<void> _openExamForm(BuildContext context, {Exam? exam}) async {
     final result = await showSteppedFormSheet<Exam>(
       context: context,
       builder: (_) => ExamFormDialog(initialExam: exam),
@@ -98,21 +95,17 @@ class ExamsScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Exames',
-                            style: Theme.of(context)
-                                .textTheme
-                                .headlineSmall
+                            style: Theme.of(context).textTheme.headlineSmall
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                           const SizedBox(height: 5),
                           Text(
                             'Do pedido do médico ao resultado do laudo.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                           ),
                         ],
@@ -209,7 +202,8 @@ class ExamsScreen extends StatelessWidget {
                     itemCount: pending.length,
                     itemBuilder: (context, index) => _ExamCard(
                       exam: pending[index],
-                      onEdit: () => _openExamForm(context, exam: pending[index]),
+                      onEdit: () =>
+                          _openExamForm(context, exam: pending[index]),
                       onDelete: () => _confirmDelete(context, pending[index]),
                     ),
                     separatorBuilder: (context, index) =>
@@ -319,8 +313,7 @@ class _ExamCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                       child: Builder(
                         builder: (context) {
-                          final Uint8List bytes =
-                              base64Decode(exam.photo!);
+                          final Uint8List bytes = base64Decode(exam.photo!);
                           return Image.memory(
                             bytes,
                             width: 52,
@@ -361,10 +354,7 @@ class _ExamCard extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 4,
                       children: [
-                        _StatusChip(
-                          label: exam.statusLabel,
-                          color: accent,
-                        ),
+                        _StatusChip(label: exam.statusLabel, color: accent),
                         if (exam.category.isNotEmpty)
                           _CategoryChip(label: exam.category),
                       ],
@@ -407,10 +397,7 @@ class _ExamCard extends StatelessWidget {
                   text: 'Solicitado por ${exam.doctorName}',
                 ),
               if (exam.place.isNotEmpty)
-                _DetailLine(
-                  icon: Icons.place_outlined,
-                  text: exam.place,
-                ),
+                _DetailLine(icon: Icons.place_outlined, text: exam.place),
             ],
           ),
           if (exam.results.isNotEmpty) ...[
@@ -481,9 +468,9 @@ class _StatusChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: isDark ? color : Color.lerp(color, Colors.black, .25),
-            ),
+          fontWeight: FontWeight.w800,
+          color: isDark ? color : Color.lerp(color, Colors.black, .25),
+        ),
       ),
     );
   }
@@ -508,9 +495,9 @@ class _CategoryChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: isDark ? BrandColors.darkInk : BrandColors.ink,
-            ),
+          fontWeight: FontWeight.w700,
+          color: isDark ? BrandColors.darkInk : BrandColors.ink,
+        ),
       ),
     );
   }

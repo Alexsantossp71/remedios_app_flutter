@@ -132,10 +132,9 @@ class _TodayScreenState extends State<TodayScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final consultation = consultations[index];
-                    final doctor =
-                        doctorProvider.doctors
-                            .where((d) => d.id == consultation.doctorId)
-                            .firstOrNull;
+                    final doctor = doctorProvider.doctors
+                        .where((d) => d.id == consultation.doctorId)
+                        .firstOrNull;
                     return _TodayConsultationCard(
                       consultation: consultation,
                       doctor: doctor,
@@ -158,10 +157,9 @@ class _TodayScreenState extends State<TodayScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                 sliver: SliverToBoxAdapter(
                   child: SectionHeader(
-                    title:
-                        isToday
-                            ? 'Medicamentos de Hoje (${events.length})'
-                            : 'Medicamentos Programados (${events.length})',
+                    title: isToday
+                        ? 'Medicamentos de Hoje (${events.length})'
+                        : 'Medicamentos Programados (${events.length})',
                   ),
                 ),
               ),
@@ -207,8 +205,10 @@ class _TodayScreenState extends State<TodayScreen> {
                                   : 'Dose pulada.',
                               action: SnackBarAction(
                                 label: 'Desfazer',
-                                onPressed: () => therapyProvider
-                                    .setDoseStatus(event, DoseStatus.pending),
+                                onPressed: () => therapyProvider.setDoseStatus(
+                                  event,
+                                  DoseStatus.pending,
+                                ),
                               ),
                             );
                           },
@@ -402,10 +402,9 @@ class _TodayHeader extends StatelessWidget {
                 child: StatCard(
                   icon: Icons.event_available_rounded,
                   value: '$consultationCount',
-                  label:
-                      consultationCount == 1
-                          ? 'consulta no dia'
-                          : 'consultas no dia',
+                  label: consultationCount == 1
+                      ? 'consulta no dia'
+                      : 'consultas no dia',
                   iconColor: BrandColors.teal600,
                 ),
               ),
@@ -473,14 +472,13 @@ class _TodayConsultationCard extends StatelessWidget {
 
     // Contagem regressiva até a consulta (em relação ao dia selecionado).
     final daysUntil = _daysUntil();
-    final countdownBadge =
-        consultation.status == ConsultationStatus.scheduled
-            ? (daysUntil == 0
-                ? 'Hoje'
-                : daysUntil == 1
-                ? 'Amanhã'
-                : 'Em $daysUntil dias')
-            : null;
+    final countdownBadge = consultation.status == ConsultationStatus.scheduled
+        ? (daysUntil == 0
+              ? 'Hoje'
+              : daysUntil == 1
+              ? 'Amanhã'
+              : 'Em $daysUntil dias')
+        : null;
 
     final doctorName = doctor?.name ?? 'Médico não informado';
     final doctorSpecialty = doctor?.specialty ?? '';
@@ -562,8 +560,8 @@ class _TodayConsultationCard extends StatelessWidget {
                         consultation.title.isNotEmpty
                             ? consultation.title
                             : (doctorSpecialty.isNotEmpty
-                                ? 'Consulta de $doctorSpecialty'
-                                : 'Consulta médica'),
+                                  ? 'Consulta de $doctorSpecialty'
+                                  : 'Consulta médica'),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w800,
                         ),
@@ -584,48 +582,47 @@ class _TodayConsultationCard extends StatelessWidget {
                 PopupMenuButton<String>(
                   tooltip: 'Status da consulta',
                   onSelected: onStatusChanged,
-                  itemBuilder:
-                      (context) => [
-                        if (consultation.status != ConsultationStatus.completed)
-                          const PopupMenuItem(
-                            value: ConsultationStatus.completed,
-                            child: ListTile(
-                              leading: Icon(
-                                Icons.check_circle_outline,
-                                color: Colors.green,
-                              ),
-                              title: Text('Marcar como realizada'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
+                  itemBuilder: (context) => [
+                    if (consultation.status != ConsultationStatus.completed)
+                      const PopupMenuItem(
+                        value: ConsultationStatus.completed,
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.check_circle_outline,
+                            color: Colors.green,
                           ),
-                        if (consultation.status != ConsultationStatus.scheduled)
-                          const PopupMenuItem(
-                            value: ConsultationStatus.scheduled,
-                            child: ListTile(
-                              leading: Icon(
-                                Icons.schedule_outlined,
-                                color: Colors.blue,
-                              ),
-                              title: Text('Marcar como agendada'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
+                          title: Text('Marcar como realizada'),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    if (consultation.status != ConsultationStatus.scheduled)
+                      const PopupMenuItem(
+                        value: ConsultationStatus.scheduled,
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.schedule_outlined,
+                            color: Colors.blue,
                           ),
-                        if (consultation.status != ConsultationStatus.cancelled)
-                          const PopupMenuItem(
-                            value: ConsultationStatus.cancelled,
-                            child: ListTile(
-                              leading: Icon(
-                                Icons.cancel_outlined,
-                                color: Colors.red,
-                              ),
-                              title: Text('Cancelar consulta'),
-                              dense: true,
-                              contentPadding: EdgeInsets.zero,
-                            ),
+                          title: Text('Marcar como agendada'),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    if (consultation.status != ConsultationStatus.cancelled)
+                      const PopupMenuItem(
+                        value: ConsultationStatus.cancelled,
+                        child: ListTile(
+                          leading: Icon(
+                            Icons.cancel_outlined,
+                            color: Colors.red,
                           ),
-                      ],
+                          title: Text('Cancelar consulta'),
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                  ],
                   child: Icon(Icons.more_vert, color: statusColor),
                 ),
               ],
@@ -684,12 +681,11 @@ class DoseCard extends StatelessWidget {
     final isSkipped = event.status == DoseStatus.skipped;
     final isPending = event.status == DoseStatus.pending;
     final semantic = AppSemanticColors.of(context);
-    final statusColor =
-        isTaken
-            ? semantic.success
-            : isSkipped
-            ? semantic.danger
-            : theme.colorScheme.primary;
+    final statusColor = isTaken
+        ? semantic.success
+        : isSkipped
+        ? semantic.danger
+        : theme.colorScheme.primary;
 
     final BorderSide side;
     if (isPending) {
@@ -746,10 +742,9 @@ class DoseCard extends StatelessWidget {
                     treatment.name,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w800,
-                      decoration:
-                          isSkipped || isTaken
-                              ? TextDecoration.lineThrough
-                              : null,
+                      decoration: isSkipped || isTaken
+                          ? TextDecoration.lineThrough
+                          : null,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -853,12 +848,11 @@ class _DoseTimelineRow extends StatelessWidget {
     final semantic = AppSemanticColors.of(context);
     final isTaken = event.status == DoseStatus.taken;
     final isSkipped = event.status == DoseStatus.skipped;
-    final dotColor =
-        isTaken
-            ? semantic.success
-            : isSkipped
-            ? semantic.danger
-            : theme.colorScheme.primary;
+    final dotColor = isTaken
+        ? semantic.success
+        : isSkipped
+        ? semantic.danger
+        : theme.colorScheme.primary;
 
     return IntrinsicHeight(
       child: Row(
@@ -871,10 +865,9 @@ class _DoseTimelineRow extends StatelessWidget {
                 Expanded(
                   child: Container(
                     width: 2.5,
-                    color:
-                        isFirst
-                            ? Colors.transparent
-                            : dotColor.withValues(alpha: .35),
+                    color: isFirst
+                        ? Colors.transparent
+                        : dotColor.withValues(alpha: .35),
                   ),
                 ),
                 AnimatedContainer(
@@ -894,10 +887,9 @@ class _DoseTimelineRow extends StatelessWidget {
                 Expanded(
                   child: Container(
                     width: 2.5,
-                    color:
-                        isLast
-                            ? Colors.transparent
-                            : dotColor.withValues(alpha: .35),
+                    color: isLast
+                        ? Colors.transparent
+                        : dotColor.withValues(alpha: .35),
                   ),
                 ),
               ],
@@ -1074,15 +1066,14 @@ class _CapsuleConfettiState extends State<_CapsuleConfetti>
     return IgnorePointer(
       child: AnimatedBuilder(
         animation: _controller,
-        builder:
-            (context, _) => CustomPaint(
-              painter: _ConfettiPainter(
-                progress: _controller.value,
-                particles: _particles,
-                baseColor: semantic.success,
-              ),
-              size: MediaQuery.sizeOf(context),
-            ),
+        builder: (context, _) => CustomPaint(
+          painter: _ConfettiPainter(
+            progress: _controller.value,
+            particles: _particles,
+            baseColor: semantic.success,
+          ),
+          size: MediaQuery.sizeOf(context),
+        ),
       ),
     );
   }

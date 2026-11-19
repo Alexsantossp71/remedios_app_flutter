@@ -64,8 +64,7 @@ void main() {
     });
   });
 
-  testWidgets('AppShell pinta o palco e repassa o filho',
-      (tester) async {
+  testWidgets('AppShell pinta o palco e repassa o filho', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -75,15 +74,14 @@ void main() {
     expect(find.text('palco'), findsOneWidget);
   });
 
-  testWidgets('DashboardHero renderiza o conteúdo sobre o gradiente',
-      (tester) async {
+  testWidgets('DashboardHero renderiza o conteúdo sobre o gradiente', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
         home: const Scaffold(
-          body: Center(
-            child: DashboardHero(child: Text('herói')),
-          ),
+          body: Center(child: DashboardHero(child: Text('herói'))),
         ),
       ),
     );
@@ -125,17 +123,13 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('RecordCard renderiza conteúdo e dispara onTap',
-      (tester) async {
+  testWidgets('RecordCard renderiza conteúdo e dispara onTap', (tester) async {
     var taps = 0;
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
         home: Scaffold(
-          body: RecordCard(
-            onTap: () => taps++,
-            child: const Text('registro'),
-          ),
+          body: RecordCard(onTap: () => taps++, child: const Text('registro')),
         ),
       ),
     );
@@ -144,14 +138,11 @@ void main() {
     expect(taps, 1);
   });
 
-  testWidgets('BrandMark desenha o glifo branco no gradiente',
-      (tester) async {
+  testWidgets('BrandMark desenha o glifo branco no gradiente', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        home: const Scaffold(
-          body: Center(child: BrandMark(size: 48)),
-        ),
+        home: const Scaffold(body: Center(child: BrandMark(size: 48))),
       ),
     );
     final icon = tester.widget<Icon>(find.byType(Icon));
@@ -159,8 +150,9 @@ void main() {
     expect(icon.size, closeTo(48 * .52, .01));
   });
 
-  testWidgets('tema escuro mantém os componentes de assinatura legíveis',
-      (tester) async {
+  testWidgets('tema escuro mantém os componentes de assinatura legíveis', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark(),

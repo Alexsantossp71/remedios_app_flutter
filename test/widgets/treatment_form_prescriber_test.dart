@@ -42,8 +42,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('passo 3 tem a seção "Quem receitou" com data da receita',
-      (tester) async {
+  testWidgets('passo 3 tem a seção "Quem receitou" com data da receita', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(home: Scaffold(body: TreatmentFormDialog())),
     );
@@ -57,15 +58,18 @@ void main() {
 
     expect(find.text('Quem receitou'), findsOneWidget);
     expect(
-      find.text('Fica no registro do tratamento: quem prescreveu e em que dia.'),
+      find.text(
+        'Fica no registro do tratamento: quem prescreveu e em que dia.',
+      ),
       findsOneWidget,
     );
     expect(find.text('Médico que receitou'), findsOneWidget);
     expect(find.textContaining('Receita emitida em'), findsOneWidget);
   });
 
-  testWidgets('médico digitado vira registro no tratamento salvo',
-      (tester) async {
+  testWidgets('médico digitado vira registro no tratamento salvo', (
+    tester,
+  ) async {
     Treatment? saved;
     await tester.pumpWidget(
       MaterialApp(
@@ -107,10 +111,7 @@ void main() {
       find.widgetWithText(TextField, 'CRM (opcional)'),
       '123456',
     );
-    await tester.enterText(
-      find.widgetWithText(TextField, 'UF'),
-      'SP',
-    );
+    await tester.enterText(find.widgetWithText(TextField, 'UF'), 'SP');
 
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
@@ -125,8 +126,9 @@ void main() {
     expect(result.prescribedOn, isNotNull);
   });
 
-  testWidgets('médico lido da receita abre preenchido para conferência',
-      (tester) async {
+  testWidgets('médico lido da receita abre preenchido para conferência', (
+    tester,
+  ) async {
     await openForm(
       tester,
       draft: const TreatmentDraft(
@@ -173,8 +175,9 @@ void main() {
     expect(find.text('Salvar'), findsOneWidget);
   });
 
-  testWidgets('catálogo vazio mostra o cadastro inline de médico',
-      (tester) async {
+  testWidgets('catálogo vazio mostra o cadastro inline de médico', (
+    tester,
+  ) async {
     await openForm(
       tester,
       draft: const TreatmentDraft(
@@ -197,8 +200,9 @@ void main() {
     expect(find.text('Cadastrar médico'), findsOneWidget);
   });
 
-  testWidgets('médico do catálogo preenche nome e CRM com um toque',
-      (tester) async {
+  testWidgets('médico do catálogo preenche nome e CRM com um toque', (
+    tester,
+  ) async {
     await openForm(
       tester,
       draft: const TreatmentDraft(
@@ -208,7 +212,12 @@ void main() {
         doseTimes: [DoseTime(hour: 8, minute: 0)],
       ),
       doctorCatalog: const [
-        Doctor(id: 'doc-1', name: 'Dra. Ana Prado', crm: '654321', crmState: 'SP'),
+        Doctor(
+          id: 'doc-1',
+          name: 'Dra. Ana Prado',
+          crm: '654321',
+          crmState: 'SP',
+        ),
       ],
     );
 
@@ -225,8 +234,9 @@ void main() {
     expect(find.text('SP'), findsWidgets);
   });
 
-  testWidgets('histórico de receitas fica à disposição na edição',
-      (tester) async {
+  testWidgets('histórico de receitas fica à disposição na edição', (
+    tester,
+  ) async {
     Treatment? saved;
     await tester.pumpWidget(
       MaterialApp(
@@ -235,39 +245,38 @@ void main() {
             onPressed: () async {
               saved = await showDialog<Treatment>(
                 context: context,
-                builder:
-                    (_) => TreatmentFormDialog(
-                      initialTreatment: Treatment(
-                        id: 'treat-1',
-                        name: 'Metotrexato',
-                        dosage: '15MG',
-                        presentation: 'Comprimido',
-                        instructions: '',
-                        startDate: DateTime(2026, 11, 1),
-                        endDate: null,
-                        frequency: TreatmentFrequency.weekly,
-                        doseTimes: const [DoseTime(hour: 8, minute: 0)],
-                        weekdays: const [DateTime.saturday],
-                        stock: 4,
-                        refillThreshold: 1,
-                        prescriberName: 'Dr. Carlos Almeida',
-                        prescriberCrm: '123456',
-                        prescriberCrmState: 'SP',
-                        prescribedOn: DateTime(2026, 11, 15),
-                      ),
-                      prescriptionHistory: [
-                        PrescriptionRecord(
-                          id: 'rec-old',
-                          treatmentId: 'treat-1',
-                          doctorName: 'Dra. Ana Prado',
-                          doctorCrm: '654321',
-                          doctorCrmState: 'SP',
-                          prescribedOn: DateTime(2026, 2, 10),
-                          source: PrescriptionSource.prescriptionPhoto,
-                          createdAt: DateTime(2026, 2, 10, 9),
-                        ),
-                      ],
+                builder: (_) => TreatmentFormDialog(
+                  initialTreatment: Treatment(
+                    id: 'treat-1',
+                    name: 'Metotrexato',
+                    dosage: '15MG',
+                    presentation: 'Comprimido',
+                    instructions: '',
+                    startDate: DateTime(2026, 11, 1),
+                    endDate: null,
+                    frequency: TreatmentFrequency.weekly,
+                    doseTimes: const [DoseTime(hour: 8, minute: 0)],
+                    weekdays: const [DateTime.saturday],
+                    stock: 4,
+                    refillThreshold: 1,
+                    prescriberName: 'Dr. Carlos Almeida',
+                    prescriberCrm: '123456',
+                    prescriberCrmState: 'SP',
+                    prescribedOn: DateTime(2026, 11, 15),
+                  ),
+                  prescriptionHistory: [
+                    PrescriptionRecord(
+                      id: 'rec-old',
+                      treatmentId: 'treat-1',
+                      doctorName: 'Dra. Ana Prado',
+                      doctorCrm: '654321',
+                      doctorCrmState: 'SP',
+                      prescribedOn: DateTime(2026, 2, 10),
+                      source: PrescriptionSource.prescriptionPhoto,
+                      createdAt: DateTime(2026, 2, 10, 9),
                     ),
+                  ],
+                ),
               );
             },
             child: const Text('abrir'),

@@ -73,8 +73,9 @@ void main() {
     expect(find.text('Perfil'), findsOneWidget);
   });
 
-  testWidgets('Doctors catalog is reachable from the main navigation',
-      (tester) async {
+  testWidgets('Doctors catalog is reachable from the main navigation', (
+    tester,
+  ) async {
     await pumpApp(tester);
     await _openDoctorsViaProfile(tester);
 
@@ -82,8 +83,9 @@ void main() {
     expect(find.text('Seu catálogo começa aqui'), findsOneWidget);
   });
 
-  testWidgets('Can add a doctor with contact and location details',
-      (tester) async {
+  testWidgets('Can add a doctor with contact and location details', (
+    tester,
+  ) async {
     await pumpApp(tester);
     await _openDoctorsViaProfile(tester);
     await tester.tap(find.text('Cadastrar primeiro médico'));
@@ -162,7 +164,9 @@ void main() {
     );
     await tester.enterText(find.widgetWithText(TextFormField, 'Número'), '45');
     await tester.enterText(
-        find.widgetWithText(TextFormField, 'Cidade'), 'Niterói');
+      find.widgetWithText(TextFormField, 'Cidade'),
+      'Niterói',
+    );
     await tester.ensureVisible(find.byKey(const ValueKey('addressUf')));
     await _pumpFor(tester);
     await tester.tap(find.byKey(const ValueKey('addressUf')));
@@ -228,5 +232,3 @@ Future<void> _resetInMemoryDb() async {
     await db.delete(table);
   }
 }
-
-

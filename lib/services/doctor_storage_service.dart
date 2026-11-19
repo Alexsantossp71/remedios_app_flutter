@@ -7,7 +7,7 @@ class DoctorStorageService {
   final DatabaseService _dbService;
 
   DoctorStorageService({DatabaseService? dbService})
-      : _dbService = dbService ?? DatabaseService.instance;
+    : _dbService = dbService ?? DatabaseService.instance;
 
   Future<List<Doctor>> loadDoctors() async {
     final db = await _dbService.database;
@@ -40,9 +40,36 @@ class DoctorStorageService {
     final db = await _dbService.database;
     final nowIso = DateTime.now().toUtc().toIso8601String();
 
-    await db.insert(
-      'doctors',
-      {
+    await db.insert('doctors', {
+      'id': doctor.id,
+      'name': doctor.name,
+      'specialty': doctor.specialty,
+      'crm': doctor.crm,
+      'crm_state': doctor.crmState,
+      'phone': doctor.phone,
+      'email': doctor.email,
+      'clinic': doctor.clinic,
+      'street': doctor.street,
+      'number': doctor.number,
+      'complement': doctor.complement,
+      'neighborhood': doctor.neighborhood,
+      'city': doctor.city,
+      'state': doctor.state,
+      'postal_code': doctor.postalCode,
+      'health_plans': doctor.healthPlans,
+      'notes': doctor.notes,
+      'created_at': nowIso,
+      'updated_at': nowIso,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> saveDoctors(List<Doctor> doctors) async {
+    final db = await _dbService.database;
+    final batch = db.batch();
+    final nowIso = DateTime.now().toUtc().toIso8601String();
+
+    for (final doctor in doctors) {
+      batch.insert('doctors', {
         'id': doctor.id,
         'name': doctor.name,
         'specialty': doctor.specialty,
@@ -62,42 +89,7 @@ class DoctorStorageService {
         'notes': doctor.notes,
         'created_at': nowIso,
         'updated_at': nowIso,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
-
-  Future<void> saveDoctors(List<Doctor> doctors) async {
-    final db = await _dbService.database;
-    final batch = db.batch();
-    final nowIso = DateTime.now().toUtc().toIso8601String();
-
-    for (final doctor in doctors) {
-      batch.insert(
-        'doctors',
-        {
-          'id': doctor.id,
-          'name': doctor.name,
-          'specialty': doctor.specialty,
-          'crm': doctor.crm,
-          'crm_state': doctor.crmState,
-          'phone': doctor.phone,
-          'email': doctor.email,
-          'clinic': doctor.clinic,
-          'street': doctor.street,
-          'number': doctor.number,
-          'complement': doctor.complement,
-          'neighborhood': doctor.neighborhood,
-          'city': doctor.city,
-          'state': doctor.state,
-          'postal_code': doctor.postalCode,
-          'health_plans': doctor.healthPlans,
-          'notes': doctor.notes,
-          'created_at': nowIso,
-          'updated_at': nowIso,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }

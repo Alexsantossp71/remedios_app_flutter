@@ -22,12 +22,9 @@ import 'package:http/http.dart' as http;
 /// Em plataformas nativas não há navegador: enviamos manualmente a mesma
 /// origem autorizada do PWA para passar pela verificação de CORS do proxy.
 class AiProxyClient {
-  AiProxyClient({
-    http.Client? client,
-    String? proxyUrl,
-    bool? isWebOverride,
-  })  : _client = client ?? http.Client(),
-        _isWeb = isWebOverride ?? kIsWeb;
+  AiProxyClient({http.Client? client, String? proxyUrl, bool? isWebOverride})
+    : _client = client ?? http.Client(),
+      _isWeb = isWebOverride ?? kIsWeb;
 
   final http.Client _client;
   final bool _isWeb;
@@ -37,8 +34,7 @@ class AiProxyClient {
       'https://remedios-ai-proxy.alexsantossp71.workers.dev';
 
   /// Origem autorizada usada nas chamadas nativas (mesma do PWA React).
-  static const String nativeOrigin =
-      'https://alexsantossp71-lgtm.github.io';
+  static const String nativeOrigin = 'https://alexsantossp71-lgtm.github.io';
 
   static const String defaultTextModel = 'z-ai/glm-5.3-flash';
 
@@ -143,12 +139,14 @@ class AiProxyClient {
         lastError = error;
         final status = error.status;
         final detail = error.message.toLowerCase();
-        final proxyRateLimited = status == 429 &&
+        final proxyRateLimited =
+            status == 429 &&
             (detail.contains('limite de uso do proxy') ||
                 detail.contains('limite de solicitações atingido'));
         // Falhas de autenticação, corpo grande e limite local do proxy não
         // melhoram trocando de modelo — espelho exato do canFallback do PWA.
-        final canFallback = !proxyRateLimited &&
+        final canFallback =
+            !proxyRateLimited &&
             (status == null ||
                 status == 403 ||
                 status == 404 ||
@@ -244,17 +242,12 @@ class AiProxyClient {
   Future<Set<String>?> _loadCatalogIds() async {
     final now = DateTime.now();
     final expiresAt = _catalogExpiresAt;
-    if (_catalogIds != null &&
-        expiresAt != null &&
-        expiresAt.isAfter(now)) {
+    if (_catalogIds != null && expiresAt != null && expiresAt.isAfter(now)) {
       return _catalogIds;
     }
     try {
       final response = await _client
-          .get(
-            Uri.parse('$defaultProxyUrl/v1/models'),
-            headers: _headers(),
-          )
+          .get(Uri.parse('$defaultProxyUrl/v1/models'), headers: _headers())
           .timeout(catalogTimeout);
       if (response.statusCode != 200) return null;
       final decoded = jsonDecode(response.body);
@@ -282,42 +275,42 @@ class AiProxyClient {
     if (status == 401) {
       return detail.isEmpty
           ? 'A autenticação do serviço de IA foi recusada. Verifique a chave '
-              'NVIDIA cadastrada no Worker.'
+                'NVIDIA cadastrada no Worker.'
           : detail;
     }
     if (status == 403) {
       return detail.isEmpty
           ? 'O serviço recusou a solicitação. Verifique se o modelo está '
-              'autorizado para a conta NVIDIA e na lista permitida do Worker.'
+                'autorizado para a conta NVIDIA e na lista permitida do Worker.'
           : detail;
     }
     if (status == 404) {
       return detail.isEmpty
           ? 'O modelo ou endereço solicitado não foi encontrado. Verifique a '
-              'configuração do serviço de IA.'
+                'configuração do serviço de IA.'
           : detail;
     }
     if (status == 413) {
       return detail.isEmpty
           ? 'A foto ou o texto é muito grande. Escolha uma imagem menor ou '
-              'reduza o texto.'
+                'reduza o texto.'
           : detail;
     }
     if (status == 429) {
       return detail.isEmpty
           ? 'O limite de solicitações foi atingido. Aguarde alguns instantes '
-              'e tente novamente.'
+                'e tente novamente.'
           : detail;
     }
     if (status >= 500) {
       return detail.isEmpty
           ? 'O serviço de IA está temporariamente indisponível. Tente '
-              'novamente mais tarde.'
+                'novamente mais tarde.'
           : detail;
     }
     return detail.isEmpty
         ? 'A solicitação ao serviço de IA falhou (HTTP $status). Tente '
-            'novamente.'
+              'novamente.'
         : detail;
   }
 
@@ -374,4 +367,3 @@ class AiException implements Exception {
   @override
   String toString() => message;
 }
-

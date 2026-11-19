@@ -9,12 +9,13 @@ import 'package:remedios_app_flutter/widgets/empty_state.dart';
 /// quando o tema fornece uma; sem ilustração, o círculo volta.
 void main() {
   Widget host(Widget child) => MaterialApp(
-        theme: AppTheme.light(),
-        home: Scaffold(body: child),
-      );
+    theme: AppTheme.light(),
+    home: Scaffold(body: child),
+  );
 
-  testWidgets('EmptyState com ilustração desenha o CustomPaint do tema',
-      (tester) async {
+  testWidgets('EmptyState com ilustração desenha o CustomPaint do tema', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       host(
         const EmptyState(
@@ -33,8 +34,9 @@ void main() {
     expect(find.text('Seu dia está livre'), findsOneWidget);
   });
 
-  testWidgets('EmptyState sem ilustração mantém o círculo com ícone',
-      (tester) async {
+  testWidgets('EmptyState sem ilustração mantém o círculo com ícone', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       host(
         const EmptyState(
@@ -49,8 +51,9 @@ void main() {
     expect(find.byIcon(Icons.wb_sunny_outlined), findsOneWidget);
   });
 
-  testWidgets('EmptyIllustration herda o verde-saúde do tema escuro',
-      (tester) async {
+  testWidgets('EmptyIllustration herda o verde-saúde do tema escuro', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark(),
@@ -61,14 +64,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final painter = tester
-        .widget<CustomPaint>(
-          find.descendant(
-            of: find.byType(EmptyIllustration),
-            matching: find.byType(CustomPaint),
-          ).first,
-        )
-        .painter! as dynamic;
+    final painter =
+        tester
+                .widget<CustomPaint>(
+                  find
+                      .descendant(
+                        of: find.byType(EmptyIllustration),
+                        matching: find.byType(CustomPaint),
+                      )
+                      .first,
+                )
+                .painter!
+            as dynamic;
     // O acento vem da extensão semântica do tema escuro.
     expect(painter.accent, const Color(0xFF63C894));
   });

@@ -8,8 +8,11 @@ void main() {
       expect(parseNumericValue('95'), 95);
       expect(parseNumericValue('5,4'), 5.4);
       expect(parseNumericValue('5.4'), 5.4);
-      expect(parseNumericValue('10.200'), 10200,
-          reason: 'agrupamento de milhar');
+      expect(
+        parseNumericValue('10.200'),
+        10200,
+        reason: 'agrupamento de milhar',
+      );
       expect(parseNumericValue('10.200,45'), 10200.45);
       expect(parseNumericValue(' 95 '), 95);
       expect(parseNumericValue('<95'.replaceAll('<', '')), 95);
@@ -91,8 +94,7 @@ void main() {
 
     test('data inválida e limite de 40 valores', () {
       final many = [
-        for (var i = 0; i < 45; i++)
-          {'examName': 'Exame $i', 'value': '$i'},
+        for (var i = 0; i < 45; i++) {'examName': 'Exame $i', 'value': '$i'},
       ];
       final scan = sanitizeLabScan({
         'examDate': '12/11/2026',
@@ -116,10 +118,7 @@ void main() {
         normalizeExamName('Ácido Úrico'),
         normalizeExamName('acido urico'),
       );
-      expect(
-        normalizeExamName('Hemoglobina  Glicada'),
-        'hemoglobina glicada',
-      );
+      expect(normalizeExamName('Hemoglobina  Glicada'), 'hemoglobina glicada');
     });
   });
 
@@ -176,10 +175,7 @@ void main() {
           date: '2026-02-10',
           values: [valueOf('TSH', 2.03, unit: 'mUI/L')],
         ),
-        LabResultLike(
-          date: '2026-03-10',
-          values: [valueOf('Ácido Úrico', 5)],
-        ),
+        LabResultLike(date: '2026-03-10', values: [valueOf('Ácido Úrico', 5)]),
       ]);
       expect(trends.length, 1);
       expect(trends.single.direction, 'stable');
@@ -187,10 +183,7 @@ void main() {
 
     test('data inválida ou valor sem número não entram', () {
       final trends = computeTrends([
-        LabResultLike(
-          date: '12/03/2026',
-          values: [valueOf('Glicemia', 95)],
-        ),
+        LabResultLike(date: '12/03/2026', values: [valueOf('Glicemia', 95)]),
         LabResultLike(
           date: '2026-03-01',
           values: [
