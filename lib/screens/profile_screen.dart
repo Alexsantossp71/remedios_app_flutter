@@ -26,6 +26,7 @@ import '../widgets/app_snack_bar.dart';
 import '../widgets/br_input_formatters.dart';
 import '../widgets/privacy_notice.dart';
 import '../widgets/section_header.dart';
+import 'profile/profile_validators.dart';
 import 'profile/widgets/cadastro_icon_box.dart';
 import 'profile/widgets/emergency_card.dart';
 import 'profile/widgets/emergency_contact_dialog.dart';
@@ -93,10 +94,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _cpfController.text = profile?.cpf ?? '';
     _telefoneController.text = profile?.telefone ?? '';
     _pesoController.text = profile?.peso != null
-        ? _formatNumber(profile!.peso!)
+        ? formatNumber(profile!.peso!)
         : '';
     _alturaController.text = profile?.altura != null
-        ? _formatNumber(profile!.altura!)
+        ? formatNumber(profile!.altura!)
         : '';
     _observacoesController.text = profile?.observacoes ?? '';
     _dataNascimento = profile?.dataNascimento;
@@ -105,19 +106,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _condicoesCronicas = List.of(profile?.condicoesCronicas ?? const []);
     _consentAt = profile?.consentAt;
     _consentGranted = profile?.consentAt != null;
-  }
-
-  String _formatNumber(double value) {
-    if (value == value.roundToDouble()) {
-      return value.roundToDouble().toStringAsFixed(0);
-    }
-    return value.toStringAsFixed(2);
-  }
-
-  double? _parseNumber(String text) {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return null;
-    return double.tryParse(trimmed.replaceAll(',', '.'));
   }
 
   @override
@@ -190,8 +178,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         tipoSanguineo: _tipoSanguineo,
         alergias: _alergias,
         condicoesCronicas: _condicoesCronicas,
-        peso: _parseNumber(_pesoController.text),
-        altura: _parseNumber(_alturaController.text),
+        peso: parseNumber(_pesoController.text),
+        altura: parseNumber(_alturaController.text),
         telefone: _telefoneController.text.trim().isNotEmpty
             ? _telefoneController.text.trim()
             : null,
@@ -1044,84 +1032,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   /// CPF opcional: se preenchido, precisa ter 11 dígitos com dígitos
-  /// verificadores válidos.
+  /// verificadores válidos. Registra o campo como primeiro inválido.
   String? _validateCpf(String? value) {
-    final error = _cpfError(value);
+    final error = cpfError(value);
     if (error != null) _firstInvalidFieldKey ??= _cpfFieldKey;
     return error;
   }
 
-  String? _cpfError(String? value) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return null;
-    final digits = trimmed.replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 11) return 'CPF deve ter 11 dígitos';
-    if (RegExp(r'^(\d)\1{10}$').hasMatch(digits)) return 'CPF inválido';
-
-    int sum = 0;
-    for (var i = 0; i < 9; i++) {
-      sum += int.parse(digits[i]) * (10 - i);
-    }
-    final d1 = (sum * 10) % 11;
-    if ((d1 == 10 ? 0 : d1) != int.parse(digits[9])) return 'CPF inválido';
-
-    sum = 0;
-    for (var i = 0; i < 10; i++) {
-      sum += int.parse(digits[i]) * (11 - i);
-    }
-    final d2 = (sum * 10) % 11;
-    if ((d2 == 10 ? 0 : d2) != int.parse(digits[10])) return 'CPF inválido';
-
-    return null;
-  }
-
   /// Telefone opcional: se preenchido, precisa ter 10 ou 11 dígitos.
   String? _validateTelefone(String? value) {
-    final error = _telefoneError(value);
+    final error = telefoneError(value);
     if (error != null) _firstInvalidFieldKey ??= _telefoneFieldKey;
     return error;
   }
 
-  String? _telefoneError(String? value) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return null;
-    final digits = trimmed.replaceAll(RegExp(r'\D'), '');
-    if (digits.length < 10 || digits.length > 11) {
-      return 'Telefone deve ter 10 ou 11 dígitos';
-    }
-    return null;
-  }
-
   /// Peso opcional: se preenchido, deve ser um número entre 1 e 500 kg.
   String? _validatePeso(String? value) {
-    final error = _pesoError(value);
+    final error = pesoError(value);
     if (error != null) _firstInvalidFieldKey ??= _pesoFieldKey;
     return error;
-  }
-
-  String? _pesoError(String? value) {
-    if (value == null || value.trim().isEmpty) return null;
-    final peso = _parseNumber(value);
-    if (peso == null) return 'Informe um peso válido';
-    if (peso < 1 || peso > 500) return 'Peso deve estar entre 1 e 500 kg';
-    return null;
   }
 
   /// Altura opcional: se preenchida, deve ser um número entre 0,30 e
   /// 3,00 metros.
   String? _validateAltura(String? value) {
-    final error = _alturaError(value);
+    final error = alturaError(value);
     if (error != null) _firstInvalidFieldKey ??= _alturaFieldKey;
     return error;
-  }
-
-  String? _alturaError(String? value) {
-    if (value == null || value.trim().isEmpty) return null;
-    final altura = _parseNumber(value);
-    if (altura == null) return 'Informe uma altura válida';
-    if (altura < 0.3 || altura > 3) {
-      return 'Altura deve estar entre 0,30 e 3,00 m';
-    }
-    return null;
   }
 }
