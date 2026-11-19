@@ -278,9 +278,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (password == null || !mounted) return;
     setState(() => _backupBusy = true);
     try {
-      final data = await BackupService.instance.exportAll();
+      final envelope = await BackupService.instance.exportAll();
       final encrypted = await BackupCryptoService.instance.encrypt(
-        data,
+        envelope.toJson(),
         password,
       );
       final savedAs = await saveBackupJson(jsonEncode(encrypted));
@@ -361,7 +361,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // Compatibilidade: backups JSON antigos continuam restauráveis.
         backup = decoded;
       }
-      final summary = await BackupService.instance.restore(backup);
+      final envelope = BackupEnvelope.fromJson(backup);
+      final summary = await BackupService.instance.restore(envelope);
       if (!mounted) return;
 
       // Captura os cinco providers antes dos awaits (BuildContext não

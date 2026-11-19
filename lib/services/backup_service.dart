@@ -1,6 +1,11 @@
 import 'package:sqflite/sqflite.dart';
 
+import 'backup_envelope.dart';
 import 'database_service.dart';
+
+// P2-4: o envelope tipado é a fronteira pública; reexportado aqui para que
+// imports existentes de backup_service.dart continuem funcionando.
+export 'backup_envelope.dart';
 
 /// Serviço de backup/restauração de todos os dados do app em JSON.
 ///
@@ -22,15 +27,15 @@ class BackupService {
   /// Singleton padrão usado pela UI.
   static final BackupService instance = BackupService();
 
-  /// Versão do formato do arquivo de backup (independe do schema do banco).
-  static const int backupFormatVersion = 1;
-
   /// Marcador de origem: arquivos de outros apps/JSONs soltos são rejeitados.
-  static const String appMarker = 'remedios-app';
+  static const String appMarker = BackupEnvelope.appMarker;
+
+  /// Versão do formato do arquivo de backup (independe do schema do banco).
+  static const int backupFormatVersion = BackupEnvelope.currentFormatVersion;
 
   /// Versão do schema de dados incluído no backup. Acompanha a versão
   /// atual do banco; versões antigas continuam aceitas na restauração.
-  static const int maxSchemaVersion = 11;
+  static const int maxSchemaVersion = BackupEnvelope.maxSchemaVersion;
 
   /// Ordem de INSERÇÃO (pais antes de filhos, para respeitar foreign keys).
   static const List<String> _tableOrder = [
@@ -83,52 +88,44 @@ class BackupService {
     return 'remedios-backup-$date-$time.json';
   }
 
-  /// Exporta todas as tabelas para o mapa serializável em JSON.
-  Future<Map<String, dynamic>> exportAll() async {
+  /// Exporta todas as tabelas para um envelope tipado, serializável em JSON
+  /// via [BackupEnvelope.toJson] (formato de arquivo estável).
+  Future<BackupEnvelope> exportAll() async {
     final db = await _dbService.database;
     final tables = <String, List<Map<String, dynamic>>>{};
     for (final table in _tableOrder) {
       tables[table] = await db.query(table);
     }
-    return {
-      'app': appMarker,
-      'formatVersion': backupFormatVersion,
-      'schemaVersion': maxSchemaVersion,
-      'exportedAt': DateTime.now().toUtc().toIso8601String(),
-      'tables': tables,
-    };
+    return BackupEnvelope(
+      formatVersion: backupFormatVersion,
+      schemaVersion: maxSchemaVersion,
+      exportedAt: DateTime.now(),
+      tables: tables,
+    );
   }
 
-  /// Valida e restaura um backup, substituindo TODO o conteúdo atual do
-  /// banco numa única transação (ou tudo entra, ou nada muda).
+  /// Valida e restaura um backup tipado, substituindo TODO o conteúdo atual
+  /// do banco numa única transação (ou tudo entra, ou nada muda).
   ///
-  /// Lança [BackupFormatException] quando o arquivo não é um backup válido
-  /// deste app, é de formato/schema mais novo que o app suporta, ou tem
-  /// linhas sem as chaves de integridade mínima.
-  Future<RestoreSummary> restore(Map<String, dynamic> backup) async {
-    _validate(backup);
-
-    final rawTables = (backup['tables'] as Map?)?.cast<String, dynamic>() ?? {};
+  /// O parse de arquivos (JSON decodificado) passa por
+  /// [BackupEnvelope.fromJson], que valida marcador, versões e estrutura.
+  /// Aqui ficam as chaves de integridade por linha (PKs/FKs), que dependem
+  /// da ordem de inserção entre tabelas.
+  ///
+  /// Lança [BackupFormatException] quando o envelope tem linhas sem as
+  /// chaves de integridade mínima.
+  Future<RestoreSummary> restore(BackupEnvelope backup) async {
     final rowsByTable = <String, List<Map<String, dynamic>>>{};
     for (final table in _tableOrder) {
-      final rawRows = rawTables[table];
+      final rawRows = backup.tables[table];
       if (rawRows == null) {
         rowsByTable[table] = const [];
         continue;
       }
-      if (rawRows is! List) {
-        throw BackupFormatException('"tables.$table" deveria ser uma lista.');
-      }
       final required = _requiredKeys[table]!;
       final rows = <Map<String, dynamic>>[];
       for (var i = 0; i < rawRows.length; i++) {
-        final row = rawRows[i];
-        if (row is! Map) {
-          throw BackupFormatException(
-            'Linha $i de "$table" não é um objeto JSON.',
-          );
-        }
-        final map = row.cast<String, dynamic>();
+        final map = rawRows[i];
         for (final key in required) {
           final value = map[key];
           if (value == null || (value is String && value.isEmpty)) {
@@ -171,32 +168,6 @@ class BackupService {
       prescriptionRecords: rowsByTable['treatment_prescriptions']!.length,
     );
   }
-
-  void _validate(Map<String, dynamic> backup) {
-    if (backup['app'] != appMarker) {
-      throw BackupFormatException(
-        'Este arquivo não é um backup do Remédio na Hora.',
-      );
-    }
-
-    final format = _readInt(backup['formatVersion']);
-    if (format == null || format > backupFormatVersion) {
-      throw BackupFormatException(
-        'Formato de backup ($format) é mais novo que este app suporta '
-        '($backupFormatVersion). Atualize o app.',
-      );
-    }
-
-    final schema = _readInt(backup['schemaVersion']);
-    if (schema == null || schema > maxSchemaVersion) {
-      throw BackupFormatException(
-        'O backup foi feito por uma versão mais nova do app '
-        '(schema $schema > $maxSchemaVersion). Atualize o app.',
-      );
-    }
-  }
-
-  int? _readInt(dynamic value) => value is int ? value : null;
 }
 
 /// Resumo do que foi restaurado, para feedback na UI.
@@ -245,14 +216,4 @@ class RestoreSummary {
     }
     return parts.isEmpty ? 'nenhum registro' : parts.join(', ');
   }
-}
-
-/// O arquivo não é um backup válido deste app.
-class BackupFormatException implements Exception {
-  const BackupFormatException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
 }
