@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter/foundation.dart'
     show TargetPlatform, defaultTargetPlatform, kIsWeb, visibleForTesting;
 
-import 'android_database_key_store.dart';
 import 'database_key_store.dart';
 import 'in_memory_database_key_store.dart';
 import 'native_database_key_store.dart';
