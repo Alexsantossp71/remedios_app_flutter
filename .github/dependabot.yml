@@ -1,0 +1,91 @@
+# Dependabot — atualizações automatizadas de dependências
+#
+# Mantém pubspec.lock, package-lock.json (raiz + e2e) e GitHub Actions
+# atualizados. Os PRs são agrupados por ecossistema para reduzir ruído.
+#
+# Documentação: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+
+updates:
+  # Flutter/Dart — pubspec.yaml
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "flutter"
+    commit-message:
+      prefix: "deps(flutter)"
+      include-scope: true
+    groups:
+      flutter-minor:
+        update-types:
+          - "minor"
+          - "patch"
+    # Seguros: patches e minors auto-mergeable após CI verde.
+    # Majors (breaking) exigem PR manual — não habilitamos auto-merge aqui.
+
+  # Node.js (raiz) — package-lock.json
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "deps(npm)"
+      include-scope: true
+    groups:
+      npm-minor:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Node.js (e2e) — e2e/package-lock.json (Playwright)
+  - package-ecosystem: "npm"
+    directory: "/e2e"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "npm"
+      - "e2e"
+    commit-message:
+      prefix: "deps(e2e)"
+      include-scope: true
+
+  # GitHub Actions — atualiza actions/* nos workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "deps(ci)"
+      include-scope: true
+    groups:
+      actions-minor:
+        update-types:
+          - "minor"
+          - "patch"

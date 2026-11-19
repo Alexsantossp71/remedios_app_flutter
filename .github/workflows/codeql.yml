@@ -1,0 +1,68 @@
+# CodeQL — análise estática de segurança para Dart, JavaScript e TypeScript
+#
+# Executa em pull requests e pushes para main/master. Não substitui o
+# flutter-ci.yml (testes/build), mas adiciona detecção automatizada de
+# vulnerabilidades conhecidas no padrão de código (SAST).
+#
+# Documentação: https://docs.github.com/en/code-security/code-scanning
+
+name: "CodeQL"
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    # A análise roda apenas quando o PR toca código-fonte relevante —
+    # evita desperdiçar runners em PRs de só-documentação.
+    paths:
+      - 'lib/**'
+      - 'test/**'
+      - 'integration_test/**'
+      - 'api/**'
+      - 'server/**'
+      - 'e2e/**'
+      - '.github/workflows/codeql.yml'
+  schedule:
+    # Varredura completa semanal aos domingos, 03:00 UTC.
+    - cron: '0 3 * * 0'
+
+permissions:
+  contents: read
+  # Necessário para o upload dos resultados SARIF que aparecem na aba Security.
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # CodeQL não tem análise nativa de Dart ainda (jan/2026), mas
+        # JavaScript/TypeScript cobre api/, server/ e e2e/. Incluímos
+        # Dart na expectativa de cobertura futura (no-op hoje).
+        language: [javascript-typescript]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # 'security-and-quality' adiciona queries de qualidade além das
+          # de segurança — recomendado para repositórios ativos.
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

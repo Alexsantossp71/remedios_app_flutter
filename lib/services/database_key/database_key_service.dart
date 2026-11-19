@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart'
 import 'android_database_key_store.dart';
 import 'database_key_store.dart';
 import 'in_memory_database_key_store.dart';
+import 'native_database_key_store.dart';
 import 'web_database_key_store.dart';
 
 /// Facade that resolves the database key for the current platform.
@@ -14,6 +15,13 @@ import 'web_database_key_store.dart';
 ///   Android Keystore (via the `remedios_app/database_key_store` channel).
 ///   Subsequent launches unwrap it transparently; a broken envelope throws
 ///   [DatabaseKeyRecoveryRequiredException] and never creates a new key.
+/// - iOS / macOS: the DEK is wrapped by a non-exportable AES-256 key stored
+///   in the platform Keychain (kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly).
+///   Implemented in `ios/Runner/Security/IosDatabaseKeyStore.swift` and
+///   `macos/Runner/Security/MacosDatabaseKeyStore.swift`; the Dart side uses
+///   the same `AndroidDatabaseKeyStore` channel contract (renamed conceptually
+///   to `NativeDatabaseKeyStore`) so the same MethodChannel works on every
+///   native platform. See ADR 0009 for the full design and validation status.
 /// - Web: the key is resolved through the explicit unlock flow
 ///   ([WebDatabaseKeyStore]); sessions start locked until the user unlocks.
 /// - Tests: an [InMemoryDatabaseKeyStore] (or any injected store) is used.
@@ -24,12 +32,17 @@ class DatabaseKeyService {
   }) : _injectedStore = injectedStore {
     if (kIsWeb) {
       _webStore = injectedWebStore ?? WebDatabaseKeyStore();
-    } else if (defaultTargetPlatform == TargetPlatform.android) {
-      _androidStore = injectedStore ?? AndroidDatabaseKeyStore();
+    } else if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      // Android, iOS and macOS share the `remedios_app/database_key_store`
+      // channel contract. The native host (Kotlin on Android, Swift on iOS
+      // and macOS) implements readKey / createKeyIfAbsent / deleteKey.
+      _nativeStore = injectedStore ?? NativeDatabaseKeyStore();
     } else {
-      // Other native platforms are out of scope for this delivery; tests and
-      // tooling may inject an in-memory store.
-      _androidStore = injectedStore;
+      // Windows and Linux are still out of scope (no OS keychain abstraction
+      // implemented yet); tests and tooling may inject an in-memory store.
+      _nativeStore = injectedStore;
     }
   }
 
@@ -55,7 +68,7 @@ class DatabaseKeyService {
     instanceOverride = _instance;
   }
 
-  DatabaseKeyStore? _androidStore;
+  DatabaseKeyStore? _nativeStore;
   WebDatabaseKeyStore? _webStore;
   final DatabaseKeyStore? _injectedStore;
 
@@ -68,11 +81,12 @@ class DatabaseKeyService {
     if (kIsWeb) {
       return _webStore!.readKey();
     }
-    final store = _androidStore;
+    final store = _nativeStore;
     if (store == null) {
       throw UnsupportedError(
         'No database key store available for this platform in this delivery '
-        '(scope: Android and Web).',
+        '(scope: Android, iOS, macOS and Web). Windows and Linux remain on '
+        'legacy plaintext until a key-store abstraction is implemented.',
       );
     }
     final existing = await store.readKey();
@@ -136,11 +150,12 @@ class DatabaseKeyService {
     return _webStore?.exportEnvelopeJson();
   }
 
-  /// Native (Android) recovery flow: stores a DEK recovered from a recovery
-  /// envelope into the Keystore-backed store without overwriting a valid key.
-  Future<void> restoreRecoveredKeyOnAndroid(List<int> key) async {
+  /// Native (Android/iOS/macOS) recovery flow: stores a DEK recovered from a
+  /// recovery envelope into the OS-backed key store without overwriting a
+  /// valid key.
+  Future<void> restoreRecoveredKeyOnNative(List<int> key) async {
     assert(!kIsWeb);
-    final store = _androidStore ?? _injectedStore;
+    final store = _nativeStore ?? _injectedStore;
     if (store == null) {
       throw UnsupportedError('No key store available for restoration.');
     }

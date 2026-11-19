@@ -1,0 +1,424 @@
+openapi: 3.1.0
+info:
+  title: Remédio na Hora — Serverless API
+  version: 1.0.0
+  summary: Contrato HTTP das funções serverless implantadas no Vercel.
+  description: |
+    Este contrato descreve os quatro endpoints serverless (`api/`) usados
+    pelo aplicativo Flutter Remédio na Hora:
+
+      - `GET  /api/ping`         — sonda de runtime (CI/CD).
+      - `POST /api/read-card`    — OCR de carteirinha de plano de saúde.
+      - `POST /api/read-receita` — OCR de receituário médico.
+      - `GET  /api/places`       — autocomplete de endereços (OpenStreetMap).
+
+    Cada função roda no runtime Node.js do Vercel com assinatura
+    `(req, res) -> void` (não `Request -> Response`): o launcher Express
+    espera `res.end()`. O OCR é executado localmente por Tesseract.js
+    dentro da função — não há chave de API nem terceiros para visão.
+    Os limites de taxa são por IP (janela móvel de 24h).
+
+    Fonte canônica: `api/ping.ts`, `api/read-card.ts`, `api/read-receita.ts`,
+    `api/places.ts`. Este arquivo é derivado; em caso de divergência, o
+    código prevalece.
+  contact:
+    name: Remédio na Hora
+    url: https://github.com/Alexsantossp71/remedios_app_flutter
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit
+
+servers:
+  - url: https://remedios-app-flutter.vercel.app
+    description: Produção (Vercel)
+  - url: http://localhost:3000
+    description: Desenvolvimento local (vercel dev)
+
+tags:
+  - name: health
+    description: Sonda de runtime.
+  - name: ocr
+    description: Leitura assistida de documentos por OCR local (Tesseract.js).
+  - name: places
+    description: Autocomplete de endereços via proxy OpenStreetMap.
+
+# ============================================================
+# Security: nenhum esquema de autenticação. O rate limiting é por IP
+# (X-Forwarded-For) e implementado em código; não há header de auth.
+# Tráfego sensível (imagem de receita) transita em HTTPS somente.
+# ============================================================
+security: []
+
+paths:
+  # ============================================================
+  # /api/ping
+  # ============================================================
+  /api/ping:
+    get:
+      tags: [health]
+      operationId: ping
+      summary: Sonda de runtime.
+      description: |
+        Endpoint mínimo sem dependências. Retorna `200 { ok: true }` se a
+        função Node.js está saudável. Usado por probes de deploy e por
+        diagnósticos do cliente Dart.
+      responses:
+        '200':
+          description: Função saudável.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                additionalProperties: false
+
+  # ============================================================
+  # /api/read-card
+  # ============================================================
+  /api/read-card:
+    post:
+      tags: [ocr]
+      operationId: readCard
+      summary: OCR de carteirinha de plano de saúde.
+      description: |
+        Processa a imagem da carteirinha com duas passadas Tesseract.js
+        (original + preprocessada), pontua por campos preenchidos ×
+        confiança × volume de texto e devolve o melhor resultado como
+        JSON string em `content`. O parsing dos campos é feito por regex
+        determinísticas em `server/parse-card.ts`.
+      parameters:
+        - $ref: '#/components/parameters/ForwardedFor'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OcrRequest'
+            examples:
+              jpeg:
+                value:
+                  image: /9j/4AAQSkZJRgABAQ...
+                  mimeType: image/jpeg
+              png:
+                value:
+                  image: iVBORw0KGgoAAAANSUhE...
+                  mimeType: image/png
+      responses:
+        '200':
+          description: OCR concluído; o melhor resultado é retornado em `content`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OcrCardResponse'
+              examples:
+                success:
+                  value:
+                    content: '{"name":"JOAO DA SILVA","provider":"UNIMED","cardNumber":"1234567890","groupNumber":"","beneficiaryCode":"","validity":"12/2027","coverageType":""}'
+                    model: tesseract-ocr
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '413':
+          $ref: '#/components/responses/ImageTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/Unreadable'
+
+  # ============================================================
+  # /api/read-receita
+  # ============================================================
+  /api/read-receita:
+    post:
+      tags: [ocr]
+      operationId: readReceita
+      summary: OCR de receituário médico.
+      description: |
+        Processa a imagem da receita com Tesseract.js (uma passada) e
+        extrai medicamentos via regex determinísticas em
+        `server/parse-receita.ts`. Não há chave de API nem terceiros:
+        o custo por leitura é zero. Texto vazio (foto sem nada legível)
+        não é erro — a lista vem vazia e o cliente Dart exibe
+        "não encontrei medicamentos, tente outra foto".
+      parameters:
+        - $ref: '#/components/parameters/ForwardedFor'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OcrRequest'
+      responses:
+        '200':
+          description: OCR concluído; `content` traz o JSON com medicamentos + rawText.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OcrReceitaResponse'
+              examples:
+                success:
+                  value:
+                    content: '{"medicines":[{"name":"Amoxicilina","dosage":"500mg","frequency":"8/8h","duration":"7 dias"}],"rawText":"Amoxicilina 500mg..."}'
+                    model: tesseract-ocr
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '413':
+          $ref: '#/components/responses/ImageTooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/Unreadable'
+
+  # ============================================================
+  # /api/places
+  # ============================================================
+  /api/places:
+    get:
+      tags: [places]
+      operationId: searchPlaces
+      summary: Autocomplete de endereços.
+      description: |
+        Proxy server-side para o OpenStreetMap Nominatim. O proxy existe
+        porque o Nominatim exige User-Agent identificável e bloqueia CORS
+        de browser; a função roda no servidor com `User-Agent:
+        RemedioNaHora/1.0` e `Accept-Language: pt-BR`. Resultados são
+        mapeados para um subconjunto simplificado. Atribuição
+        `© OpenStreetMap contributors` é devolvida em cada resposta.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: |
+            Texto do endereço. Mínimo 3 caracteres; abaixo disso a função
+            retorna `200 { results: [] }` sem chamar o OSM (evita abuso).
+          schema:
+            type: string
+            minLength: 3
+            example: Rua Ada Pereira, Campinas
+        - $ref: '#/components/parameters/ForwardedFor'
+      responses:
+        '200':
+          description: Sucesso. `results` pode ser vazio (q curto demais ou OSM sem resposta).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlacesResponse'
+              examples:
+                success:
+                  value:
+                    results:
+                      - label: Rua Ada Pereira, Campinas - SP, Brasil
+                        street: Rua Ada Pereira
+                        number: ''
+                        neighborhood: Centro
+                        city: Campinas
+                        uf: SP
+                        postalCode: '13013-001'
+                    attribution: '© OpenStreetMap contributors'
+                empty:
+                  value:
+                    results: []
+                    attribution: '© OpenStreetMap contributors'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          $ref: '#/components/responses/Unavailable'
+
+# ============================================================
+# Components
+# ============================================================
+components:
+  parameters:
+    ForwardedFor:
+      name: X-Forwarded-For
+      in: header
+      required: false
+      description: |
+        IP do cliente, usado para rate limiting. O Vercel preenche
+        automaticamente; clientes Dart não devem enviar (seria ignorado).
+      schema:
+        type: string
+        format: ipv4
+        example: 189.45.12.34
+
+  responses:
+    InvalidRequest:
+      description: Payload inválido (JSON não-objeto, ou campos `image`/`mimeType` ausentes/tipo errado).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: invalid_request
+    MethodNotAllowed:
+      description: Método HTTP não suportado pelo endpoint.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: method_not_allowed
+    ImageTooLarge:
+      description: |
+        Imagem base64 excede 6 MiB (~5,6 MiB em base64 + teto de segurança
+        para uma imagem original de ~4 MB).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: image_too_large
+    RateLimited:
+      description: |
+        Limite diário por IP excedido. Janela móvel de 24h.
+        - `/api/read-card`: 10 leituras/dia.
+        - `/api/read-receita`: 10 leituras/dia.
+        - `/api/places`: 200 buscas/dia (autocomplete é barato).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: rate_limited
+    Unreadable:
+      description: |
+        A imagem não pôde ser processada pelo Tesseract.js. Causas
+        possíveis: traineddata ausente, WASM quebrado, timeout da
+        passada, foto ilegível. O cliente Dart deve orientar o usuário
+        a tentar outra foto.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: unreadable
+    Unavailable:
+      description: |
+        Serviço upstream (OpenStreetMap Nominatim) indisponível ou
+        respondeu status não-OK. Tentar novamente mais tarde.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: unavailable
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum:
+            - invalid_request
+            - method_not_allowed
+            - image_too_large
+            - rate_limited
+            - unreadable
+            - unavailable
+      additionalProperties: false
+
+    OcrRequest:
+      type: object
+      required: [image, mimeType]
+      properties:
+        image:
+          type: string
+          description: Imagem codificada em base64 (sem o prefixo `data:...`).
+          pattern: '^[A-Za-z0-9+/]+={0,2}$'
+          maxLength: 6291456   # 6 MiB
+          example: /9j/4AAQSkZJRgABAQ...
+        mimeType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+          example: image/jpeg
+      additionalProperties: false
+
+    OcrCardResponse:
+      type: object
+      required: [content, model]
+      properties:
+        content:
+          type: string
+          description: |
+            JSON serializado com os campos da carteirinha. Schema do
+            conteúdo: ver `CardFields` em `server/parse-card.ts`.
+            Campos: `name`, `provider`, `cardNumber`, `groupNumber`,
+            `beneficiaryCode`, `validity`, `coverageType`, `rawText`.
+          example: '{"name":"JOAO DA SILVA","provider":"UNIMED","cardNumber":"1234567890"}'
+        model:
+          type: string
+          enum: [tesseract-ocr]
+          example: tesseract-ocr
+      additionalProperties: false
+
+    OcrReceitaResponse:
+      type: object
+      required: [content, model]
+      properties:
+        content:
+          type: string
+          description: |
+            JSON serializado com a lista de medicamentos extraídos.
+            Schema do conteúdo: ver `parseReceitaText` em
+            `server/parse-receita.ts`. Campos principais:
+            `medicines[]` (`name`, `dosage`, `frequency`, `duration`),
+            `rawText`.
+          example: '{"medicines":[{"name":"Amoxicilina","dosage":"500mg"}],"rawText":"..."}'
+        model:
+          type: string
+          enum: [tesseract-ocr]
+          example: tesseract-ocr
+      additionalProperties: false
+
+    PlacesResponse:
+      type: object
+      required: [results, attribution]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlaceSuggestion'
+        attribution:
+          type: string
+          example: '© OpenStreetMap contributors'
+      additionalProperties: false
+
+    PlaceSuggestion:
+      type: object
+      properties:
+        label:
+          type: string
+          description: Rótulo de exibição (endereço formatado completo).
+          example: Rua Ada Pereira, Campinas - SP, Brasil
+        street:
+          type: string
+          example: Rua Ada Pereira
+        number:
+          type: string
+          description: Número, se detectado separadamente pelo OSM.
+          example: ''
+        neighborhood:
+          type: string
+          example: Centro
+        city:
+          type: string
+          example: Campinas
+        uf:
+          type: string
+          description: Sigla da unidade federativa.
+          example: SP
+        postalCode:
+          type: string
+          example: '13013-001'
+      additionalProperties: false
