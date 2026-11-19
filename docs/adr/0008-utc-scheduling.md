@@ -1,4 +1,7 @@
-# Schedule storage uses absolute UTC for safety
+# ADR 0008 — Schedule storage uses absolute UTC for safety
+
+- **Status:** ativo
+- **Data:** original (renumerado de 0004 em 19/11/2026 para resolver conflito de numeração com `0004-database-key-management-and-recovery.md`)
 
 Devices change timezones and daylight saving time shifts. If a fixed-interval dose (every 8 hours) is stored in local time, daylight saving shifts will miscalculate the next absolute dose time, posing a health risk (e.g. antibiotics).
 
