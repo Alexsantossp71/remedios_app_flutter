@@ -17,7 +17,6 @@ import '../services/web_reminder_service.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/section_header.dart';
 import 'profile/profile_validators.dart';
-import 'profile/widgets/cadastro_icon_box.dart';
 import 'profile/widgets/emergency_card.dart';
 import 'profile/widgets/emergency_contact_dialog.dart';
 import 'profile/widgets/emergency_contacts_card.dart';
@@ -25,7 +24,6 @@ import 'profile/widgets/profile_backup_card.dart';
 import 'profile/widgets/profile_form_card.dart';
 import 'profile/widgets/profile_privacy_card.dart';
 import 'profile/widgets/profile_registry_card.dart';
-import 'profile/widgets/string_list_editor.dart';
 import 'profile/widgets/web_reminder_card.dart';
 
 class ProfileScreen extends StatefulWidget {
