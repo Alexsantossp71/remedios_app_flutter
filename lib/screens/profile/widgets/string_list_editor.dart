@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Editor simples de lista de textos: chips com remoção + campo para adicionar.
 class StringListEditor extends StatefulWidget {

@@ -1,9 +1,8 @@
 /// Card de consulta marcada para o dia selecionado no painel "Hoje".
 library;
 
-import 'package:flutter/services.dart';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';

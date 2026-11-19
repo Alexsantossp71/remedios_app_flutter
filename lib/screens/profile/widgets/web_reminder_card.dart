@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../core/design/record_card.dart';
 import '../../../services/web_reminder_service.dart';

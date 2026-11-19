@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Tokens de design do RxKit — a fundação "V4 companheiro calmo".
 ///

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Opções oferecidas ao iniciar um novo plano de saúde.
 enum AddPlanChoice {

@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' show ImageByteFormat;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 
 import '../../../core/design/brand_colors.dart';

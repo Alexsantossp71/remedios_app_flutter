@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Paleta de marca V5 — replicada 1:1 do design system do PWA irmão
 /// "Remédios na Hora" (`tailwind.config.js` + `src/index.css` do repo

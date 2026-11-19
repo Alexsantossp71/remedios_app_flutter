@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Uma opção da folha "como você quer cadastrar?".
 class CreateChoiceOption<T> {

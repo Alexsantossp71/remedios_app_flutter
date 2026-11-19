@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../models/emergency_contact.dart';
 import '../../../widgets/br_input_formatters.dart';
