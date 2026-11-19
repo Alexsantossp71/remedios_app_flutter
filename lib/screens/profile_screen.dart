@@ -1,10 +1,6 @@
 import 'dart:convert';
-import 'dart:typed_data';
-import 'dart:ui' show ImageByteFormat;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../models/emergency_contact.dart';
@@ -14,22 +10,21 @@ import '../providers/doctor_provider.dart';
 import '../providers/health_plan_provider.dart';
 import '../providers/therapy_provider.dart';
 import '../providers/user_profile_provider.dart';
-import '../core/design/brand_colors.dart';
-import '../core/design/record_card.dart';
-import '../screens/doctors_screen.dart';
-import '../screens/exams_screen.dart';
-import '../screens/lab_results_screen.dart';
-import '../screens/health_plans_screen.dart';
-import '../screens/progress_screen.dart';
 import '../services/backup_file.dart';
 import '../services/backup_crypto_service.dart';
 import '../services/backup_service.dart';
-import '../services/emergency_card_share_service.dart';
 import '../services/web_reminder_service.dart';
 import '../widgets/app_snack_bar.dart';
-import '../widgets/br_input_formatters.dart';
-import '../widgets/privacy_notice.dart';
 import '../widgets/section_header.dart';
+import 'profile/profile_validators.dart';
+import 'profile/widgets/emergency_card.dart';
+import 'profile/widgets/emergency_contact_dialog.dart';
+import 'profile/widgets/emergency_contacts_card.dart';
+import 'profile/widgets/profile_backup_card.dart';
+import 'profile/widgets/profile_form_card.dart';
+import 'profile/widgets/profile_privacy_card.dart';
+import 'profile/widgets/profile_registry_card.dart';
+import 'profile/widgets/web_reminder_card.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -73,8 +68,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// True enquanto um backup está sendo exportado/restaurado.
   bool _backupBusy = false;
 
-  final _dateFormat = DateFormat('dd/MM/yyyy', 'pt_BR');
-
   @override
   void initState() {
     super.initState();
@@ -92,10 +85,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _cpfController.text = profile?.cpf ?? '';
     _telefoneController.text = profile?.telefone ?? '';
     _pesoController.text = profile?.peso != null
-        ? _formatNumber(profile!.peso!)
+        ? formatNumber(profile!.peso!)
         : '';
     _alturaController.text = profile?.altura != null
-        ? _formatNumber(profile!.altura!)
+        ? formatNumber(profile!.altura!)
         : '';
     _observacoesController.text = profile?.observacoes ?? '';
     _dataNascimento = profile?.dataNascimento;
@@ -104,19 +97,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _condicoesCronicas = List.of(profile?.condicoesCronicas ?? const []);
     _consentAt = profile?.consentAt;
     _consentGranted = profile?.consentAt != null;
-  }
-
-  String _formatNumber(double value) {
-    if (value == value.roundToDouble()) {
-      return value.roundToDouble().toStringAsFixed(0);
-    }
-    return value.toStringAsFixed(2);
-  }
-
-  double? _parseNumber(String text) {
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return null;
-    return double.tryParse(trimmed.replaceAll(',', '.'));
   }
 
   @override
@@ -189,8 +169,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         tipoSanguineo: _tipoSanguineo,
         alergias: _alergias,
         condicoesCronicas: _condicoesCronicas,
-        peso: _parseNumber(_pesoController.text),
-        altura: _parseNumber(_alturaController.text),
+        peso: parseNumber(_pesoController.text),
+        altura: parseNumber(_alturaController.text),
         telefone: _telefoneController.text.trim().isNotEmpty
             ? _telefoneController.text.trim()
             : null,
@@ -475,7 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final provider = context.read<UserProfileProvider>();
     final result = await showDialog<EmergencyContact>(
       context: context,
-      builder: (context) => _EmergencyContactDialog(contact: contact),
+      builder: (context) => EmergencyContactDialog(contact: contact),
     );
     if (result == null) return;
 
@@ -517,7 +497,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final provider = context.watch<UserProfileProvider>();
     final profile = provider.profile;
     final contacts = provider.emergencyContacts;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SafeArea(
       child: Form(
@@ -547,7 +526,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _alergias.isNotEmpty ||
                 _condicoesCronicas.isNotEmpty) ...[
               const SizedBox(height: 24),
-              _EmergencyCard(
+              EmergencyCard(
                 tipoSanguineo: _tipoSanguineo,
                 alergias: _alergias,
                 condicoesCronicas: _condicoesCronicas,
@@ -557,475 +536,76 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const SizedBox(height: 28),
             const SectionHeader(title: 'Dados pessoais'),
             const SizedBox(height: 10),
-            RecordCard(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      key: _nomeFieldKey,
-                      controller: _nomeController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome',
-                        hintText: 'Como você quer ser chamado',
-                        prefixIcon: Icon(Icons.person_outline),
-                      ),
-                      textCapitalization: TextCapitalization.words,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          _firstInvalidFieldKey ??= _nomeFieldKey;
-                          return 'Informe seu nome';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      key: _cpfFieldKey,
-                      controller: _cpfController,
-                      decoration: const InputDecoration(
-                        labelText: 'CPF',
-                        hintText: '000.000.000-00',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                      ),
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [CpfInputFormatter()],
-                      validator: _validateCpf,
-                    ),
-                    const SizedBox(height: 16),
-                    InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: _selectBirthDate,
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Data de nascimento',
-                          prefixIcon: Icon(Icons.cake_outlined),
-                          suffixIcon: Icon(Icons.calendar_today_outlined),
-                        ),
-                        child: Text(
-                          _dataNascimento != null
-                              ? _dateFormat.format(_dataNascimento!)
-                              : 'Toque para selecionar',
-                          style: _dataNascimento != null
-                              ? null
-                              : TextStyle(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      key: _telefoneFieldKey,
-                      controller: _telefoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Telefone',
-                        hintText: '(11) 91234-5678',
-                        prefixIcon: Icon(Icons.phone_outlined),
-                      ),
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [PhoneInputFormatter()],
-                      validator: _validateTelefone,
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<TipoSanguineo>(
-                      initialValue: _tipoSanguineo,
-                      decoration: const InputDecoration(
-                        labelText: 'Tipo sanguíneo',
-                        prefixIcon: Icon(Icons.bloodtype_outlined),
-                      ),
-                      items: TipoSanguineo.values
-                          .map(
-                            (tipo) => DropdownMenuItem(
-                              value: tipo,
-                              child: Text(tipo.value),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() => _tipoSanguineo = value);
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _StringListEditor(
-                      label: 'Alergias',
-                      icon: Icons.warning_amber_outlined,
-                      hint: 'Ex: Dipirona, frutos do mar',
-                      values: _alergias,
-                      onChanged: (values) => setState(() => _alergias = values),
-                    ),
-                    const SizedBox(height: 16),
-                    _StringListEditor(
-                      label: 'Condições crônicas',
-                      icon: Icons.monitor_heart_outlined,
-                      hint: 'Ex: Hipertensão, diabetes',
-                      values: _condicoesCronicas,
-                      onChanged: (values) =>
-                          setState(() => _condicoesCronicas = values),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            key: _pesoFieldKey,
-                            controller: _pesoController,
-                            decoration: const InputDecoration(
-                              labelText: 'Peso (kg)',
-                              hintText: 'Ex: 70',
-                              prefixIcon: Icon(Icons.monitor_weight_outlined),
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            validator: _validatePeso,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            key: _alturaFieldKey,
-                            controller: _alturaController,
-                            decoration: const InputDecoration(
-                              labelText: 'Altura (m)',
-                              hintText: 'Ex: 1.70',
-                              prefixIcon: Icon(Icons.height_outlined),
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true,
-                            ),
-                            validator: _validateAltura,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _observacoesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Observações',
-                        hintText: 'Informações relevantes sobre sua saúde',
-                        prefixIcon: Icon(Icons.notes_outlined),
-                      ),
-                      maxLines: 3,
-                      textCapitalization: TextCapitalization.sentences,
-                    ),
-                    const SizedBox(height: 20),
-                    const PrivacyNoticeCard(),
-                    const SizedBox(height: 12),
-                    ConsentCheckbox(
-                      value: _consentGranted,
-                      grantedAt: _consentAt,
-                      onChanged: (value) {
-                        setState(() => _consentGranted = value ?? false);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: _saveProfile,
-                      icon: const Icon(Icons.save_outlined),
-                      label: const Text('Salvar perfil'),
-                    ),
-                  ],
-                ),
-              ),
+            ProfileFormCard(
+              nomeFieldKey: _nomeFieldKey,
+              nomeController: _nomeController,
+              cpfFieldKey: _cpfFieldKey,
+              cpfController: _cpfController,
+              telefoneFieldKey: _telefoneFieldKey,
+              telefoneController: _telefoneController,
+              pesoFieldKey: _pesoFieldKey,
+              pesoController: _pesoController,
+              alturaFieldKey: _alturaFieldKey,
+              alturaController: _alturaController,
+              observacoesController: _observacoesController,
+              dataNascimento: _dataNascimento,
+              tipoSanguineo: _tipoSanguineo,
+              alergias: _alergias,
+              condicoesCronicas: _condicoesCronicas,
+              consentGranted: _consentGranted,
+              consentAt: _consentAt,
+              onTipoSanguineoChanged: (value) {
+                setState(() => _tipoSanguineo = value);
+              },
+              onAlergiasChanged: (values) {
+                setState(() => _alergias = values);
+              },
+              onCondicoesCronicasChanged: (values) {
+                setState(() => _condicoesCronicas = values);
+              },
+              onConsentChanged: (value) {
+                setState(() => _consentGranted = value ?? false);
+              },
+              onSelectBirthDate: _selectBirthDate,
+              onSave: _saveProfile,
+              onInvalidField: (fieldKey) => _firstInvalidFieldKey ??= fieldKey,
+              validateCpf: _validateCpf,
+              validateTelefone: _validateTelefone,
+              validatePeso: _validatePeso,
+              validateAltura: _validateAltura,
             ),
             const SizedBox(height: 28),
             const SectionHeader(title: 'Contatos de emergência'),
             const SizedBox(height: 10),
-            RecordCard(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  children: [
-                    if (contacts.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 12,
-                        ),
-                        child: Text(
-                          'Nenhum contato cadastrado. Adicione alguém de '
-                          'confiança.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                      )
-                    else ...[
-                      for (var i = 0; i < contacts.length; i++) ...[
-                        if (i > 0)
-                          const Divider(height: 1, indent: 64, endIndent: 12),
-                        ListTile(
-                          leading: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              // Caixa de ícone com véu vermelho — contexto
-                              // de emergência no PWA usa o brand.red.
-                              color: BrandColors.red.withValues(
-                                alpha: isDark ? .16 : .10,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.contact_emergency_outlined,
-                              color: BrandColors.red,
-                              size: 22,
-                            ),
-                          ),
-                          title: Text(contacts[i].nome),
-                          subtitle: Text(
-                            [
-                              if (contacts[i].parentesco.isNotEmpty)
-                                contacts[i].parentesco,
-                              contacts[i].telefone,
-                            ].join(' • '),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined),
-                                tooltip: 'Editar',
-                                onPressed: () => _editContact(contacts[i]),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline),
-                                tooltip: 'Remover',
-                                onPressed: () => _removeContact(contacts[i]),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _editContact(),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Adicionar contato'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            EmergencyContactsCard(
+              contacts: contacts,
+              isDark: Theme.of(context).brightness == Brightness.dark,
+              onAdd: () => _editContact(),
+              onEdit: (contact) => _editContact(contact),
+              onRemove: (contact) => _removeContact(contact),
             ),
             const SizedBox(height: 28),
             const SectionHeader(title: 'Meus cadastros'),
             const SizedBox(height: 10),
-            RecordCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: _CadastroIconBox(
-                      icon: Icons.medical_services_outlined,
-                      isDark: isDark,
-                    ),
-                    title: const Text('Médicos'),
-                    subtitle: const Text('Seu catálogo de médicos e contatos'),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const DoctorsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: _CadastroIconBox(
-                      icon: Icons.science_outlined,
-                      isDark: isDark,
-                    ),
-                    title: const Text('Exames'),
-                    subtitle: const Text(
-                      'Do pedido do médico ao laudo, com leitura por IA',
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ExamsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: _CadastroIconBox(
-                      icon: Icons.biotech_outlined,
-                      isDark: isDark,
-                    ),
-                    title: const Text('Resultados de laboratório'),
-                    subtitle: const Text(
-                      'Laudos, valores e evolução dos exames',
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const LabResultsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: _CadastroIconBox(
-                      icon: Icons.health_and_safety,
-                      isDark: isDark,
-                    ),
-                    title: const Text('Planos e convênios'),
-                    subtitle: const Text('Gerencie seus planos de saúde'),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const HealthPlansScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  ListTile(
-                    leading: _CadastroIconBox(
-                      icon: Icons.insights_outlined,
-                      isDark: isDark,
-                    ),
-                    title: const Text('Progresso'),
-                    subtitle: const Text('Constância e histórico de doses'),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const ProgressScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
+            const ProfileRegistryCard(),
             const SizedBox(height: 28),
             if (WebReminderService.instance.isSupported) ...[
               const SectionHeader(title: 'Lembretes no navegador'),
               const SizedBox(height: 10),
-              _WebReminderCard(),
+              WebReminderCard(),
               const SizedBox(height: 28),
             ],
             const SectionHeader(title: 'Backup e restauração'),
             const SizedBox(height: 10),
-            RecordCard(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Exporte um backup criptografado com senha para guardar ou levar '
-                      'para outro aparelho. A senha não é salva pelo app; '
-                      'sem ela, não será possível restaurar o arquivo. '
-                      'Backups JSON antigos também podem ser restaurados.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: _backupBusy ? null : _exportBackup,
-                            icon: _backupBusy
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.download_outlined),
-                            label: const Text('Exportar'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _backupBusy ? null : _restoreBackup,
-                            icon: const Icon(Icons.restore_outlined),
-                            label: const Text('Restaurar'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+            ProfileBackupCard(
+              busy: _backupBusy,
+              onExport: _exportBackup,
+              onRestore: _restoreBackup,
             ),
             const SizedBox(height: 28),
             const SectionHeader(title: 'Dados e privacidade'),
             const SizedBox(height: 10),
-            RecordCard(
-              padding: EdgeInsets.zero,
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Seus dados ficam armazenados apenas neste dispositivo. '
-                      'A qualquer momento você pode apagá-los por completo '
-                      '(LGPD).',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Theme.of(context).colorScheme.error,
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                      onPressed: _confirmDeleteAllData,
-                      icon: const Icon(Icons.delete_forever_outlined),
-                      label: const Text('Apagar meus dados'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            ProfilePrivacyCard(onDeleteAll: _confirmDeleteAllData),
             const SizedBox(height: 24),
             Center(
               child: Text(
@@ -1043,694 +623,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   /// CPF opcional: se preenchido, precisa ter 11 dígitos com dígitos
-  /// verificadores válidos.
+  /// verificadores válidos. Registra o campo como primeiro inválido.
   String? _validateCpf(String? value) {
-    final error = _cpfError(value);
+    final error = cpfError(value);
     if (error != null) _firstInvalidFieldKey ??= _cpfFieldKey;
     return error;
   }
 
-  String? _cpfError(String? value) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return null;
-    final digits = trimmed.replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 11) return 'CPF deve ter 11 dígitos';
-    if (RegExp(r'^(\d)\1{10}$').hasMatch(digits)) return 'CPF inválido';
-
-    int sum = 0;
-    for (var i = 0; i < 9; i++) {
-      sum += int.parse(digits[i]) * (10 - i);
-    }
-    final d1 = (sum * 10) % 11;
-    if ((d1 == 10 ? 0 : d1) != int.parse(digits[9])) return 'CPF inválido';
-
-    sum = 0;
-    for (var i = 0; i < 10; i++) {
-      sum += int.parse(digits[i]) * (11 - i);
-    }
-    final d2 = (sum * 10) % 11;
-    if ((d2 == 10 ? 0 : d2) != int.parse(digits[10])) return 'CPF inválido';
-
-    return null;
-  }
-
   /// Telefone opcional: se preenchido, precisa ter 10 ou 11 dígitos.
   String? _validateTelefone(String? value) {
-    final error = _telefoneError(value);
+    final error = telefoneError(value);
     if (error != null) _firstInvalidFieldKey ??= _telefoneFieldKey;
     return error;
   }
 
-  String? _telefoneError(String? value) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return null;
-    final digits = trimmed.replaceAll(RegExp(r'\D'), '');
-    if (digits.length < 10 || digits.length > 11) {
-      return 'Telefone deve ter 10 ou 11 dígitos';
-    }
-    return null;
-  }
-
   /// Peso opcional: se preenchido, deve ser um número entre 1 e 500 kg.
   String? _validatePeso(String? value) {
-    final error = _pesoError(value);
+    final error = pesoError(value);
     if (error != null) _firstInvalidFieldKey ??= _pesoFieldKey;
     return error;
-  }
-
-  String? _pesoError(String? value) {
-    if (value == null || value.trim().isEmpty) return null;
-    final peso = _parseNumber(value);
-    if (peso == null) return 'Informe um peso válido';
-    if (peso < 1 || peso > 500) return 'Peso deve estar entre 1 e 500 kg';
-    return null;
   }
 
   /// Altura opcional: se preenchida, deve ser um número entre 0,30 e
   /// 3,00 metros.
   String? _validateAltura(String? value) {
-    final error = _alturaError(value);
+    final error = alturaError(value);
     if (error != null) _firstInvalidFieldKey ??= _alturaFieldKey;
     return error;
-  }
-
-  String? _alturaError(String? value) {
-    if (value == null || value.trim().isEmpty) return null;
-    final altura = _parseNumber(value);
-    if (altura == null) return 'Informe uma altura válida';
-    if (altura < 0.3 || altura > 3) {
-      return 'Altura deve estar entre 0,30 e 3,00 m';
-    }
-    return null;
-  }
-}
-
-/// Cartão de emergência com resumo rápido do perfil.
-///
-/// Recebe os valores ao vivo do formulário (não o perfil salvo), para que
-/// o resumo reaja na hora em que o usuário edita alergias, condições
-/// crônicas ou tipo sanguíneo — antes de apertar "Salvar perfil".
-///
-/// O botão de compartilhar captura o próprio cartão como imagem PNG
-/// (RepaintBoundary) e abre a folha de compartilhamento do sistema; no
-/// navegador, quando não há suporte a compartilhar arquivos, o PNG é
-/// baixado direto.
-class _EmergencyCard extends StatefulWidget {
-  const _EmergencyCard({
-    required this.tipoSanguineo,
-    required this.alergias,
-    required this.condicoesCronicas,
-    required this.contacts,
-  });
-
-  final TipoSanguineo? tipoSanguineo;
-  final List<String> alergias;
-  final List<String> condicoesCronicas;
-  final List<EmergencyContact> contacts;
-
-  @override
-  State<_EmergencyCard> createState() => _EmergencyCardState();
-}
-
-class _EmergencyCardState extends State<_EmergencyCard> {
-  /// RepaintBoundary que delimita o que entra na imagem compartilhada.
-  final _boundaryKey = GlobalKey();
-
-  /// True enquanto a imagem está sendo gerada/compartilhada.
-  bool _compartilhando = false;
-
-  Future<void> _compartilharComoImagem() async {
-    if (_compartilhando) return;
-    final boundary =
-        _boundaryKey.currentContext?.findRenderObject()
-            as RenderRepaintBoundary?;
-    if (boundary == null) return;
-
-    // A captura acontece ANTES do spinner: a imagem é sempre do cartão
-    // completo, nunca com o indicador de progresso por cima.
-    final Uint8List pngBytes;
-    try {
-      final image = await boundary.toImage(pixelRatio: 3.0);
-      final byteData = await image.toByteData(format: ImageByteFormat.png);
-      if (byteData == null) {
-        throw StateError('Falha ao codificar PNG do cartão de emergência');
-      }
-      pngBytes = byteData.buffer.asUint8List();
-    } catch (_) {
-      if (mounted) {
-        showAppSnackBar(
-          context,
-          'Não foi possível gerar a imagem do cartão.',
-          type: AppSnackType.error,
-        );
-      }
-      return;
-    }
-
-    setState(() => _compartilhando = true);
-    try {
-      final agora = DateTime.now();
-      await shareEmergencyCardImage(
-        pngBytes: pngBytes,
-        fileName: 'cartao-emergencia-${_stampArquivo(agora)}.png',
-        sharePositionOrigin: _rectDaTela(),
-      );
-      if (mounted) {
-        showAppSnackBar(
-          context,
-          'Imagem do cartão gerada — compartilhe ou salve onde quiser.',
-          type: AppSnackType.success,
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        showAppSnackBar(
-          context,
-          'Não foi possível compartilhar o cartão agora.',
-          type: AppSnackType.error,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _compartilhando = false);
-    }
-  }
-
-  /// Retângulo do cartão em coordenadas globais — âncora do popover de
-  /// compartilhamento no iPad/macOS; ignorado nas demais plataformas.
-  Rect? _rectDaTela() {
-    final box = _boundaryKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null || !box.attached) return null;
-    final position = box.localToGlobal(Offset.zero);
-    return position & box.size;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textTheme = Theme.of(context).textTheme;
-    final inkColor = isDark ? BrandColors.darkInk : BrandColors.ink;
-    final mutedColor = isDark ? BrandColors.darkMuted : BrandColors.muted;
-    final mainContact = widget.contacts.isNotEmpty
-        ? widget.contacts.first
-        : null;
-
-    return RecordCard(
-      // Acento vermelho da marca: cartão de emergência pede atenção —
-      // o mesmo papel do errorContainer antes da migração.
-      accentColor: BrandColors.red,
-      padding: EdgeInsets.zero,
-      child: Stack(
-        children: [
-          // A captura (RepaintBoundary) cobre o conteúdo inteiro do cartão,
-          // com fundo sólido — assim o PNG não sai com fundo transparente
-          // e leva título, linhas e rodapé prontos para quem receber.
-          RepaintBoundary(
-            key: _boundaryKey,
-            child: Container(
-              color: isDark ? BrandColors.darkSurface : Colors.white,
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.medical_information_outlined,
-                        color: BrandColors.red,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Cartão de emergência',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: inkColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _EmergencyRow(
-                    label: 'Tipo sanguíneo',
-                    value: widget.tipoSanguineo?.value ?? 'Não informado',
-                  ),
-                  const SizedBox(height: 6),
-                  _EmergencyRow(
-                    label: 'Alergias',
-                    value: _resumoLista(widget.alergias),
-                  ),
-                  const SizedBox(height: 6),
-                  _EmergencyRow(
-                    label: 'Condições crônicas',
-                    value: _resumoLista(widget.condicoesCronicas),
-                  ),
-                  const SizedBox(height: 6),
-                  _EmergencyRow(
-                    label: 'Contato de emergência',
-                    value: mainContact != null
-                        ? '${mainContact.nome} — ${mainContact.telefone}'
-                        : 'Nenhum cadastrado',
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Remédio na Hora • Gerado em ${_stampRodape(DateTime.now())}',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: mutedColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: _compartilhando
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2.4),
-                    ),
-                  )
-                : IconButton(
-                    tooltip: 'Compartilhar como imagem',
-                    icon: const Icon(Icons.ios_share_outlined),
-                    color: BrandColors.red,
-                    onPressed: _compartilharComoImagem,
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Resumo compacto de uma lista do cartão: 'Nenhuma' quando vazia,
-/// itens separados por vírgula e "(+N)" quando passa de dois.
-String _resumoLista(List<String> valores) {
-  if (valores.isEmpty) return 'Nenhuma';
-  if (valores.length <= 2) return valores.join(', ');
-  return '${valores.take(2).join(', ')} (+${valores.length - 2})';
-}
-
-/// Carimbo para o nome do arquivo: YYYYMMDD-HHMMSS.
-///
-/// Formatação manual (sem intl) para não depender do locale inicializado.
-String _stampArquivo(DateTime d) {
-  String p2(int v) => v.toString().padLeft(2, '0');
-  return '${d.year.toString().padLeft(4, '0')}${p2(d.month)}${p2(d.day)}'
-      '-${p2(d.hour)}${p2(d.minute)}${p2(d.second)}';
-}
-
-/// Carimbo legível para o rodapé da imagem: dd/MM/yyyy HH:mm.
-String _stampRodape(DateTime d) {
-  String p2(int v) => v.toString().padLeft(2, '0');
-  return '${p2(d.day)}/${p2(d.month)}/${d.year} ${p2(d.hour)}:${p2(d.minute)}';
-}
-
-class _EmergencyRow extends StatelessWidget {
-  const _EmergencyRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 140,
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: isDark ? BrandColors.darkMuted : BrandColors.muted,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: isDark ? BrandColors.darkInk : BrandColors.ink,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Editor simples de lista de textos: chips com remoção + campo para adicionar.
-class _StringListEditor extends StatefulWidget {
-  const _StringListEditor({
-    required this.label,
-    required this.icon,
-    required this.hint,
-    required this.values,
-    required this.onChanged,
-  });
-
-  final String label;
-  final IconData icon;
-  final String hint;
-  final List<String> values;
-  final ValueChanged<List<String>> onChanged;
-
-  @override
-  State<_StringListEditor> createState() => _StringListEditorState();
-}
-
-class _StringListEditorState extends State<_StringListEditor> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _add() {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    if (widget.values.any((v) => v.toLowerCase() == text.toLowerCase())) {
-      _controller.clear();
-      return;
-    }
-    widget.onChanged([...widget.values, text]);
-    _controller.clear();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return InputDecorator(
-      decoration: InputDecoration(
-        labelText: widget.label,
-        prefixIcon: Icon(widget.icon),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (widget.values.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 8),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: widget.values
-                    .map(
-                      (value) => InputChip(
-                        label: Text(value),
-                        onDeleted: () => widget.onChanged(
-                          widget.values.where((v) => v != value).toList(),
-                        ),
-                        deleteIcon: const Icon(Icons.close, size: 18),
-                      ),
-                    )
-                    .toList(),
-              ),
-            )
-          else
-            const Padding(
-              padding: EdgeInsets.only(top: 4, bottom: 8),
-              child: Text('Nenhum item adicionado'),
-            ),
-          TextField(
-            controller: _controller,
-            decoration: InputDecoration(
-              hintText: widget.hint,
-              isDense: true,
-              border: InputBorder.none,
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.add_circle_outline),
-                tooltip: 'Adicionar',
-                onPressed: _add,
-              ),
-            ),
-            textCapitalization: TextCapitalization.sentences,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _add(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Caixa de ícone `.stat-icon` do PWA para os atalhos de cadastro do
-/// Perfil: véu teal com anel fino, no claro e no escuro.
-class _CadastroIconBox extends StatelessWidget {
-  const _CadastroIconBox({required this.icon, required this.isDark});
-
-  final IconData icon;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: isDark
-            ? BrandColors.teal700.withValues(alpha: .18)
-            : BrandColors.accentSoft,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: BrandColors.teal700.withValues(alpha: .07)),
-      ),
-      child: Icon(icon, color: BrandColors.teal700, size: 22),
-    );
-  }
-}
-
-/// Dialog para criar/editar um contato de emergência.
-class _EmergencyContactDialog extends StatefulWidget {
-  const _EmergencyContactDialog({this.contact});
-
-  final EmergencyContact? contact;
-
-  @override
-  State<_EmergencyContactDialog> createState() =>
-      _EmergencyContactDialogState();
-}
-
-class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
-  final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nomeController;
-  late final TextEditingController _parentescoController;
-  late final TextEditingController _telefoneController;
-
-  bool get _isEditing => widget.contact != null;
-
-  @override
-  void initState() {
-    super.initState();
-    _nomeController = TextEditingController(text: widget.contact?.nome ?? '');
-    _parentescoController = TextEditingController(
-      text: widget.contact?.parentesco ?? '',
-    );
-    _telefoneController = TextEditingController(
-      text: widget.contact?.telefone ?? '',
-    );
-  }
-
-  @override
-  void dispose() {
-    _nomeController.dispose();
-    _parentescoController.dispose();
-    _telefoneController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-    final contact = _isEditing
-        ? widget.contact!.copyWith(
-            nome: _nomeController.text.trim(),
-            parentesco: _parentescoController.text.trim(),
-            telefone: _telefoneController.text.trim(),
-          )
-        : EmergencyContact.create(
-            nome: _nomeController.text.trim(),
-            parentesco: _parentescoController.text.trim(),
-            telefone: _telefoneController.text.trim(),
-          );
-    Navigator.of(context).pop(contact);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(_isEditing ? 'Editar contato' : 'Adicionar contato'),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _nomeController,
-                decoration: const InputDecoration(
-                  labelText: 'Nome *',
-                  hintText: 'Ex: Maria Silva',
-                  prefixIcon: Icon(Icons.person_outline),
-                ),
-                textCapitalization: TextCapitalization.words,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Informe o nome';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _parentescoController,
-                decoration: const InputDecoration(
-                  labelText: 'Parentesco',
-                  hintText: 'Ex: Cônjuge, filho(a), amigo(a)',
-                  prefixIcon: Icon(Icons.family_restroom_outlined),
-                ),
-                textCapitalization: TextCapitalization.words,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _telefoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Telefone *',
-                  hintText: '(11) 91234-5678',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-                keyboardType: TextInputType.phone,
-                inputFormatters: [PhoneInputFormatter()],
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Informe o telefone';
-                  }
-                  final digits = value.replaceAll(RegExp(r'\D'), '');
-                  if (digits.length < 10 || digits.length > 11) {
-                    return 'Telefone deve ter 10 ou 11 dígitos';
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: _submit,
-          child: Text(_isEditing ? 'Salvar' : 'Adicionar'),
-        ),
-      ],
-    );
-  }
-}
-
-/// Card "Lembretes no navegador" — só aparece na web (Notification API).
-/// Três estados: concedido, bloqueado pelo site e nunca perguntado.
-class _WebReminderCard extends StatefulWidget {
-  @override
-  State<_WebReminderCard> createState() => _WebReminderCardState();
-}
-
-class _WebReminderCardState extends State<_WebReminderCard> {
-  late bool _granted = WebReminderService.instance.isPermissionGranted;
-  late bool _denied = WebReminderService.instance.isPermissionDenied;
-  bool _busy = false;
-
-  Future<void> _activate() async {
-    setState(() => _busy = true);
-    final granted = await WebReminderService.instance.requestPermission();
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-      _granted = granted;
-      _denied = WebReminderService.instance.isPermissionDenied;
-    });
-    showAppSnackBar(
-      context,
-      granted
-          ? 'Lembretes ativos neste navegador.'
-          : 'O navegador não concedeu a permissão. Libere as notificações '
-                'deste site e tente novamente.',
-      type: granted ? AppSnackType.success : AppSnackType.error,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return RecordCard(
-      padding: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  _granted
-                      ? Icons.notifications_active_outlined
-                      : Icons.notifications_outlined,
-                  color: _granted
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _granted
-                        ? 'Lembretes ativos neste navegador: enquanto o app '
-                              'estiver aberto, você recebe o aviso na hora da '
-                              'dose, mesmo com a aba em segundo plano.'
-                        : _denied
-                        ? 'As notificações estão bloqueadas para este '
-                              'site. Libere nas permissões do navegador e '
-                              'recarregue a página para ativar.'
-                        : 'O navegador pode avisar na hora da dose '
-                              'enquanto o app estiver aberto — mesmo com '
-                              'a aba em segundo plano. No celular (APK), '
-                              'os avisos já funcionam com o app fechado.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (!_granted && !_denied) ...[
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: _busy ? null : _activate,
-                icon: _busy
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.notifications_on_outlined),
-                label: const Text('Ativar lembretes'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }
