@@ -1,8 +1,9 @@
 plugins {
     id("com.android.application")
-    // AGP 9 tem Kotlin embutido: o plugin org.jetbrains.kotlin.android não
-    // deve mais ser aplicado aqui (kotl.in/gradle/agp-built-in-kotlin).
-    // The Flutter Gradle Plugin must be applied after the Android plugin.
+    id("org.jetbrains.kotlin.android")
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin
+    // Gradle plugins. (AGP 9 com android.builtInKotlin=false usa KGP como
+    // antes — ver android/gradle.properties.)
     id("dev.flutter.flutter-gradle-plugin")
 }
 
