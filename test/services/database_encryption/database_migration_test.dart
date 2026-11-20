@@ -166,6 +166,12 @@ Future<sqflite.Database> _createV11LegacyDb(String path) async {
 void main() {
   setUpAll(() {
     sqfliteFfiInit();
+    // The code under test (DatabaseService._openLegacyPlaintextDatabase)
+    // uses the GLOBAL sqflite factory via getDatabasesPath()/openDatabase().
+    // On macOS the production gate skips FFI init, so set the global factory
+    // here to keep the end-to-end migration tests green on every desktop CI
+    // lane (P3-1). Seeding already uses databaseFactoryFfi explicitly.
+    databaseFactory = databaseFactoryFfi;
   });
 
   late Directory tempDir;
