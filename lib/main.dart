@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart'
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+import 'core/service_locator.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/consultation_provider.dart';
 import 'providers/doctor_provider.dart';
@@ -15,7 +16,14 @@ import 'providers/lab_result_provider.dart';
 import 'providers/therapy_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'screens/main_shell.dart';
+import 'services/consultation_storage_service.dart';
+import 'services/database_service.dart';
+import 'services/doctor_storage_service.dart';
+import 'services/exam_storage_service.dart';
+import 'services/health_plan_storage_service.dart';
+import 'services/lab_result_storage_service.dart';
 import 'services/notification_service.dart';
+import 'services/therapy_storage_service.dart';
 import 'services/web_reminder_service.dart';
 import 'widgets/database_unlock_gate.dart';
 
@@ -23,9 +31,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR');
 
+  // P2-2: dependências de infraestrutura registradas no service locator;
+  // o bootstrap abaixo resolve tudo a partir dele (testável via fakes).
+  setupServiceLocator();
+
   // No-op on web; on mobile it also asks for the notification permission
   // (Android 13+) and creates the dose channel before any alarm is set.
-  final notifications = NotificationService.instance;
+  final notifications = sl<NotificationService>();
   await notifications.init();
 
   // Web: the encrypted database requires explicit unlock before any
@@ -58,13 +70,26 @@ Future<void> main() async {
 }
 
 Future<void> bootstrapApp(NotificationService notifications) async {
-  final therapyProvider = TherapyProvider(notifications: notifications);
-  final doctorProvider = DoctorProvider();
-  final consultationProvider = ConsultationProvider();
-  final examProvider = ExamProvider();
-  final labResultProvider = LabResultProvider();
-  final healthPlanProvider = HealthPlanProvider();
-  final userProfileProvider = UserProfileProvider();
+  // Todos os providers recebem suas dependências explicitamente do service
+  // locator; em testes, registre fakes antes de chamar esta função.
+  final therapyProvider = TherapyProvider(
+    notifications: notifications,
+    storage: sl<TherapyStorageService>(),
+  );
+  final doctorProvider = DoctorProvider(storage: sl<DoctorStorageService>());
+  final consultationProvider = ConsultationProvider(
+    storage: sl<ConsultationStorageService>(),
+  );
+  final examProvider = ExamProvider(storage: sl<ExamStorageService>());
+  final labResultProvider = LabResultProvider(
+    storage: sl<LabResultStorageService>(),
+  );
+  final healthPlanProvider = HealthPlanProvider(
+    storage: sl<HealthPlanStorageService>(),
+  );
+  final userProfileProvider = UserProfileProvider(
+    dbService: sl<DatabaseService>(),
+  );
   await therapyProvider.initialize();
   await doctorProvider.initialize();
   await consultationProvider.initialize();
