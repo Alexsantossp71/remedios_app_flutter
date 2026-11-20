@@ -72,6 +72,7 @@ void main() {
       expect(result, isNotNull);
       expect(result!.request, isNull);
       expect(result.user, isNull);
+      // ignore: deprecated_member_use
       expect(result.extra, isEmpty);
     });
 

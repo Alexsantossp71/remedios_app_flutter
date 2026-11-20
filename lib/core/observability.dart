@@ -88,15 +88,13 @@ Future<void> setupObservability() async {
   const dsn = String.fromEnvironment('SENTRY_DSN');
   if (dsn.isEmpty) return;
 
-  await SentryFlutter.init(
-    (options) {
-      options.dsn = dsn;
-      // Nunca anexar PII automática (IP, headers, etc.).
-      options.sendDefaultPii = false;
-      options.beforeSend = redactSentryEvent;
-      // O app lida com dados de saúde: não capturar breadcrumbs de UI que
-      // podem conter PHI (toques em campos de formulário, por exemplo).
-      options.maxBreadcrumbs = 20;
-    },
-  );
+  await SentryFlutter.init((options) {
+    options.dsn = dsn;
+    // Nunca anexar PII automática (IP, headers, etc.).
+    options.sendDefaultPii = false;
+    options.beforeSend = redactSentryEvent;
+    // O app lida com dados de saúde: não capturar breadcrumbs de UI que
+    // podem conter PHI (toques em campos de formulário, por exemplo).
+    options.maxBreadcrumbs = 20;
+  });
 }
