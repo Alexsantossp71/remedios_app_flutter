@@ -26,3 +26,16 @@ void initializeDatabaseFactory() {
     databaseFactory = databaseFactoryFfi;
   }
 }
+
+/// Initialize the FFI database factory unconditionally for tests.
+///
+/// [initializeDatabaseFactory] skips iOS/macOS (out of scope for the
+/// encryption delivery), which leaves `databaseFactory` unset on macOS and
+/// breaks the in-memory database used by tests. Test setup needs a working
+/// factory on every desktop platform CI runs on (P3-1 multi-OS matrix), so
+/// this forces `sqflite_common_ffi` regardless of the production gate.
+/// Production code must not call this — use [initializeDatabaseFactory].
+void initializeDatabaseFactoryForTesting() {
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+}

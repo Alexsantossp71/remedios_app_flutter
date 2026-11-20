@@ -82,7 +82,10 @@ class DatabaseService {
     if (kIsWeb) {
       throw UnsupportedError('In-memory database not supported on Web');
     }
-    initializeDatabaseFactory();
+    // Tests need a working FFI factory on every desktop platform CI runs on
+    // (macOS included — the production gate skips it). Use the test-only
+    // initializer instead of the platform-gated production one.
+    initializeDatabaseFactoryForTesting();
 
     if (_db != null && _db!.isOpen) return _db!;
 
