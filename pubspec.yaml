@@ -1,7 +1,7 @@
 name: remedios_app_flutter
-description: "Remédio na Hora - Flutter implementation."
-publish_to: 'none'
-version: 3.0.0+0
+description: Remédio na Hora - Flutter implementation.
+publish_to: none
+version: 3.1.0
 environment:
   sdk: '>=3.12.0 <4.0.0'
 dependencies:
@@ -17,15 +17,12 @@ dependencies:
   table_calendar: ^3.0.9
   intl: ^0.20.2
   provider: ^6.1.5+1
-  # P2-2 (auditoria): injeção de dependência formal no bootstrap.
   get_it: ^8.0.0
   uuid: ^4.5.1
   flutter_localizations:
     sdk: flutter
   url_launcher: ^6.3.2
   flutter_local_notifications: ^20.1.0
-  # Keep these versions aligned with the cross-platform SQLite3MC adapter POC.
-  # This only prepares dependency compatibility; database encryption is NOT enabled.
   sqlite3: 3.5.2
   sqflite_common: 2.5.17
   sqflite_common_ffi: 2.4.7
@@ -48,17 +45,11 @@ dev_dependencies:
     sdk: flutter
   test: any
   flutter_lints: ^5.0.0
-
-# Compile the SQLite library used by sqflite_common_ffi as SQLite3MultipleCiphers
-# (SQLite3MC) with the ChaCha20 cipher, so the database can be encrypted at rest.
-# This replaces the plaintext SQLite build on Android and on the Dart VM used by
-# the automated tests. It does not change the schema or any stored data.
 hooks:
   user_defines:
     sqlite3:
       source: sqlite3mc
       cipher: chacha20
-
 flutter:
   uses-material-design: true
   assets:
