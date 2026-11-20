@@ -62,10 +62,11 @@ void main() {
 
     test('remove request, user e extra (PHI nunca sai do dispositivo)', () {
       final event = SentryEvent(
-        message: const SentryMessage('ok'),
-        request: const SentryRequest(),
+        message: SentryMessage('ok'),
+        request: SentryRequest(),
         user: SentryUser(id: 'user-1', username: 'alex'),
-        extra: const <String, dynamic>{'diagnosis': 'hipertensão'},
+        // ignore: deprecated_member_use
+        extra: <String, dynamic>{'diagnosis': 'hipertensão'},
       );
       final result = redactSentryEvent(event, Hint());
       expect(result, isNotNull);
@@ -76,8 +77,8 @@ void main() {
 
     test('filtra tags cuja chave sugere dado sensível', () {
       final event = SentryEvent(
-        message: const SentryMessage('ok'),
-        tags: const <String, String>{
+        message: SentryMessage('ok'),
+        tags: <String, String>{
           'patient_id': '123',
           'build': '3.1.0',
           'email': 'a@b.com',

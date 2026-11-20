@@ -39,25 +39,30 @@ String redactPii(String input) {
 /// - Remove `user` (IP/email/username nunca são enviados).
 /// - Descarta `extra` (pode conter PHI injetado por acidente).
 /// - Filtra `tags` cuja chave sugere dado sensível.
+///
+/// Mutate o evento in place (os campos de `SentryEvent` são mutáveis no
+/// sentry-dart 10.x; `copyWith` foi removido).
 SentryEvent? redactSentryEvent(SentryEvent event, Hint hint) {
   final formatted = event.message?.formatted;
-  final redacted = formatted != null ? redactPii(formatted) : null;
+  if (formatted != null) {
+    final redacted = redactPii(formatted);
+    if (redacted != formatted) {
+      event.message = SentryMessage(redacted);
+    }
+  }
 
-  final filteredTags = Map<String, String>.fromEntries(
-    event.tags.entries.where(
-      (entry) => !_looksSensitive(entry.key),
-    ),
-  );
+  event.request = null;
+  event.user = null;
+  // extra está deprecated no sentry 10.x em favor de Contexts, mas ainda
+  // precisa ser limpo para minimização de PHI.
+  // ignore: deprecated_member_use
+  event.extra = const <String, dynamic>{};
+  final tags = event.tags;
+  if (tags != null) {
+    tags.removeWhere((key, _) => _looksSensitive(key));
+  }
 
-  return event.copyWith(
-    message: redacted != null && redacted != formatted
-        ? SentryMessage(redacted)
-        : event.message,
-    request: null,
-    user: null,
-    extra: const <String, dynamic>{},
-    tags: filteredTags,
-  );
+  return event;
 }
 
 bool _looksSensitive(String key) {
