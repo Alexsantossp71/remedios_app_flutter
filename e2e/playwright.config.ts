@@ -17,10 +17,15 @@ export default defineConfig({
     ['list']
   ],
   use: {
-    baseURL: 'http://localhost:5000',
+    // 127.0.0.1 explícito: "localhost" pode resolver para ::1 (IPv6) e o
+    // http-server escuta apenas IPv4 — o mesmo sintoma quebrou o primeiro
+    // run do e2e em CI (P3-3).
+    baseURL: 'http://127.0.0.1:5000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    // Vídeo é o artefato mais pesado do report; em CI fica desligado para
+    // não estourar memória/disco em runs longos.
+    video: process.env.CI ? 'off' : 'retain-on-failure',
     actionTimeout: 60000,
     navigationTimeout: 120000,
   },
@@ -41,14 +46,17 @@ export default defineConfig({
     // },
   ],
 
-  // Run local dev server before starting tests
-  // IMPORTANT: Start Flutter manually before running tests:
-  // 1. Terminal 1: flutter run -d web-server --web-port=5000
-  // 2. Terminal 2: cd e2e && npm test
+  // O Playwright gerencia o servidor do build release: se já houver um
+  // servidor na porta (ex.: `flutter run -d web-server --web-port=5000`
+  // para e2e em modo dev, ou o servidor do CI), ele é reutilizado.
   webServer: {
-    command: 'echo "Flutter server must be started manually" && exit 1',
-    url: 'http://localhost:5000',
+    command: [
+      'ls ../build/web/index.html >/dev/null 2>&1 ||',
+      '(echo "Build web ausente: rode flutter build web --release antes" && exit 1);',
+      'npx -y http-server ../build/web -p 5000 -a 127.0.0.1 -c-1 --silent',
+    ].join(' '),
+    url: 'http://127.0.0.1:5000',
     reuseExistingServer: true,
-    timeout: 10000,
+    timeout: 60000,
   },
 });

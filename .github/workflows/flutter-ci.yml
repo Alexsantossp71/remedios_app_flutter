@@ -14,8 +14,16 @@ concurrency:
 
 jobs:
   quality:
-    name: Analyze, test and build
-    runs-on: ubuntu-latest
+    name: Analyze, test and build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        # P3-1 (auditoria): portabilidade verificada em Linux, macOS e
+        # Windows. O build web (e todo o pipeline de cobertura) roda só no
+        # lane Linux; nos demais executa pub get + format + analyze + test.
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,6 +44,7 @@ jobs:
       # then replace the WASM with the SQLite3MultipleCiphers build and
       # compile the encryption-capable shared worker used by the app.
       - name: Prepare Web SQLite assets (SQLite3MC)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           dart run sqflite_common_ffi_web:setup --force
           curl -fsSLo web/sqlite3.wasm "https://github.com/simolus3/sqlite3.dart/releases/download/sqlite3-3.5.2/sqlite3mc.wasm"
@@ -60,7 +69,7 @@ jobs:
       # summary, keeps the raw lcov as an artifact and uploads to Codecov
       # (tokenless for public repos; set CODECOV_TOKEN to enable the badge).
       - name: Coverage summary
-        if: always()
+        if: matrix.os == 'ubuntu-latest'
         run: |
           if [ ! -f coverage/lcov.info ]; then
             echo "coverage/lcov.info was not generated (tests likely did not run)"
@@ -92,7 +101,7 @@ jobs:
           echo "Total line coverage: ${TOTAL} (${tlh}/${tlf} lines)"
 
       - name: Upload coverage artifact
-        if: always()
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: lcov-report
@@ -100,7 +109,7 @@ jobs:
           retention-days: 14
 
       - name: Upload to Codecov
-        if: always()
+        if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v5
         with:
           files: coverage/lcov.info
@@ -108,4 +117,5 @@ jobs:
           fail_ci_if_error: false
 
       - name: Build web release
+        if: matrix.os == 'ubuntu-latest'
         run: flutter build web --release

@@ -1,156 +1,192 @@
 import { Page } from '@playwright/test';
 
 /**
- * Wait for Flutter app to be fully loaded.
- * Strategy: Flutter web renders inside <flutter-view> shadow DOM.
- * We wait for:
- *  1. flutter-view element present
- *  2. shadow root has rendered text (not empty)
- *  3. document.title is set (AppBar title)
+ * Helpers for driving the Flutter web app from Playwright.
+ *
+ * Flutter 3.50 web renders pixels to a canvas inside <flt-glass-pane>; the
+ * DOM exposes text only through the semantics tree, which lives in the
+ * light-DOM element <flt-semantics-host> (NOT inside <flutter-view>'s
+ * shadow root — <flutter-view> has no shadow root in this version). The
+ * semantics tree is disabled by default and is turned on by clicking the
+ * <flt-semantics-placeholder> button ("Enable accessibility") that Flutter
+ * injects at the top of the document. waitForAppReady() does that click
+ * before waiting for any text.
  */
+
+/** Password used to set up the encrypted database in e2e (≥12 chars). */
+const E2E_DB_PASSWORD = 'e2e-test-pass-1234';
+
+/** Wait for the Flutter app to be fully loaded and interactive. */
 export async function waitForAppReady(page: Page) {
-  // Wait for flutter-view element
+  // 1. flutter-view element present (host mounted by the engine).
   await page.waitForSelector('flutter-view', { timeout: 60000 });
 
-  // Wait for shadow DOM to have rendered text content
-  await page.waitForFunction(() => {
-    const fv = document.querySelector('flutter-view') as HTMLElement;
-    if (!fv?.shadowRoot) return false;
-    const text = fv.shadowRoot.textContent?.trim();
-    return text && text.length > 10;
-  }, { timeout: 120000 });
-
-  // Wait for document title to be set (proves AppBar rendered)
-  await page.waitForFunction(() => document.title && document.title.length > 0, {
-    timeout: 60000,
+  // 2. Enable the semantics tree: Flutter renders text to canvas, so the
+  //    DOM only exposes <flt-semantics> text nodes after accessibility is
+  //    on. Playwright is not an assistive tech, so we click the built-in
+  //    <flt-semantics-placeholder> ourselves (it lives in the light DOM).
+  await page.evaluate(() => {
+    const ph = document.querySelector(
+      'flt-semantics-placeholder',
+    ) as HTMLElement | null;
+    ph?.click();
   });
 
-  // Extra wait for SQLite to initialize
+  // 3. Wait for <flt-semantics-host> to expose rendered text content.
+  await page.waitForFunction(
+    () => {
+      const host = document.querySelector('flt-semantics-host');
+      if (!host) return false;
+      const text = host.textContent?.trim();
+      return text != null && text.length > 10;
+    },
+    undefined,
+    { timeout: 120000 },
+  );
+
+  // 4. On web with a fresh browser profile, the app boots into the
+  //    DatabaseUnlockGate ("Proteger seu banco de dados") and requires a
+  //    recovery password before the main shell loads. Complete it once per
+  //    context (idempotent — if the DB is already unlocked, skip).
+  await ensureDatabaseUnlocked(page);
+
+  // 5. Wait for the main shell: AppBar title "Remédio na Hora" is set by
+  //    Flutter on the first rendered frame of MainShell.
+  await page.waitForFunction(
+    () => !!document.title && document.title.length > 0,
+    undefined,
+    { timeout: 60000 },
+  );
+
+  // 6. Extra settle time for SQLite (sqlite3mc wasm) to finish initializing
+  //    before interactions start.
   await page.waitForTimeout(3000);
 }
 
-/**
- * Enable Flutter semantics tree so text is exposed to Playwright.
- * This calls SemanticsBinding to populate flt-semantics nodes.
+/** Complete the web DatabaseUnlockGate setup or unlock flow if present.
+ *
+ * Two flows:
+ *  - Setup (fresh profile): "Proteger seu banco de dados" → password +
+ *    confirm + "Criar cofre e abrir o app".
+ *  - Unlock (returning profile): "Banco bloqueado" → password +
+ *    "Desbloquear".
+ *
+ * Idempotent: if neither prompt is visible (DB already unlocked in this
+ * context), returns immediately.
  */
+export async function ensureDatabaseUnlocked(page: Page) {
+  // Setup flow.
+  const setupVisible = await page
+    .locator('text=Proteger seu banco de dados')
+    .isVisible({ timeout: 3000 })
+    .catch(() => false);
+  if (setupVisible) {
+    const password = page.locator('[aria-label="Senha de recuperação"]').first();
+    const confirm = page.locator('[aria-label="Confirmar senha"]').first();
+    // Flutter web keeps a single native <input> in flt-text-editing-host and
+    // reassigns it to whichever semantics textbox has focus. Click each field
+    // first so Flutter spawns the native input for it, then type.
+    await password.click();
+    await password.fill(E2E_DB_PASSWORD);
+    await confirm.click();
+    await confirm.fill(E2E_DB_PASSWORD);
+    await page.getByRole('button', { name: 'Criar cofre e abrir o app' }).click();
+    return;
+  }
+
+  // Unlock flow (returning profile, e.g. after page.reload()).
+  const unlockVisible = await page
+    .locator('text=Banco bloqueado')
+    .isVisible({ timeout: 3000 })
+    .catch(() => false);
+  if (unlockVisible) {
+    const password = page.locator('[aria-label="Senha de recuperação"]').first();
+    await password.click();
+    await password.fill(E2E_DB_PASSWORD);
+    await page.getByRole('button', { name: 'Desbloquear' }).click();
+    return;
+  }
+}
+
+/** Enable Flutter's semantics tree (idempotent; also called by waitForAppReady). */
 export async function enableSemantics(page: Page) {
   await page.evaluate(() => {
-    // Enable semantics programmatically
-    (window as any)._flutter?.loader?.loadEntrypoint?.({});
-    // Try to access SemanticsBinding
-    const sb = (window as any).SemanticsBinding;
-    if (sb?.instance) {
-      sb.instance.setSemanticsEnabled(true);
-    }
-    // Alternative: dispatch accessibility event
-    const fv = document.querySelector('flutter-view');
-    if (fv?.shadowRoot) {
-      // Click on the shadow root to trigger semantics
-      fv.shadowRoot.dispatchEvent(new Event('tap', { bubbles: true }));
-    }
+    const ph = document.querySelector(
+      'flt-semantics-placeholder',
+    ) as HTMLElement | null;
+    ph?.click();
   });
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(500);
 }
 
-/**
- * Get text content from Flutter's shadow DOM.
- */
+/** Get the text content rendered in the Flutter semantics tree. */
 export async function getFlutterText(page: Page): Promise<string> {
   return page.evaluate(() => {
-    const fv = document.querySelector('flutter-view') as HTMLElement;
-    if (!fv?.shadowRoot) return '';
-    return fv.shadowRoot.textContent?.trim() || '';
+    const host = document.querySelector('flt-semantics-host');
+    return host?.textContent?.trim() || '';
   });
 }
 
-/**
- * Find an element inside flutter-view shadow DOM by text content.
- * Returns the element if found, null otherwise.
- */
+/** Find a semantics node by exact text. Returns 'found' or 'not-found'. */
 export async function findInShadow(page: Page, text: string): Promise<string> {
-  return page.evaluate(
-    (t) => {
-      const fv = document.querySelector('flutter-view') as HTMLElement;
-      if (!fv?.shadowRoot) return 'not-found';
-      const walker = document.createTreeWalker(
-        fv.shadowRoot,
-        NodeFilter.SHOW_TEXT,
-        null
-      );
-      let node: Node | null;
-      while ((node = walker.nextNode())) {
-        if (node.textContent?.trim() === t) {
-          // Return the parent element's outerHTML for inspection
-          return 'found:' + node.parentElement?.tagName + ':' + node.parentElement?.className;
-        }
+  return page.evaluate((t) => {
+    const host = document.querySelector('flt-semantics-host');
+    if (!host) return 'not-found';
+    const walker = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+    let node: Node | null;
+    while ((node = walker.nextNode())) {
+      if (node.textContent?.trim() === t) {
+        return 'found:' + node.parentElement?.tagName;
       }
-      return 'not-found';
-    },
-    text
-  );
+    }
+    return 'not-found';
+  }, text);
 }
 
-/**
- * Click a text element inside Flutter's shadow DOM.
- * Searches shadow DOM for the text and clicks its parent element.
- */
+/** Click a Flutter semantics node by exact text or aria-label. */
 export async function flutterClick(page: Page, text: string) {
   await page.evaluate((t) => {
-    const fv = document.querySelector('flutter-view') as HTMLElement;
-    if (!fv?.shadowRoot) throw new Error('flutter-view shadow root not found');
-    const shadow = fv.shadowRoot;
-    const all = shadow.querySelectorAll('*');
+    const host = document.querySelector('flt-semantics-host');
+    if (!host) throw new Error('flt-semantics-host not found');
+    const all = host.querySelectorAll('*');
     for (const el of all) {
-      if (
-        el.textContent?.trim() === t ||
-        el.getAttribute('aria-label') === t
-      ) {
+      if (el.textContent?.trim() === t || el.getAttribute('aria-label') === t) {
         (el as HTMLElement).click();
         return;
       }
     }
-    throw new Error(`Text "${t}" not found in shadow DOM`);
+    throw new Error(`Text "${t}" not found in semantics tree`);
   }, text);
 }
 
-/**
- * Fill a text field inside Flutter's shadow DOM by its label/placeholder.
- */
-export async function flutterFill(
-  page: Page,
-  label: string,
-  value: string
-) {
-  await page.evaluate(
-    ([l, v]) => {
-      const fv = document.querySelector('flutter-view') as HTMLElement;
-      if (!fv?.shadowRoot) throw new Error('flutter-view shadow root not found');
-      const inputs = fv.shadowRoot.querySelectorAll(
-        'input, textarea, [contenteditable="true"]'
-      );
-      for (const input of inputs) {
-        const inp = input as HTMLInputElement;
-        if (
-          inp.placeholder === l ||
-          inp.getAttribute('aria-label') === l ||
-          inp.id === l
-        ) {
-          inp.focus();
-          inp.value = v;
-          inp.dispatchEvent(new Event('input', { bubbles: true }));
-          inp.dispatchEvent(new Event('change', { bubbles: true }));
-          return;
-        }
+/** Fill a Flutter text field by placeholder/aria-label/id. */
+export async function flutterFill(page: Page, label: string, value: string) {
+  await page.evaluate(([l, v]) => {
+    // Flutter hosts native inputs inside <flt-text-editing-host> (light DOM).
+    const root =
+      document.querySelector('flt-text-editing-host') ?? document.body;
+    const inputs = root.querySelectorAll(
+      'input, textarea, [contenteditable="true"]',
+    );
+    for (const input of inputs) {
+      const inp = input as HTMLInputElement;
+      if (
+        inp.placeholder === l ||
+        inp.getAttribute('aria-label') === l ||
+        inp.id === l
+      ) {
+        inp.focus();
+        inp.value = v;
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        inp.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
       }
-      throw new Error(`Input "${l}" not found in shadow DOM`);
-    },
-    [label, value]
-  );
+    }
+    throw new Error(`Input "${l}" not found`);
+  }, [label, value]);
 }
 
-/**
- * Clear all data from the app (reset state).
- */
+/** Clear all data from the app (reset state). */
 export async function clearAppData(page: Page) {
   await page.click('text=Perfil');
   await page.waitForTimeout(500);
@@ -166,17 +202,13 @@ export async function clearAppData(page: Page) {
   }
 }
 
-/**
- * Navigate to a specific tab (bottom navigation).
- */
+/** Navigate to a specific tab (bottom navigation). */
 export async function navigateToTab(page: Page, tabName: string) {
   await page.click(`text=${tabName}`);
   await page.waitForTimeout(500);
 }
 
-/**
- * Fill a text field by placeholder (standard DOM fallback).
- */
+/** Fill a text field by placeholder (standard DOM fallback). */
 export async function fillField(page: Page, placeholder: string, value: string) {
   const field = page.locator(`[placeholder="${placeholder}"]`);
   if (await field.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -187,13 +219,11 @@ export async function fillField(page: Page, placeholder: string, value: string) 
   }
 }
 
-/**
- * Select an option from a dropdown.
- */
+/** Select an option from a dropdown. */
 export async function selectDropdownOption(
   page: Page,
   label: string,
-  value: string
+  value: string,
 ) {
   const dropdown = page.locator(`text=${label}`).first();
   await dropdown.click();
@@ -201,9 +231,7 @@ export async function selectDropdownOption(
   await page.click(`text=${value}`);
 }
 
-/**
- * Take a screenshot with timestamp.
- */
+/** Take a screenshot with timestamp. */
 export async function takeScreenshot(page: Page, name: string) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   await page.screenshot({
@@ -212,18 +240,14 @@ export async function takeScreenshot(page: Page, name: string) {
   });
 }
 
-/**
- * Generate a random Brazilian phone number.
- */
+/** Generate a random Brazilian phone number. */
 export function generatePhone(): string {
   const ddd = Math.floor(Math.random() * 89) + 11;
   const number = Math.floor(Math.random() * 90000000) + 10000000;
   return `(${ddd}) 9${number}`;
 }
 
-/**
- * Generate a random CRM number.
- */
+/** Generate a random CRM number. */
 export function generateCRM(): string {
   return Math.floor(Math.random() * 99999) + 10000;
 }
