@@ -6,6 +6,7 @@ import 'package:flutter_localizations/flutter_localizations.dart'
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
+import 'core/observability.dart';
 import 'core/service_locator.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/consultation_provider.dart';
@@ -34,6 +35,10 @@ Future<void> main() async {
   // P2-2: dependências de infraestrutura registradas no service locator;
   // o bootstrap abaixo resolve tudo a partir dele (testável via fakes).
   setupServiceLocator();
+
+  // P3-2: observabilidade de falhas. Dormant por default — só ativa com
+  // --dart-define=SENTRY_DSN=... no build; sem o DSN é no-op.
+  await setupObservability();
 
   // No-op on web; on mobile it also asks for the notification permission
   // (Android 13+) and creates the dose channel before any alarm is set.
