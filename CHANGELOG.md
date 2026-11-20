@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/Alexsantossp71/remedios_app_flutter/compare/v3.1.0...v3.2.0) (2026-11-20)
+
+
+### Features
+
+* **observability:** Sentry wiring with PII/PHI scrubbing, dormant by default (P3-2) ([#76](https://github.com/Alexsantossp71/remedios_app_flutter/issues/76)) ([f333582](https://github.com/Alexsantossp71/remedios_app_flutter/commit/f3335829e0e6cb85677b5f12fe9d69e3a4a5795d))
+
 ## [3.1.0](https://github.com/Alexsantossp71/remedios_app_flutter/compare/v3.0.0...v3.1.0) (2026-11-20)
 
 
