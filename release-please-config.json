@@ -6,8 +6,9 @@
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
         {
-          "type": "generic",
-          "path": "pubspec.yaml"
+          "type": "yaml",
+          "path": "pubspec.yaml",
+          "jsonpath": "$.version"
         }
       ]
     }
