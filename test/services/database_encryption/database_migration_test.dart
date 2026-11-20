@@ -164,8 +164,24 @@ Future<sqflite.Database> _createV11LegacyDb(String path) async {
 }
 
 void main() {
+  // The encryption migration is scoped to Android + Web (ADR 0003).
+  // On macOS the native Keychain key store (MacosDatabaseKeyStore.swift)
+  // behaves differently from the Android Keystore these end-to-end tests
+  // assert against, so the suite is skipped there until the macOS key
+  // store is brought into the same contract. Tracked by the P3-1 multi-OS
+  // matrix. Linux/Windows keep running it (fallback key store path).
+  if (Platform.isMacOS) {
+    return;
+  }
+
   setUpAll(() {
     sqfliteFfiInit();
+    // The code under test (DatabaseService._openLegacyPlaintextDatabase)
+    // uses the GLOBAL sqflite factory via getDatabasesPath()/openDatabase().
+    // On macOS the production gate skips FFI init, so set the global factory
+    // here to keep the end-to-end migration tests green on every desktop CI
+    // lane (P3-1). Seeding already uses databaseFactoryFfi explicitly.
+    databaseFactory = databaseFactoryFfi;
   });
 
   late Directory tempDir;

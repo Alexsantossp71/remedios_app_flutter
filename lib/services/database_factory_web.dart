@@ -28,3 +28,10 @@ final DatabaseFactory databaseFactoryWeb = createDatabaseFactoryFfiWeb(
 void initializeDatabaseFactory() {
   // databaseFactoryWeb is ready to use; the worker loads the WASM lazily.
 }
+
+/// No-op for web (kept for the conditional-import contract).
+/// Tests never reach this: [DatabaseService.initInMemoryDatabase] throws on
+/// web before calling it.
+void initializeDatabaseFactoryForTesting() {
+  // no-op
+}
