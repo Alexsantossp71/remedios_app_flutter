@@ -183,41 +183,44 @@ void main() {
   }
 
   group('BackupService', () {
-    test('exportAll devolve estrutura completa com todas as tabelas', () async {
-      await seedAll();
-      final backup = await backupService.exportAll();
+    test(
+      'exportAll devolve envelope tipado completo com todas as tabelas',
+      () async {
+        await seedAll();
+        final envelope = await backupService.exportAll();
 
-      expect(backup['app'], BackupService.appMarker);
-      expect(backup['formatVersion'], BackupService.backupFormatVersion);
-      expect(backup['schemaVersion'], BackupService.maxSchemaVersion);
-      expect(backup['exportedAt'], isA<String>());
+        expect(BackupService.appMarker, BackupEnvelope.appMarker);
+        expect(envelope.formatVersion, BackupService.backupFormatVersion);
+        expect(envelope.schemaVersion, BackupService.maxSchemaVersion);
+        expect(envelope.exportedAt, isA<DateTime>());
 
-      final tables = backup['tables'] as Map<String, dynamic>;
-      expect(
-        tables.keys,
-        containsAll([
-          'treatments',
-          'dose_events',
-          'treatment_prescriptions',
-          'doctors',
-          'consultations',
-          'health_plans',
-          'user_profile',
-          'emergency_contacts',
-          'exams',
-          'lab_results',
-        ]),
-      );
-      expect(tables['treatments'], hasLength(2));
-      expect(tables['dose_events'], hasLength(1));
-      expect(tables['doctors'], hasLength(1));
-      expect(tables['consultations'], hasLength(1));
-      expect(tables['health_plans'], hasLength(1));
-      expect(tables['user_profile'], hasLength(1));
-      expect(tables['emergency_contacts'], hasLength(1));
-      expect(tables['exams'], hasLength(1));
-      expect(tables['lab_results'], hasLength(1));
-    });
+        final tables = envelope.tables;
+        expect(
+          tables.keys,
+          containsAll([
+            'treatments',
+            'dose_events',
+            'treatment_prescriptions',
+            'doctors',
+            'consultations',
+            'health_plans',
+            'user_profile',
+            'emergency_contacts',
+            'exams',
+            'lab_results',
+          ]),
+        );
+        expect(tables['treatments'], hasLength(2));
+        expect(tables['dose_events'], hasLength(1));
+        expect(tables['doctors'], hasLength(1));
+        expect(tables['consultations'], hasLength(1));
+        expect(tables['health_plans'], hasLength(1));
+        expect(tables['user_profile'], hasLength(1));
+        expect(tables['emergency_contacts'], hasLength(1));
+        expect(tables['exams'], hasLength(1));
+        expect(tables['lab_results'], hasLength(1));
+      },
+    );
 
     test('restore recria tudo após limpar o banco (round-trip)', () async {
       await seedAll();
@@ -290,24 +293,24 @@ void main() {
       await backupService.restore(first);
       final second = await backupService.exportAll();
 
-      // O único campo que pode diferir é o carimbo de hora da exportação.
-      (first['tables'] as Map).remove('exportedAt');
-      expect(second['tables'], first['tables']);
-      expect(second['schemaVersion'], first['schemaVersion']);
-      expect(second['formatVersion'], first['formatVersion']);
+      // O único campo que pode diferir é o carimbo de hora da exportação
+      // (campo próprio do envelope, fora das tabelas).
+      expect(second.tables, first.tables);
+      expect(second.schemaVersion, first.schemaVersion);
+      expect(second.formatVersion, first.formatVersion);
     });
 
     test('arquivo que não é um backup do app é rejeitado', () async {
       expect(
-        () => backupService.restore({'tables': {}}),
+        () => BackupEnvelope.fromJson({'tables': {}}),
         throwsA(isA<BackupFormatException>()),
       );
       expect(
-        () => backupService.restore({'app': 'outro-app', 'tables': {}}),
+        () => BackupEnvelope.fromJson({'app': 'outro-app', 'tables': {}}),
         throwsA(isA<BackupFormatException>()),
       );
       expect(
-        () => backupService.restore(
+        () => BackupEnvelope.fromJson(
           jsonDecode(
                 '{"app": "remedios-app", "formatVersion": 1, '
                 '"schemaVersion": 99, "tables": {}}',
@@ -320,7 +323,7 @@ void main() {
 
     test('backup de formato mais novo que o app é rejeitado', () async {
       expect(
-        () => backupService.restore(
+        () => BackupEnvelope.fromJson(
           jsonDecode(
                 '{"app": "remedios-app", "formatVersion": 2, '
                 '"schemaVersion": 7, "tables": {}}',
@@ -332,7 +335,7 @@ void main() {
     });
 
     test('linha sem chave de integridade é rejeitada', () async {
-      final backup = {
+      final envelope = BackupEnvelope.fromJson({
         'app': BackupService.appMarker,
         'formatVersion': BackupService.backupFormatVersion,
         'schemaVersion': BackupService.maxSchemaVersion,
@@ -341,15 +344,15 @@ void main() {
             {'id': 'dose-sem-tratamento'},
           ],
         },
-      };
+      });
       expect(
-        () => backupService.restore(backup),
+        () => backupService.restore(envelope),
         throwsA(isA<BackupFormatException>()),
       );
     });
 
     test('tabela ausente no backup restaura vazia (compatibilidade)', () async {
-      final backup = {
+      final envelope = BackupEnvelope.fromJson({
         'app': BackupService.appMarker,
         'formatVersion': BackupService.backupFormatVersion,
         'schemaVersion': BackupService.maxSchemaVersion,
@@ -371,15 +374,64 @@ void main() {
             },
           ],
         },
-      };
+      });
       await wipeAll();
-      final summary = await backupService.restore(backup);
+      final summary = await backupService.restore(envelope);
       expect(summary.treatments, 1);
       expect(summary.doseEvents, 0);
       expect(summary.doctors, 0);
 
       final treatments = await therapyService.loadTreatments();
       expect(treatments.single.name, 'Losartana');
+    });
+  });
+
+  group('BackupEnvelope', () {
+    test('toJson → fromJson é round-trip exato', () async {
+      await seedAll();
+      final envelope = await backupService.exportAll();
+
+      // Passa pelo JSON real (encode/decode) como acontece no arquivo.
+      final decoded =
+          jsonDecode(jsonEncode(envelope.toJson())) as Map<String, dynamic>;
+      final parsed = BackupEnvelope.fromJson(decoded);
+
+      expect(parsed.formatVersion, envelope.formatVersion);
+      expect(parsed.schemaVersion, envelope.schemaVersion);
+      expect(parsed.exportedAt.toUtc(), envelope.exportedAt.toUtc());
+      expect(parsed.tables, envelope.tables);
+    });
+
+    test('estrutura inválida de tabela é rejeitada no parse', () {
+      Map<String, dynamic> raw(Map<String, dynamic> tables) => {
+        'app': BackupEnvelope.appMarker,
+        'formatVersion': BackupEnvelope.currentFormatVersion,
+        'schemaVersion': BackupEnvelope.maxSchemaVersion,
+        'tables': tables,
+      };
+
+      expect(
+        () => BackupEnvelope.fromJson(raw({'treatments': 'não-lista'})),
+        throwsA(isA<BackupFormatException>()),
+      );
+      expect(
+        () => BackupEnvelope.fromJson(
+          raw({
+            'treatments': ['não-map'],
+          }),
+        ),
+        throwsA(isA<BackupFormatException>()),
+      );
+    });
+
+    test('backups sem "tables" ou sem carimbo restauram vazios', () async {
+      final envelope = BackupEnvelope.fromJson({
+        'app': BackupEnvelope.appMarker,
+        'formatVersion': BackupEnvelope.currentFormatVersion,
+        'schemaVersion': BackupEnvelope.maxSchemaVersion,
+      });
+      expect(envelope.tables, isEmpty);
+      expect(envelope.exportedAt, isA<DateTime>());
     });
   });
 }
