@@ -5,6 +5,11 @@ name: Release Please
 # chore...). O release-please mantém CHANGELOG.md, abre/mantém um PR
 # "chore(master): release X.Y.Z" (com bump em pubspec.yaml) e, quando o PR
 # é mergeado, cria a tag vX.Y.Z e a GitHub Release correspondente.
+#
+# REQUER configuração do repositório: Settings → Actions → General →
+# Workflow permissions → marcar "Allow GitHub Actions to create and approve
+# pull requests". Sem isso, o release-please falha com "GitHub Actions is
+# not permitted to create or approve pull requests."
 
 on:
   push:
@@ -18,7 +23,7 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: google-github-actions/release-please-action@v4
+      - uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
