@@ -102,8 +102,7 @@ class WelcomeScreen extends StatelessWidget {
                               vertical: 16,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.md),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                           ),
                           icon: const Icon(Icons.lock_outline),
@@ -124,8 +123,7 @@ class WelcomeScreen extends StatelessWidget {
                               vertical: 14,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.md),
+                              borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
                           ),
                           icon: const Icon(Icons.play_arrow_outlined),
@@ -184,9 +182,7 @@ class _BrandMark extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: isDark
-                  ? const Color(0x3315857A)
-                  : const Color(0x1A15857A),
+              color: isDark ? const Color(0x3315857A) : const Color(0x1A15857A),
               blurRadius: 18,
               offset: const Offset(0, 6),
             ),
