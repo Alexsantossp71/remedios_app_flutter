@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.3.0](https://github.com/Alexsantossp71/remedios_app_flutter/compare/v3.2.0...v3.3.0) (2026-11-21)
+
+
+### Features
+
+* **sentry:** pass SENTRY_DSN as --dart-define in the Vercel build ([#78](https://github.com/Alexsantossp71/remedios_app_flutter/issues/78)) ([6ceb364](https://github.com/Alexsantossp71/remedios_app_flutter/commit/6ceb3647bb127728300b64fe2f0666079414c468))
+
+
+### Bug Fixes
+
+* **sentry:** pass SENTRY_DSN via GitHub Actions env (Vercel Secret can't be pulled by local CLI) ([#80](https://github.com/Alexsantossp71/remedios_app_flutter/issues/80)) ([ed4f8b7](https://github.com/Alexsantossp71/remedios_app_flutter/commit/ed4f8b73b591f2973003f79a25b259ecad77eca6))
+
 ## [3.2.0](https://github.com/Alexsantossp71/remedios_app_flutter/compare/v3.1.0...v3.2.0) (2026-11-20)
 
 
