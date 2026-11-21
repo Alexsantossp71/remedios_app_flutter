@@ -38,6 +38,12 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          # SENTRY_DSN vem do GitHub Secret (não da env var da Vercel): o
+          # `vercel build` roda localmente neste runner, e Secrets da Vercel
+          # não podem ser baixados pelo CLI — ele escreve "[SENSITIVE]" como
+          # placeholder. O shell do buildCommand herda o env do step, então
+          # $SENTRY_DSN expande para o valor real aqui.
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: npx vercel@latest build --prod --yes --token="$VERCEL_TOKEN"
 
       # Nem o .wasm nem o .traineddata são rastreados pela Vercel: nenhum dos
