@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "flutter build web --release",
+  "buildCommand": "flutter build web --release --dart-define=SENTRY_DSN=$SENTRY_DSN",
   "outputDirectory": "build/web",
   "rewrites": [
     {
