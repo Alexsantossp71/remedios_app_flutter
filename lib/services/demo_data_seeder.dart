@@ -138,36 +138,30 @@ class DemoDataSeeder {
       'treatment_id': 'demo-treat-1',
       'scheduled_at': utc(today.add(const Duration(hours: 8))),
       'status': 'taken',
-      'taken_at': utc(today.add(const Duration(hours: 8, minutes: 5))),
+      'completed_at': utc(today.add(const Duration(hours: 8, minutes: 5))),
       'created_at': utc(today),
-      'updated_at': utc(today.add(const Duration(hours: 8, minutes: 5))),
     });
     await db.insert('dose_events', {
       'id': 'demo-dose-2',
       'treatment_id': 'demo-treat-2',
       'scheduled_at': utc(today.add(const Duration(hours: 8))),
       'status': 'taken',
-      'taken_at': utc(today.add(const Duration(hours: 8, minutes: 10))),
+      'completed_at': utc(today.add(const Duration(hours: 8, minutes: 10))),
       'created_at': utc(today),
-      'updated_at': utc(today.add(const Duration(hours: 8, minutes: 10))),
     });
     await db.insert('dose_events', {
       'id': 'demo-dose-3',
       'treatment_id': 'demo-treat-2',
       'scheduled_at': utc(today.add(const Duration(hours: 16))),
       'status': 'pending',
-      'taken_at': null,
       'created_at': utc(today),
-      'updated_at': utc(today),
     });
     await db.insert('dose_events', {
       'id': 'demo-dose-4',
       'treatment_id': 'demo-treat-2',
       'scheduled_at': utc(today.add(const Duration(hours: 24))),
       'status': 'pending',
-      'taken_at': null,
       'created_at': utc(today),
-      'updated_at': utc(today),
     });
 
     // ── treatment_prescriptions ──────────────────────────────────
