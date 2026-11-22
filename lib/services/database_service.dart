@@ -15,6 +15,7 @@ import 'database_encryption/database_encryption_service_web.dart'
 import 'database_encryption/encrypted_database_opener_stub.dart'
     if (dart.library.io) 'database_encryption/encrypted_database_opener.dart';
 import 'database_key/database_key_service.dart';
+import 'demo_data_seeder.dart';
 
 /// Database service for managing SQLite database instance, schemas, and migrations.
 class DatabaseService {
@@ -40,8 +41,24 @@ class DatabaseService {
   /// recovery UI. Null when the database opened successfully.
   Object? lastOpenError;
 
+  /// Quando true, [database] abre um banco em memória (não persistido,
+  /// sem criptografia) com dados mock para o visitante explorar a UI.
+  /// Ativado pelo CTA "Ver demo" da WelcomeScreen. Desativado por
+  /// `disableDemoMode()` quando o usuário sai do demo.
+  static bool demoMode = false;
+
+  /// Ativa o modo demo: banco em memória + dados mock, sem cofre.
+  static void enableDemoMode() => demoMode = true;
+
+  /// Desativa o modo demo e fecha o banco em memória. Próxima chamada
+  /// a [database] abre o fluxo normal (criptografia + cofre).
+  static void disableDemoMode() => demoMode = false;
+
   /// Returns the singleton [Database] instance.
   Future<Database> get database async {
+    if (demoMode) {
+      return _initDemoDatabase();
+    }
     if (_db != null && _db!.isOpen) return _db!;
     try {
       _db = await _initDatabase();
@@ -96,6 +113,32 @@ class DatabaseService {
       onConfigure: (db) => _onConfigure(db),
     );
     await setDatabaseForTesting(db);
+    return db;
+  }
+
+  /// Inicializa o banco em memória para o modo demo.
+  ///
+  /// Funciona em Web e native: usa a factory da plataforma (databaseFactoryWeb
+  /// em Web com SQLite3MC WASM SharedWorker, sqflite_common_ffi em native).
+  /// O banco vive em memória apenas — fechando a aba ou saindo do demo perde
+  /// tudo. Sem criptografia, sem cofre, sem persistência.
+  ///
+  /// Após criar o schema v11, chama [DemoDataSeeder.seed] para popular com
+  /// dados mock (2 treatments, 1 doctor, 1 consultation, 1 exam, 1 lab result,
+  /// user profile, emergency contacts, doses de hoje).
+  Future<Database> _initDemoDatabase() async {
+    initializeDatabaseFactory();
+    if (_db != null && _db!.isOpen) return _db!;
+
+    final db = await openDatabase(
+      inMemoryDatabasePath,
+      version: _databaseVersion,
+      onCreate: _onCreate,
+      onConfigure: (db) => _onConfigure(db),
+    );
+    _db = db;
+    // Popula com dados mock para o visitante explorar a UI.
+    await DemoDataSeeder.seed(db);
     return db;
   }
 
