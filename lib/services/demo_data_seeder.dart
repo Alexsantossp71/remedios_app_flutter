@@ -116,7 +116,7 @@ class DemoDataSeeder {
       'instructions': 'Tomar após as refeições.',
       'start_date': utc(today),
       'end_date': utc(today.add(const Duration(days: 7))),
-      'frequency': 'interval',
+      'frequency': 'daily',
       'dose_times':
           '[{"hour":8,"minute":0},{"hour":16,"minute":0},{"hour":0,"minute":0}]',
       'weekdays': null,
