@@ -409,13 +409,8 @@ class ConsultationsScreen extends StatelessWidget {
           ],
         ),
       ),
-      floatingActionButton: hasConsultations
-          ? FloatingActionButton.extended(
-              onPressed: () => _openConsultationForm(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Agendar'),
-            )
-          : null,
+      // FAB removido — MainShell já tem FAB central com menu radial que
+      // inclui "Consulta". Design audit: CTA redundante corrigido.
     );
   }
 }

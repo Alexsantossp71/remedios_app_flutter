@@ -503,7 +503,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
           children: [
             Text(
               'Meu Perfil',

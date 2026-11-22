@@ -93,7 +93,7 @@ class TreatmentsScreen extends StatelessWidget {
         child: CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
               sliver: SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,27 +188,11 @@ class TreatmentsScreen extends StatelessWidget {
           ],
         ),
       ),
-      floatingActionButton: treatments.isEmpty
-          ? null
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                FloatingActionButton.extended(
-                  heroTag: 'prescription-scan-fab',
-                  onPressed: () => createTreatmentFromPrescription(context),
-                  icon: const Icon(Icons.photo_camera_outlined),
-                  label: const Text('Foto da receita'),
-                ),
-                const SizedBox(height: 12),
-                FloatingActionButton.extended(
-                  heroTag: 'add-treatment-fab',
-                  onPressed: () => createTreatmentManually(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Adicionar'),
-                ),
-              ],
-            ),
+      // FAB removido — MainShell já tem FAB central com menu radial que
+      // inclui "Medicamento" → manual e "Medicamento" → foto da receita.
+      // Antes: dois FloatingActionButton.extended ("Foto da receita" +
+      // "Adicionar") colidiam com o FAB do MainShell no desktop (ambos
+      // em endFloat). Design audit: CTA redundante corrigido.
     );
   }
 }
