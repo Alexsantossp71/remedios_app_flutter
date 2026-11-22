@@ -14,6 +14,10 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 /// Never used at runtime: access is guarded by `kIsWeb`.
 final databaseFactoryWeb = databaseFactory;
 
+/// Compile-time stub for [databaseFactoryWebDemo] (only defined on web).
+/// Never used at runtime: access is guarded by `kIsWeb`.
+final databaseFactoryWebDemo = databaseFactory;
+
 /// True when the current native platform must use the FFI factory backed by
 /// the SQLite3MultipleCiphers build. iOS/macOS are out of scope for this
 /// delivery and keep the standard sqflite plugin factory.
