@@ -130,6 +130,23 @@ class DatabaseService {
     initializeDatabaseFactory();
     if (_db != null && _db!.isOpen) return _db!;
 
+    if (kIsWeb) {
+      // Web: usa factory com inMemory: true — dados vivem só na memória
+      // do SharedWorker, sem OPFS, sem persistência. Fecha a aba = perde tudo.
+      final db = await databaseFactoryWebDemo.openDatabase(
+        'demo.db',
+        options: OpenDatabaseOptions(
+          version: _databaseVersion,
+          onCreate: _onCreate,
+          onConfigure: (db) => _onConfigure(db),
+        ),
+      );
+      _db = db;
+      await DemoDataSeeder.seed(db);
+      return db;
+    }
+
+    // Native: in-memory path direto (sqflite_common_ffi suporta :memory:).
     final db = await openDatabase(
       inMemoryDatabasePath,
       version: _databaseVersion,
