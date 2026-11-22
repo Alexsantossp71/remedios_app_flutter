@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../core/app_identity.dart';
+
 /// Dados extraídos da imagem do cartão de plano de saúde.
 ///
 /// Todos os campos são opcionais porque a leitura por IA pode falhar em
@@ -92,7 +94,10 @@ class CardReaderService {
       response = await _client
           .post(
             Uri.parse(proxyUrl),
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              appTokenHeader: appToken,
+            },
             body: jsonEncode({
               'image': base64Encode(imageBytes),
               'mimeType': mimeType,

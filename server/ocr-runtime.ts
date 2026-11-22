@@ -46,6 +46,31 @@ export function clientIp(req: NodeRequestLike): string {
 }
 
 /**
+ * Token público do app oficial (P2-7). NÃO é segredo — é filtro de crawlers.
+ * O cliente Flutter envia este valor em `X-App-Token` em todas as chamadas
+ * a /api/*. Funções rejeitam chamadas sem o header com 401 unauthorized_app.
+ */
+export const APP_TOKEN = 'remedios-na-hora-app-v1';
+export const APP_TOKEN_HEADER = 'x-app-token';
+
+/**
+ * Verifica se a requisição carrega o header X-App-Token com o valor esperado.
+ * Se não, envia 401 e retorna false — o handler deve retornar imediatamente.
+ */
+export function requireAppToken(
+  req: NodeRequestLike,
+  res: NodeResponseLike,
+): boolean {
+  const received = req.headers?.[APP_TOKEN_HEADER];
+  const value = Array.isArray(received) ? received[0] : received;
+  if (value !== APP_TOKEN) {
+    sendJson(res, 401, { error: 'unauthorized_app' });
+    return false;
+  }
+  return true;
+}
+
+/**
  * O launcher Node já entrega `body` desserializado quando o content-type é
  * JSON, mas tratar string mantém o handler correto se o body chegar cru.
  */

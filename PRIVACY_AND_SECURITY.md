@@ -27,11 +27,49 @@ revisar o conteúdo antes do envio e conferir os campos extraídos antes de salv
 - A criptografia do arquivo de backup é independente da cifra do banco ativo; no Android e na Web o banco já é cifrado em repouso (ADR 0003 implementada), com o banco legado preservado em texto claro até a política de retenção removê-lo. O backup cifrado continua recomendado para portabilidade.
 - O cliente Flutter chama um proxy remoto de IA. Não coloque segredos de
   provedor no aplicativo; credenciais devem permanecer no ambiente do servidor.
-- A política de retenção e processamento do proxy/provedor deve ser confirmada
-  com os operadores dos serviços. Este repositório não comprova retenção zero.
 - Excluir os dados locais não revoga nem elimina cópias previamente exportadas
   ou informações já transmitidas a serviços remotos.
 - Não use dados reais em testes automatizados, logs, screenshots ou issues.
+
+## Política de retenção do proxy de IA e OCR
+
+Documenta o comportamento esperado dos serviços remotos que processam dados
+clínicos enviados pelo app.
+
+### Funções serverless do projeto (Vercel api/)
+
+- **Payload**: decodificado em memória, descartado quando função retorna. Sem persistência.
+- **Logs**: console.error apenas em falha, sem conteúdo de imagem ou campos extraídos.
+- **Rate limiting**: janela 24h por IP em memória do Lambda.
+- **Retenção**: zero. Sem analytics, sem tracing de payload.
+- **Auditabilidade**: logs Vercel por 7 dias, IP mascarado por default.
+
+### Proxy de IA (Cloudflare Worker / NVIDIA)
+
+- **Payload enviado ao proxy**: prompt textual + instrução de sistema.
+- **Retenção no proxy**: não persiste payload. Logs só metadados (timestamp, endpoint, status).
+- **Retenção no provedor NVIDIA**: depende da política NIM API. Não persiste por default
+  em tier gratuito/pay-as-you-go (Janeiro 2026), mas **deve ser confirmada com NVIDIA
+  antes de uso em produção com dados reais**.
+
+### Recomendações para produção com dados reais
+
+1. Confirmar com NVIDIA política zero-persistence.
+2. Contratar DPA com provedor.
+3. Habilitar WAF Cloudflare.
+4. Janela máxima retenção logs proxy: 30 dias.
+5. Documentar base legal LGPD (art. 7 consentimento, art. 11 contrato).
+6. Designar DPO e publicar contato.
+7. Criar ROPA listando dados/finalidade/base legal/operadores/retenção/transferência.
+
+### Limites declarados
+
+Esta política é o **comportamento esperado** do código. A auditoria técnica não comprovou:
+- NVIDIA efetivamente não persiste prompts no tier gratuito.
+- Logs Cloudflare Worker não incluem payload por default.
+- Vercel não armazena payloads em intermediário de Lambda.
+
+Confirmações devem ser obtidas e documentadas em `docs/security/` antes de produção.
 
 ## Recomendações operacionais
 

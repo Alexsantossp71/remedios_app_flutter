@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/app_identity.dart';
+
 /// Camada de transporte para o proxy de IA (Cloudflare Worker) usado pelo
 /// app irmão React "Remédio na Hora". A chave NVIDIA permanece como secret
 /// do Worker; o app chama `/v1/chat/completions` sem credencial nenhuma.
@@ -94,6 +96,8 @@ class AiProxyClient {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      // P2-7: identifica o app oficial para o proxy/serverless.
+      appTokenHeader: appToken,
     };
     if (!_isWeb) headers['Origin'] = nativeOrigin;
     return headers;

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show SystemChannels;
 import 'package:material_ui/material_ui.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'
@@ -27,10 +28,26 @@ import 'services/notification_service.dart';
 import 'services/therapy_storage_service.dart';
 import 'services/web_reminder_service.dart';
 import 'widgets/database_unlock_gate.dart';
+import 'widgets/welcome_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR');
+
+  // P1-5: Flutter web defaulta para semantics OFF até o usuário clicar no
+  // botão "Enable accessibility" do canto do canvas. Para um app de saúde
+  // onde o público-alvo inclui idosos, baixa visão e usuários de screen
+  // reader (VoiceOver/NVDA), isso é gap de acessibilidade — o agente-browser
+  // usado na auditoria nem conseguia ver a UI do cofre no snapshot de
+  // accessibility tree, só via screenshot + VLM. SystemChannels.accessibility
+  // é o canal interno que o Flutter web usa quando o botão é clicado;
+  // invocar 'enable' aqui liga as semantics desde o primeiro frame.
+  // Trade-off: ~5-10% mais lento na renderização — aceitável para a11y.
+  // Em native, o SO controla (VoiceOver/TalkBack acionam automaticamente),
+  // então só fazemos isso em Web.
+  if (kIsWeb) {
+    await SystemChannels.accessibility.send('enable');
+  }
 
   // P2-2: dependências de infraestrutura registradas no service locator;
   // o bootstrap abaixo resolve tudo a partir dele (testável via fakes).
@@ -55,6 +72,8 @@ Future<void> main() async {
       MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
+        themeMode: ThemeMode.system,
         locale: const Locale('pt', 'BR'),
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
@@ -62,9 +81,17 @@ Future<void> main() async {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: const [Locale('pt', 'BR'), Locale('en', 'US')],
-        home: DatabaseUnlockGate(
-          onDatabaseReady: () {
-            bootstrapApp(notifications);
+        home: WelcomeScreen(
+          // P0-2: "Começar" leva ao gate existente; o usuário configura o
+          // cofre criptográfico e o app persiste normalmente.
+          onStart: () => _runUnlockGate(notifications),
+          // P0-2 (parcial): "Ver demo" mostra um diálogo explicando que o
+          // demo real (banco em memória) está em follow-up PR. O visitante
+          // é direcionado ao gate como caminho imediato para explorar.
+          onSeeDemo: (context) async {
+            await showDemoComingSoonDialog(context);
+            if (!context.mounted) return;
+            _runUnlockGate(notifications);
           },
         ),
       ),
@@ -72,6 +99,35 @@ Future<void> main() async {
     return;
   }
   await bootstrapApp(notifications);
+}
+
+/// Troca a tela atual pelo [DatabaseUnlockGate] e, após o desbloqueio,
+/// chama [bootstrapApp]. Usado em Web tanto pelo CTA "Começar" quanto
+/// pelo fluxo pós-diálogo do "Ver demo".
+///
+/// Recebe o [NotificationService] já inicializado em [main] para não
+/// recriá-lo. Em Web, esta função monta um novo MaterialApp com o gate
+/// como home (em vez da Welcome) — equivalente ao runApp original
+/// pré-P0-2.
+void _runUnlockGate(NotificationService notifications) {
+  runApp(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
+      locale: const Locale('pt', 'BR'),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('pt', 'BR'), Locale('en', 'US')],
+      home: DatabaseUnlockGate(
+        onDatabaseReady: () => bootstrapApp(notifications),
+      ),
+    ),
+  );
 }
 
 Future<void> bootstrapApp(NotificationService notifications) async {

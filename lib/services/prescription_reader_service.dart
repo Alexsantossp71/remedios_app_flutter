@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../core/app_identity.dart';
+
 import '../models/treatment.dart';
 import '../models/treatment_draft.dart';
 
@@ -303,7 +305,10 @@ class PrescriptionReaderService {
       response = await _client
           .post(
             Uri.parse(proxyUrl),
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+              'Content-Type': 'application/json',
+              appTokenHeader: appToken,
+            },
             body: jsonEncode({
               'image': base64Encode(imageBytes),
               'mimeType': mimeType,

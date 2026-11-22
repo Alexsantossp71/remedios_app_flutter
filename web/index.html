@@ -1,23 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Remédio na Hora - Sua aplicação de controle de medicamentos e terapias.">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+  <!-- Identidade e cor do navegador mobile -->
+  <meta name="description" content="Remédio na Hora — organize seus medicamentos, consultas, exames e laudos em um só lugar. Offline, criptografado, sem nuvem.">
+  <meta name="author" content="Remédio na Hora">
+  <meta name="theme-color" content="#15857A" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Remédio na Hora">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>Remédio na Hora</title>
+  <!-- Social sharing: Open Graph (Facebook, WhatsApp, Telegram, LinkedIn) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Remédio na Hora">
+  <meta property="og:title" content="Remédio na Hora — seus medicamentos, na hora certa">
+  <meta property="og:description" content="Organize medicamentos, consultas, exames e laudos. Criptografado, offline, sem nuvem. Seus dados ficam só no seu dispositivo.">
+  <meta property="og:url" content="https://remedios-app-flutter.vercel.app/">
+  <meta property="og:image" content="https://remedios-app-flutter.vercel.app/icons/Icon-512.png">
+  <meta property="og:image:alt" content="Logo do Remédio na Hora">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:locale:alternate" content="en_US">
+
+  <!-- Social sharing: Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Remédio na Hora — seus medicamentos, na hora certa">
+  <meta name="twitter:description" content="Organize medicamentos, consultas, exames e laudos. Criptografado, offline, sem nuvem.">
+  <meta name="twitter:image" content="https://remedios-app-flutter.vercel.app/icons/Icon-512.png">
+
+  <!-- Preconnect para acelerar bootstrap do Flutter web -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://browser.sentry-cdn.com" crossorigin>
+
+  <title>Remédio na Hora — seus medicamentos, na hora certa</title>
   <link rel="manifest" href="manifest.json">
 
   <style>
@@ -26,15 +55,127 @@
       padding: 0;
       height: 100%;
       width: 100%;
-      background-color: #f5f5f5;
+      background-color: #F5F8FC;
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+      color: #1A2530;
+    }
+
+    /* Splash branded — visível imediatamente enquanto o Flutter bootstrapa.
+       Oculto quando o Flutter dispara o primeiro frame. */
+    #rn-splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      background: linear-gradient(135deg, #15857A 0%, #1A5276 100%);
+      color: #FFFFFF;
+      transition: opacity 360ms ease-out;
+      z-index: 9999;
+    }
+
+    #rn-splash.rn-hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #rn-splash-mark {
+      width: 84px;
+      height: 84px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      backdrop-filter: blur(4px);
+    }
+
+    #rn-splash-title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin: 0;
+    }
+
+    #rn-splash-tagline {
+      font-size: 14px;
+      opacity: 0.85;
+      margin: 0;
+    }
+
+    #rn-splash-spinner {
+      margin-top: 12px;
+      width: 22px;
+      height: 22px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: rn-spin 0.9s linear infinite;
+    }
+
+    @keyframes rn-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      html, body { background-color: #0f172a; color: #E7F0FB; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #rn-splash-spinner { animation: none; }
+      #rn-splash { transition: none; }
     }
   </style>
 </head>
 <body>
+
+  <!-- Splash branded: pinta imediatamente, oculta quando o Flutter pinta o primeiro frame -->
+  <div id="rn-splash" role="status" aria-live="polite" aria-label="Carregando Remédio na Hora">
+    <div id="rn-splash-mark" aria-hidden="true">💊</div>
+    <h1 id="rn-splash-title">Remédio na Hora</h1>
+    <p id="rn-splash-tagline">Seus medicamentos, na hora certa.</p>
+    <div id="rn-splash-spinner" aria-hidden="true"></div>
+  </div>
+
+  <noscript>
+    <div style="max-width: 480px; margin: 80px auto; padding: 24px; font-family: sans-serif; text-align: center;">
+      <h1 style="color: #15857A; margin-bottom: 12px;">Remédio na Hora</h1>
+      <p>Este aplicativo requer JavaScript habilitado para funcionar.</p>
+      <p style="color: #606060; font-size: 14px;">
+        Habilite JavaScript nas configurações do seu navegador e recarregue esta página.
+      </p>
+    </div>
+  </noscript>
+
+  <!-- Flutter web bootstrap (async para não bloquear o primeiro paint do splash) -->
   <script src="flutter_bootstrap.js" async></script>
+
+  <!-- Oculta o splash quando o Flutter termina o primeiro frame.
+       Listener para o evento 'flutter-firstframe' disparado pelo flutter_bootstrap.js. -->
+  <script>
+    (function () {
+      var splash = document.getElementById('rn-splash');
+      if (!splash) return;
+
+      function hideSplash() {
+        splash.classList.add('rn-hidden');
+        // Remove do DOM após a transição para liberar eventos.
+        setTimeout(function () {
+          if (splash.parentNode) splash.parentNode.removeChild(splash);
+        }, 480);
+      }
+
+      window.addEventListener('flutter-firstframe', hideSplash);
+      // Fallback: se o evento não disparar em 12s (Flutter travou?), esconde mesmo assim.
+      setTimeout(hideSplash, 12000);
+    })();
+  </script>
 </body>
 </html>

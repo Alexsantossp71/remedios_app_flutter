@@ -240,14 +240,15 @@ class ExamsScreen extends StatelessWidget {
   }
 }
 
-Color _statusColor(String status) {
+Color _statusColor(BuildContext context, String status) {
+  // P2-1: AppSemanticColors.success para 'done'.
   switch (status) {
     case ExamStatus.requested:
       return BrandColors.teal700;
     case ExamStatus.scheduled:
       return BrandColors.yellow;
     case ExamStatus.done:
-      return const Color(0xFF0D9488);
+      return AppSemanticColors.of(context).success;
     default:
       return BrandColors.teal700;
   }
@@ -288,7 +289,7 @@ class _ExamCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final accent = _statusColor(exam.status);
+    final accent = _statusColor(context, exam.status);
     final mutedColor = isDark ? BrandColors.darkMuted : BrandColors.muted;
 
     final dateFormat = DateFormat('dd/MM/yyyy', 'pt_BR');

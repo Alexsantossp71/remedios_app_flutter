@@ -190,7 +190,7 @@ class DatabaseService {
   Future<void> _onCreate(Database db, int version) async {
     // 1. Treatments table
     await db.execute('''
-      CREATE TABLE treatments (
+      CREATE TABLE IF NOT EXISTS treatments (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         dosage TEXT NOT NULL DEFAULT '',
@@ -216,7 +216,7 @@ class DatabaseService {
 
     // 2. Dose Events table
     await db.execute('''
-      CREATE TABLE dose_events (
+      CREATE TABLE IF NOT EXISTS dose_events (
         id TEXT PRIMARY KEY,
         treatment_id TEXT NOT NULL,
         scheduled_at TEXT NOT NULL,
@@ -229,15 +229,15 @@ class DatabaseService {
 
     // Indices for dose events for fast date and treatment lookups
     await db.execute(
-      'CREATE INDEX idx_dose_events_treatment ON dose_events(treatment_id)',
+      'CREATE INDEX IF NOT EXISTS idx_dose_events_treatment ON dose_events(treatment_id)',
     );
     await db.execute(
-      'CREATE INDEX idx_dose_events_scheduled ON dose_events(scheduled_at)',
+      'CREATE INDEX IF NOT EXISTS idx_dose_events_scheduled ON dose_events(scheduled_at)',
     );
 
     // 3. Doctors table
     await db.execute('''
-      CREATE TABLE doctors (
+      CREATE TABLE IF NOT EXISTS doctors (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         specialty TEXT NOT NULL DEFAULT '',
@@ -262,7 +262,7 @@ class DatabaseService {
 
     // 4. Consultations table
     await db.execute('''
-      CREATE TABLE consultations (
+      CREATE TABLE IF NOT EXISTS consultations (
         id TEXT PRIMARY KEY,
         doctor_id TEXT NOT NULL,
         date TEXT NOT NULL,
@@ -278,15 +278,15 @@ class DatabaseService {
     ''');
 
     await db.execute(
-      'CREATE INDEX idx_consultations_doctor ON consultations(doctor_id)',
+      'CREATE INDEX IF NOT EXISTS idx_consultations_doctor ON consultations(doctor_id)',
     );
     await db.execute(
-      'CREATE INDEX idx_consultations_date ON consultations(date)',
+      'CREATE INDEX IF NOT EXISTS idx_consultations_date ON consultations(date)',
     );
 
     // 5. Health Plans table
     await db.execute('''
-      CREATE TABLE health_plans (
+      CREATE TABLE IF NOT EXISTS health_plans (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         provider TEXT NOT NULL,
@@ -304,7 +304,7 @@ class DatabaseService {
 
     // 6. User Profile table (linha única: perfil do usuário)
     await db.execute('''
-      CREATE TABLE user_profile (
+      CREATE TABLE IF NOT EXISTS user_profile (
         id INTEGER PRIMARY KEY CHECK (id = 1),
         nome TEXT NOT NULL DEFAULT '',
         cpf TEXT,
@@ -326,7 +326,7 @@ class DatabaseService {
 
     // 7. Emergency Contacts table (N contatos)
     await db.execute('''
-      CREATE TABLE emergency_contacts (
+      CREATE TABLE IF NOT EXISTS emergency_contacts (
         id TEXT PRIMARY KEY,
         nome TEXT NOT NULL,
         parentesco TEXT NOT NULL DEFAULT '',
@@ -338,7 +338,7 @@ class DatabaseService {
 
     // 8. Exams table (pedidos/agendamentos/laudos de exames)
     await db.execute('''
-      CREATE TABLE exams (
+      CREATE TABLE IF NOT EXISTS exams (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         category TEXT NOT NULL DEFAULT '',
@@ -358,7 +358,7 @@ class DatabaseService {
     // 9. Treatment prescriptions table (histórico de "quem receitou e em
     // que dia" — um registro por renovação de receita, nunca sobrescrito)
     await db.execute('''
-      CREATE TABLE treatment_prescriptions (
+      CREATE TABLE IF NOT EXISTS treatment_prescriptions (
         id TEXT PRIMARY KEY,
         treatment_id TEXT NOT NULL,
         doctor_id TEXT,
@@ -373,13 +373,13 @@ class DatabaseService {
     ''');
 
     await db.execute(
-      'CREATE INDEX idx_treatment_prescriptions_treatment '
+      'CREATE INDEX IF NOT EXISTS idx_treatment_prescriptions_treatment '
       'ON treatment_prescriptions(treatment_id)',
     );
 
     // 10. Lab results table (laudos de laboratório com valores por marcador)
     await db.execute('''
-      CREATE TABLE lab_results (
+      CREATE TABLE IF NOT EXISTS lab_results (
         id TEXT PRIMARY KEY,
         date TEXT NOT NULL,
         lab_name TEXT NOT NULL DEFAULT '',
@@ -407,7 +407,7 @@ class DatabaseService {
     if (oldVersion < 3) {
       // Version 3: Create health_plans table for new feature
       await db.execute('''
-        CREATE TABLE health_plans (
+        CREATE TABLE IF NOT EXISTS health_plans (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           provider TEXT NOT NULL,
@@ -426,7 +426,7 @@ class DatabaseService {
     if (oldVersion < 4) {
       // Version 4: Create user_profile and emergency_contacts tables
       await db.execute('''
-        CREATE TABLE user_profile (
+        CREATE TABLE IF NOT EXISTS user_profile (
           id INTEGER PRIMARY KEY CHECK (id = 1),
           nome TEXT NOT NULL DEFAULT '',
           data_nascimento TEXT,
@@ -443,7 +443,7 @@ class DatabaseService {
         )
       ''');
       await db.execute('''
-        CREATE TABLE emergency_contacts (
+        CREATE TABLE IF NOT EXISTS emergency_contacts (
           id TEXT PRIMARY KEY,
           nome TEXT NOT NULL,
           parentesco TEXT NOT NULL DEFAULT '',
@@ -477,7 +477,7 @@ class DatabaseService {
       // Version 9: Create exams table (módulo de exames — pedido → agendado
       // → realizado, com foto opcional do pedido/laudo em base64).
       await db.execute('''
-        CREATE TABLE exams (
+        CREATE TABLE IF NOT EXISTS exams (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           category TEXT NOT NULL DEFAULT '',
@@ -499,7 +499,7 @@ class DatabaseService {
       // marcador; a lista vive em values_json e as flags são recalculadas
       // no app ao ler — a IA nunca classifica resultado).
       await db.execute('''
-        CREATE TABLE lab_results (
+        CREATE TABLE IF NOT EXISTS lab_results (
           id TEXT PRIMARY KEY,
           date TEXT NOT NULL,
           lab_name TEXT NOT NULL DEFAULT '',
@@ -527,7 +527,7 @@ class DatabaseService {
       );
       await db.execute('ALTER TABLE treatments ADD COLUMN prescribed_on TEXT');
       await db.execute('''
-        CREATE TABLE treatment_prescriptions (
+        CREATE TABLE IF NOT EXISTS treatment_prescriptions (
           id TEXT PRIMARY KEY,
           treatment_id TEXT NOT NULL,
           doctor_id TEXT,
@@ -541,7 +541,7 @@ class DatabaseService {
         )
       ''');
       await db.execute(
-        'CREATE INDEX idx_treatment_prescriptions_treatment '
+        'CREATE INDEX IF NOT EXISTS idx_treatment_prescriptions_treatment '
         'ON treatment_prescriptions(treatment_id)',
       );
     }
