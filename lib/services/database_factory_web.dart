@@ -24,6 +24,15 @@ final DatabaseFactory databaseFactoryWeb = createDatabaseFactoryFfiWeb(
   options: SqfliteFfiWebOptions(sharedWorkerUri: Uri.parse('sqlite3_mc_sw.js')),
 );
 
+/// Factory in-memory para o modo demo — sem OPFS, sem persistência.
+/// Dados vivem só na memória do SharedWorker enquanto a aba está aberta.
+DatabaseFactory get databaseFactoryWebDemo => createDatabaseFactoryFfiWeb(
+  options: SqfliteFfiWebOptions(
+    sharedWorkerUri: Uri.parse('sqlite3_mc_sw.js'),
+    inMemory: true,
+  ),
+);
+
 /// No-op initialization for web (kept for compatibility).
 void initializeDatabaseFactory() {
   // databaseFactoryWeb is ready to use; the worker loads the WASM lazily.
