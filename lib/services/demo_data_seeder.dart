@@ -118,7 +118,7 @@ class DemoDataSeeder {
       'end_date': utc(today.add(const Duration(days: 7))),
       'frequency': 'daily',
       'dose_times':
-          '[{"hour":8,"minute":0},{"hour":16,"minute":0},{"hour":0,"minute":0}]',
+          '[{"hour":8,"minute":0},{"hour":16,"minute":0},{"hour":22,"minute":0}]',
       'weekdays': null,
       'stock': 21,
       'refill_threshold': 5,
@@ -159,7 +159,7 @@ class DemoDataSeeder {
     await db.insert('dose_events', {
       'id': 'demo-dose-4',
       'treatment_id': 'demo-treat-2',
-      'scheduled_at': utc(today.add(const Duration(hours: 24))),
+      'scheduled_at': utc(today.add(const Duration(hours: 22))),
       'status': 'pending',
       'created_at': utc(today),
     });

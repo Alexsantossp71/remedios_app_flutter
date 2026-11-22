@@ -26,7 +26,10 @@ class StatCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final accent = iconColor ?? BrandColors.teal700;
     final valueColor = isDark ? BrandColors.darkInk : BrandColors.ink;
-    final labelColor = isDark ? BrandColors.darkMuted : BrandColors.muted;
+    // Design audit: escurecer labelColor para WCAG AA (≥4.5:1 contraste).
+    // Antes: BrandColors.muted (#7A8A99 ≈ 3:1 sobre branco). Agora: #5A6A79
+    // (≈ 5.5:1 sobre branco).
+    final labelColor = isDark ? BrandColors.darkMuted : const Color(0xFF5A6A79);
 
     return Container(
       padding: const EdgeInsets.all(20),

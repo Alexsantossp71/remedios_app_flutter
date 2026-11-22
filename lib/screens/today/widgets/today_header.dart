@@ -168,36 +168,42 @@ class TodayHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: StatCard(
-                  icon: Icons.medication_rounded,
-                  value: '${adherence.taken}/${adherence.total}',
-                  label: isToday ? 'doses de hoje' : 'doses do dia',
+          // Design audit: IntrinsicHeight + stretch para todas as StatCards
+          // terem a mesma altura (antes, labels de tamanhos diferentes causavam
+          // alturas inconsistentes).
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: StatCard(
+                    icon: Icons.medication_rounded,
+                    value: '${adherence.taken}/${adherence.total}',
+                    label: isToday ? 'doses de hoje' : 'doses do dia',
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: StatCard(
-                  icon: Icons.local_fire_department_rounded,
-                  value: streak > 0 ? '$streak' : '0',
-                  label: streak == 1 ? 'dia em sequência' : 'dias em sequência',
-                  iconColor: BrandColors.yellow,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: StatCard(
+                    icon: Icons.local_fire_department_rounded,
+                    value: streak > 0 ? '$streak' : '0',
+                    label: streak == 1 ? 'dia em sequência' : 'dias em sequência',
+                    iconColor: BrandColors.yellow,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: StatCard(
-                  icon: Icons.event_available_rounded,
-                  value: '$consultationCount',
-                  label: consultationCount == 1
-                      ? 'consulta no dia'
-                      : 'consultas no dia',
-                  iconColor: BrandColors.teal600,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: StatCard(
+                    icon: Icons.event_available_rounded,
+                    value: '$consultationCount',
+                    label: consultationCount == 1
+                        ? 'consulta no dia'
+                        : 'consultas no dia',
+                    iconColor: BrandColors.teal600,
                 ),
               ),
             ],
+          ),
           ),
         ],
       ],

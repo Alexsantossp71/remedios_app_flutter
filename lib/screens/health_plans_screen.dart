@@ -32,14 +32,8 @@ class HealthPlansScreen extends StatelessWidget {
       builder: (context, provider, child) {
         return Scaffold(
           appBar: AppBar(title: const Text('Meus Planos de Saúde')),
-          floatingActionButton:
-              provider.isLoading || provider.healthPlans.isEmpty
-              ? null
-              : FloatingActionButton.extended(
-                  onPressed: () => _addPlan(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Adicionar plano'),
-                ),
+          // FAB removido — MainShell já tem FAB central com menu radial que
+          // inclui "Plano de saúde". Design audit: CTA redundante corrigido.
           body: SafeArea(
             child: provider.isLoading
                 ? const Padding(
