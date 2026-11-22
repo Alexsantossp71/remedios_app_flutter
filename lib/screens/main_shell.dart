@@ -1,7 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../core/app_bootstrap.dart';
 import '../core/design/app_shell.dart';
 import '../core/design/app_tokens.dart';
+import '../core/service_locator.dart';
+import '../services/database_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/create_choice_sheet.dart';
 import 'consultations_screen.dart';
 import 'create_flows.dart';
@@ -212,15 +216,16 @@ class _MainShellState extends State<MainShell>
 
     return Scaffold(
       // AppShell pinta o brilho radial teal do PWA atrás de todas as abas.
+      // Demo mode: banner no topo avisando que dados não persistem.
       body: isWide
           ? Row(
               children: [
                 _buildRail(),
                 const VerticalDivider(width: 1, thickness: 1),
-                Expanded(child: AppShell(child: content)),
+                Expanded(child: _wrapWithDemoBannerIfNeeded(content)),
               ],
             )
-          : AppShell(child: content),
+          : _wrapWithDemoBannerIfNeeded(content),
       floatingActionButton: FloatingActionButton(
         tooltip: 'Cadastrar',
         shape: const CircleBorder(),
@@ -231,6 +236,20 @@ class _MainShellState extends State<MainShell>
           ? FloatingActionButtonLocation.endFloat
           : FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: isWide ? null : _buildBottomBar(),
+    );
+  }
+
+  /// Envolve o conteúdo com o banner demo se [DatabaseService.demoMode]
+  /// estiver ativo. Caso contrário, retorna apenas AppShell com o conteúdo.
+  Widget _wrapWithDemoBannerIfNeeded(Widget content) {
+    if (!DatabaseService.demoMode) {
+      return AppShell(child: content);
+    }
+    return Column(
+      children: [
+        const _DemoBanner(),
+        Expanded(child: AppShell(child: content)),
+      ],
     );
   }
 
@@ -497,6 +516,56 @@ class _RadialOption extends StatelessWidget {
             style: Theme.of(
               context,
             ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Banner fixo no topo quando [DatabaseService.demoMode] está ativo.
+///
+/// Avisa ao visitante que os dados não persistem (banco em memória) e
+/// oferece botão "Sair do demo" que volta para a WelcomeScreen.
+class _DemoBanner extends StatelessWidget {
+  const _DemoBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.tertiaryContainer,
+      elevation: 4,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              Icon(
+                Icons.science_outlined,
+                size: 18,
+                color: theme.colorScheme.onTertiaryContainer,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Modo demo — dados não persistem ao fechar a aba.',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onTertiaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => exitDemoMode(sl<NotificationService>()),
+                style: TextButton.styleFrom(
+                  foregroundColor: theme.colorScheme.onTertiaryContainer,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                ),
+                child: const Text('Sair do demo'),
+              ),
+            ],
           ),
         ),
       ),

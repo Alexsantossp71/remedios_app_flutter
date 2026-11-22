@@ -1,34 +1,17 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show SystemChannels;
-import 'package:material_ui/material_ui.dart';
-import 'package:cupertino_ui/cupertino_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    hide GlobalMaterialLocalizations, GlobalCupertinoLocalizations;
+import 'package:flutter/widgets.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:provider/provider.dart';
 
+import 'core/app_bootstrap.dart';
 import 'core/observability.dart';
 import 'core/service_locator.dart';
-import 'core/theme/app_theme.dart';
-import 'providers/consultation_provider.dart';
-import 'providers/doctor_provider.dart';
-import 'providers/exam_provider.dart';
-import 'providers/health_plan_provider.dart';
-import 'providers/lab_result_provider.dart';
-import 'providers/therapy_provider.dart';
-import 'providers/user_profile_provider.dart';
-import 'screens/main_shell.dart';
-import 'services/consultation_storage_service.dart';
-import 'services/database_service.dart';
-import 'services/doctor_storage_service.dart';
-import 'services/exam_storage_service.dart';
-import 'services/health_plan_storage_service.dart';
-import 'services/lab_result_storage_service.dart';
 import 'services/notification_service.dart';
-import 'services/therapy_storage_service.dart';
-import 'services/web_reminder_service.dart';
-import 'widgets/database_unlock_gate.dart';
-import 'widgets/welcome_screen.dart';
+
+// Re-export para que testes e integration tests que importam main.dart
+// continuem tendo acesso a RemediosApp e bootstrapApp (agora em
+// app_bootstrap.dart).
+export 'core/app_bootstrap.dart' show RemediosApp, bootstrapApp;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,169 +20,22 @@ Future<void> main() async {
   // P1-5: Flutter web defaulta para semantics OFF até o usuário clicar no
   // botão "Enable accessibility" do canto do canvas. Para um app de saúde
   // onde o público-alvo inclui idosos, baixa visão e usuários de screen
-  // reader (VoiceOver/NVDA), isso é gap de acessibilidade — o agente-browser
-  // usado na auditoria nem conseguia ver a UI do cofre no snapshot de
-  // accessibility tree, só via screenshot + VLM. SystemChannels.accessibility
-  // é o canal interno que o Flutter web usa quando o botão é clicado;
-  // invocar 'enable' aqui liga as semantics desde o primeiro frame.
-  // Trade-off: ~5-10% mais lento na renderização — aceitável para a11y.
-  // Em native, o SO controla (VoiceOver/TalkBack acionam automaticamente),
-  // então só fazemos isso em Web.
+  // reader (VoiceOver/NVDA), isso é gap de acessibilidade.
   if (kIsWeb) {
     await SystemChannels.accessibility.send('enable');
   }
 
-  // P2-2: dependências de infraestrutura registradas no service locator;
-  // o bootstrap abaixo resolve tudo a partir dele (testável via fakes).
   setupServiceLocator();
-
-  // P3-2: observabilidade de falhas. Dormant por default — só ativa com
-  // --dart-define=SENTRY_DSN=... no build; sem o DSN é no-op.
   await setupObservability();
 
-  // No-op on web; on mobile it also asks for the notification permission
-  // (Android 13+) and creates the dose channel before any alarm is set.
   final notifications = sl<NotificationService>();
   await notifications.init();
 
-  // Web: the encrypted database requires explicit unlock before any
-  // provider touches the database. The gate handles setup, unlock and
-  // recovery-envelope restoration; the app boots only after it succeeds.
-  // Android/desktop resolve the key transparently (Keystore) and skip the
-  // gate entirely.
+  // Web: WelcomeScreen first → "Começar" (gate) ou "Ver demo" (demo mode).
+  // Native: bootstrap direto (Keystore resolve a chave transparente).
   if (kIsWeb) {
-    runApp(
-      MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
-        locale: const Locale('pt', 'BR'),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('pt', 'BR'), Locale('en', 'US')],
-        home: WelcomeScreen(
-          // P0-2: "Começar" leva ao gate existente; o usuário configura o
-          // cofre criptográfico e o app persiste normalmente.
-          onStart: () => _runUnlockGate(notifications),
-          // P0-2 (parcial): "Ver demo" mostra um diálogo explicando que o
-          // demo real (banco em memória) está em follow-up PR. O visitante
-          // é direcionado ao gate como caminho imediato para explorar.
-          onSeeDemo: (context) async {
-            await showDemoComingSoonDialog(context);
-            if (!context.mounted) return;
-            _runUnlockGate(notifications);
-          },
-        ),
-      ),
-    );
+    runWelcomeScreen(notifications);
     return;
   }
   await bootstrapApp(notifications);
-}
-
-/// Troca a tela atual pelo [DatabaseUnlockGate] e, após o desbloqueio,
-/// chama [bootstrapApp]. Usado em Web tanto pelo CTA "Começar" quanto
-/// pelo fluxo pós-diálogo do "Ver demo".
-///
-/// Recebe o [NotificationService] já inicializado em [main] para não
-/// recriá-lo. Em Web, esta função monta um novo MaterialApp com o gate
-/// como home (em vez da Welcome) — equivalente ao runApp original
-/// pré-P0-2.
-void _runUnlockGate(NotificationService notifications) {
-  runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
-      locale: const Locale('pt', 'BR'),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('pt', 'BR'), Locale('en', 'US')],
-      home: DatabaseUnlockGate(
-        onDatabaseReady: () => bootstrapApp(notifications),
-      ),
-    ),
-  );
-}
-
-Future<void> bootstrapApp(NotificationService notifications) async {
-  // Todos os providers recebem suas dependências explicitamente do service
-  // locator; em testes, registre fakes antes de chamar esta função.
-  final therapyProvider = TherapyProvider(
-    notifications: notifications,
-    storage: sl<TherapyStorageService>(),
-  );
-  final doctorProvider = DoctorProvider(storage: sl<DoctorStorageService>());
-  final consultationProvider = ConsultationProvider(
-    storage: sl<ConsultationStorageService>(),
-  );
-  final examProvider = ExamProvider(storage: sl<ExamStorageService>());
-  final labResultProvider = LabResultProvider(
-    storage: sl<LabResultStorageService>(),
-  );
-  final healthPlanProvider = HealthPlanProvider(
-    storage: sl<HealthPlanStorageService>(),
-  );
-  final userProfileProvider = UserProfileProvider(
-    dbService: sl<DatabaseService>(),
-  );
-  await therapyProvider.initialize();
-  await doctorProvider.initialize();
-  await consultationProvider.initialize();
-  await examProvider.initialize();
-  await labResultProvider.initialize();
-  await healthPlanProvider.initialize();
-  await userProfileProvider.initialize();
-
-  // Web: lembrete de dose enquanto o app está aberto no navegador (no-op
-  // em mobile, onde os alarmes do sistema fazem esse papel — ADR 0005).
-  WebReminderService.instance.attach(therapyProvider);
-
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: therapyProvider),
-        ChangeNotifierProvider.value(value: doctorProvider),
-        ChangeNotifierProvider.value(value: consultationProvider),
-        ChangeNotifierProvider.value(value: examProvider),
-        ChangeNotifierProvider.value(value: labResultProvider),
-        ChangeNotifierProvider.value(value: healthPlanProvider),
-        ChangeNotifierProvider.value(value: userProfileProvider),
-      ],
-      child: const RemediosApp(),
-    ),
-  );
-}
-
-class RemediosApp extends StatelessWidget {
-  const RemediosApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Remédio na Hora',
-      debugShowCheckedModeBanner: false,
-      // V3 "Clínico calmo": claro e escuro com o mesmo seed; o modo segue o
-      // sistema do dispositivo (ThemeMode.system).
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
-      locale: const Locale('pt', 'BR'),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('pt', 'BR'), Locale('en', 'US')],
-      home: const MainShell(),
-    );
-  }
 }

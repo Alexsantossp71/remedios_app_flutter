@@ -38,12 +38,7 @@ void main() {
   testWidgets('CTA "Começar" dispara onStart', (tester) async {
     bool started = false;
     await tester.pumpWidget(
-      host(
-        WelcomeScreen(
-          onStart: () => started = true,
-          onSeeDemo: (_) {},
-        ),
-      ),
+      host(WelcomeScreen(onStart: () => started = true, onSeeDemo: (_) {})),
     );
 
     final cta = find.text('Começar — criar meu cofre');
@@ -61,12 +56,7 @@ void main() {
   ) async {
     BuildContext? captured;
     await tester.pumpWidget(
-      host(
-        WelcomeScreen(
-          onStart: () {},
-          onSeeDemo: (ctx) => captured = ctx,
-        ),
-      ),
+      host(WelcomeScreen(onStart: () {}, onSeeDemo: (ctx) => captured = ctx)),
     );
 
     final cta = find.text('Ver demo (não salva dados)');
@@ -77,37 +67,6 @@ void main() {
     await tester.pump();
 
     expect(captured, isNotNull);
-  });
-
-  testWidgets('showDemoComingSoonDialog abre e fecha com "Entendi"', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      host(
-        Builder(
-          builder: (context) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              showDemoComingSoonDialog(context);
-            });
-            return const SizedBox.shrink();
-          },
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Modo demo em desenvolvimento'), findsOneWidget);
-    expect(
-      find.textContaining('banco em memória não persistido'),
-      findsOneWidget,
-    );
-
-    final entendi = find.text('Entendi');
-    expect(entendi, findsOneWidget);
-    await tester.tap(entendi);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Modo demo em desenvolvimento'), findsNothing);
   });
 
   testWidgets('BrandMark renderiza o ícone de medicação', (tester) async {

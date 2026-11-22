@@ -162,7 +162,11 @@ void main() {
         final cols = await db.rawQuery('PRAGMA table_info(treatments)');
         expect(
           cols.map((c) => c['name']).toList(),
-          containsAll(['prescriber_doctor_id', 'prescriber_name', 'prescribed_on']),
+          containsAll([
+            'prescriber_doctor_id',
+            'prescriber_name',
+            'prescribed_on',
+          ]),
         );
 
         // treatment_prescriptions foi criada.

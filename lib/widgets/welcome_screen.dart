@@ -11,10 +11,9 @@ import '../core/design/app_tokens.dart';
 /// A Welcome explica o que o app faz e oferece dois caminhos:
 /// - **Começar**: leva ao [DatabaseUnlockGate] para configurar o cofre
 ///   criptográfico (fluxo normal, persistente).
-/// - **Ver demo**: mostra um diálogo explicando que o modo demo (banco
-///   em memória não persistido) está em desenvolvimento e direciona ao
-///   cofre temporariamente. Implementação completa do demo mode é
-///   acompanhada em follow-up PR (referência: auditoria P0-2).
+/// - **Ver demo**: ativa o modo demo (banco em memória não persistido
+///   com dados mock) — o visitante explora a UI completa sem precisar
+///   criar senha. Os dados não persistem ao fechar a aba.
 ///
 /// Esta tela só aparece em Web. Android/desktop já têm cofre do SO
 /// (Keystore/Keychain) e bootstrap diretamente no app.
@@ -30,10 +29,9 @@ class WelcomeScreen extends StatelessWidget {
   final VoidCallback onStart;
 
   /// Chamado quando o usuário toca em "Ver demo". Recebe o
-  /// [BuildContext] da Welcome para que o callback possa abrir diálogos
-  /// ou navegar. A implementação atual abre o
-  /// [showDemoComingSoonDialog]; em follow-up PR será substituído pelo
-  /// demo real (banco em memória).
+  /// [BuildContext] da Welcome para que o callback possa navegar.
+  /// A implementação em [AppBootstrap.runDemoMode] ativa o banco em
+  /// memória com dados mock e faz bootstrapApp diretamente (sem gate).
   final void Function(BuildContext) onSeeDemo;
 
   @override
@@ -259,39 +257,4 @@ class _PrivacyBlurb extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Diálogo explicando o estado do modo demo.
-///
-/// Mostra que o demo real (banco em memória não persistido, sem cofre)
-/// está em desenvolvimento e oferece o caminho de criar o cofre agora
-/// para quem quiser explorar o app imediatamente.
-///
-/// Chamado pelo CTA "Ver demo" da [WelcomeScreen] até que o demo mode
-/// completo seja entregue em follow-up PR.
-Future<void> showDemoComingSoonDialog(BuildContext context) {
-  return showDialog<void>(
-    context: context,
-    builder: (dialogContext) {
-      return AlertDialog(
-        icon: const Icon(Icons.construction_outlined),
-        title: const Text('Modo demo em desenvolvimento'),
-        content: const Text(
-          'O modo demo (banco em memória não persistido, sem precisar '
-          'criar senha) está sendo implementado em um PR separado, porque '
-          'exige mudar como o DatabaseService abre o banco.\n\n'
-          'Por enquanto, para explorar o app você precisa criar o cofre '
-          'com uma senha de 12 caracteres. Seus dados ficam só neste '
-          'navegador, criptografados — você pode apagar tudo a qualquer '
-          'momento nas configurações do app.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Entendi'),
-          ),
-        ],
-      );
-    },
-  );
 }
