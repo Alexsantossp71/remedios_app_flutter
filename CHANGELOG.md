@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.4.0](https://github.com/Alexsantossp71/remedios_app_flutter/compare/v3.3.0...v3.4.0) (2026-11-22)
+
+
+### Features
+
+* **demo:** real demo mode with in-memory DB and mock data ([#86](https://github.com/Alexsantossp71/remedios_app_flutter/issues/86)) ([3b09306](https://github.com/Alexsantossp71/remedios_app_flutter/commit/3b093069a2ccdc98fb9c79d64cd214f9ed44bb89))
+
 ## [3.3.0](https://github.com/Alexsantossp71/remedios_app_flutter/compare/v3.2.0...v3.3.0) (2026-11-22)
 
 
