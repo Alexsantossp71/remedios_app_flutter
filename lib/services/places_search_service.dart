@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../core/app_identity.dart';
+
 /// Uma sugestão de endereço do OpenStreetMap para o autocomplete.
 ///
 /// Campos estruturados só chegam preenchidos quando o Nominatim devolve o
@@ -75,7 +77,10 @@ class PlacesSearchService {
     final http.Response response;
     try {
       response = await _client
-          .get(Uri.parse(placesUrl).replace(queryParameters: {'q': trimmed}))
+          .get(
+            Uri.parse(placesUrl).replace(queryParameters: {'q': trimmed}),
+            headers: {appTokenHeader: appToken},
+          )
           .timeout(const Duration(seconds: 8));
     } catch (_) {
       return const [];

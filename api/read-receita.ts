@@ -26,6 +26,7 @@ import {
   createRateLimiter,
   parseBody,
   recognizeText,
+  requireAppToken,
   sendJson,
   type NodeRequestLike,
   type NodeResponseLike,
@@ -53,6 +54,9 @@ export default async function handler(
     sendJson(res, 405, { error: 'method_not_allowed' });
     return;
   }
+
+  // P2-7: rejeita chamadas sem X-App-Token (filtro de crawlers).
+  if (!requireAppToken(req, res)) return;
 
   const ip = clientIp(req);
   if (rateLimiter.isLimited(ip)) {
