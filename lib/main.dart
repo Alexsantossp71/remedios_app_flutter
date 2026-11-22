@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart' show SystemChannels;
 import 'package:material_ui/material_ui.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'
@@ -32,6 +33,21 @@ import 'widgets/welcome_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR');
+
+  // P1-5: Flutter web defaulta para semantics OFF até o usuário clicar no
+  // botão "Enable accessibility" do canto do canvas. Para um app de saúde
+  // onde o público-alvo inclui idosos, baixa visão e usuários de screen
+  // reader (VoiceOver/NVDA), isso é gap de acessibilidade — o agente-browser
+  // usado na auditoria nem conseguia ver a UI do cofre no snapshot de
+  // accessibility tree, só via screenshot + VLM. SystemChannels.accessibility
+  // é o canal interno que o Flutter web usa quando o botão é clicado;
+  // invocar 'enable' aqui liga as semantics desde o primeiro frame.
+  // Trade-off: ~5-10% mais lento na renderização — aceitável para a11y.
+  // Em native, o SO controla (VoiceOver/TalkBack acionam automaticamente),
+  // então só fazemos isso em Web.
+  if (kIsWeb) {
+    await SystemChannels.accessibility.send('enable');
+  }
 
   // P2-2: dependências de infraestrutura registradas no service locator;
   // o bootstrap abaixo resolve tudo a partir dele (testável via fakes).
