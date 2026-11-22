@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../core/theme/app_theme.dart';
 import '../services/database_key/database_key_service.dart';
 import '../services/database_key/database_key_store.dart';
 
@@ -136,7 +137,8 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: const Color(0xFFF4F6F5),
+      // P2-1: segue theme em vez de hardcoded Color(0xFFF4F6F5).
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
       alignment: Alignment.center,
       padding: const EdgeInsets.all(24),
       child: ConstrainedBox(
@@ -166,7 +168,12 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.lock_outline, size: 40, color: Color(0xFF2E7D32)),
+          // P2-1: AppSemanticColors.success em vez de hardcoded Color(0xFF2E7D32).
+          Icon(
+            Icons.lock_outline,
+            size: 40,
+            color: AppSemanticColors.of(context).success,
+          ),
           const SizedBox(height: 12),
           Text(
             _title,
