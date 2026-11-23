@@ -112,7 +112,7 @@ class DoseCard extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DoseRoundAction(
-                    icon: Icons.check_rounded,
+                    icon: Icons.local_drink_outlined,
                     tooltip: 'Tomei',
                     color: semantic.success,
                     onPressed: () => onStatusChanged(DoseStatus.taken),
