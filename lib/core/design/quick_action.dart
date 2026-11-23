@@ -77,10 +77,13 @@ class _QuickActionState extends State<QuickAction> {
               Expanded(
                 child: Text(
                   widget.label,
-                  maxLines: 1,
+                  // Design audit: maxLines 2 + fontSize 13 para evitar
+                  // truncamento em mobile (390px). "Checar interações"
+                  // e "Consultor de horários" cabem em 2 linhas.
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: contentColor,
                   ),

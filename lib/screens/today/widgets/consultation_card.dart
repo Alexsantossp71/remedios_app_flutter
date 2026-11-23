@@ -242,8 +242,10 @@ class TodayConsultationCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         consultation.notes,
+                        // Design audit: onSurface (escuro) em vez de statusColor
+                        // (âmbar) para contraste WCAG AA.
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: statusColor,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),
