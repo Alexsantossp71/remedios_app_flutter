@@ -112,7 +112,8 @@ class TodayConsultationCard extends StatelessWidget {
                           Text(
                             timeFormat.format(consultation.date),
                             style: theme.textTheme.labelLarge?.copyWith(
-                              color: statusColor,
+                              // Design audit: onSurface em vez de statusColor.
+                              color: theme.colorScheme.onSurface,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -141,7 +142,9 @@ class TodayConsultationCard extends StatelessWidget {
                             child: Text(
                               countdownBadge ?? statusText,
                               style: theme.textTheme.labelSmall?.copyWith(
-                                color: statusColor,
+                                // Design audit: usar onSurface (escuro) em vez
+                                // de statusColor (âmbar) para contraste WCAG AA.
+                                color: theme.colorScheme.onSurface,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
