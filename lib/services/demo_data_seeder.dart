@@ -193,7 +193,7 @@ class DemoDataSeeder {
       'id': 'demo-cons-1',
       'doctor_id': 'demo-doc-1',
       'title': 'Consulta de rotina — hipertensão',
-      'date': utc(today.subtract(const Duration(days: 60))),
+      'date': utc(today.subtract(const Duration(days: 60)).add(const Duration(hours: 10))),
       'status': 'completed',
       'notes': 'Pressão controlada. Manter Losartana 50mg.',
       'return_date': utc(today.add(const Duration(days: 120))),

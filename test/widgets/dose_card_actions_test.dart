@@ -32,6 +32,7 @@ Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 /// o MaterialApp simples de teste não registra a extensão).
 const Color _success = Color(0xFF2E9E6B);
 const Color _danger = Color(0xFFD64545);
+const Color _warning = Color(0xFFB97A0A);
 
 BorderSide _cardSide(WidgetTester tester) =>
     (tester.widget<Card>(find.byType(Card)).shape as RoundedRectangleBorder)
@@ -99,7 +100,7 @@ void main() {
   );
 
   testWidgets(
-    'ações pendentes são botões circulares em coluna: Tomei verde acima de Pular vermelho',
+    'ações pendentes são botões circulares em coluna: Tomei verde acima de Pular âmbar',
     (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -124,7 +125,7 @@ void main() {
 
       // Verde para Tomei, vermelho para Pular.
       expect(tomei.style?.backgroundColor?.resolve({}), _success);
-      expect(pular.style?.backgroundColor?.resolve({}), _danger);
+      expect(pular.style?.backgroundColor?.resolve({}), _warning);
 
       // Botões circulares.
       expect(tomei.style?.shape?.resolve({}), isA<CircleBorder>());

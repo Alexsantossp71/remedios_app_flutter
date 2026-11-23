@@ -82,10 +82,10 @@ void main() {
 
       expect(find.text('Losartana'), findsOneWidget);
 
-      // Fileira de estatísticas: 1 tratamento ativo, estoque em dia.
+      // Fileira de estatísticas: 1 tratamento ativo, precisam reposição.
       expect(find.byType(StatCard), findsNWidgets(2));
       expect(find.text('tratamento ativo'), findsOneWidget);
-      expect(find.text('estoque em dia'), findsOneWidget);
+      expect(find.text('precisam reposição'), findsOneWidget);
 
       // O cartão do tratamento é um RecordCard da marca (não um Card M3).
       final recordCards = tester.widgetList<RecordCard>(

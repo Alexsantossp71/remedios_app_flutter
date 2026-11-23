@@ -228,7 +228,7 @@ class _TreatmentStats extends StatelessWidget {
                 : Icons.check_circle_outline_rounded,
             value: '$lowStockCount',
             label: lowStockCount == 0
-                ? 'estoque em dia'
+                ? 'precisam reposição'
                 : lowStockCount == 1
                 ? 'item para repor'
                 : 'itens para repor',
