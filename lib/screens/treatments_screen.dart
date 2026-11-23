@@ -93,7 +93,7 @@ class TreatmentsScreen extends StatelessWidget {
         child: CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
               sliver: SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,7 +169,7 @@ class TreatmentsScreen extends StatelessWidget {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 96),
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
                 sliver: SliverList.separated(
                   itemCount: treatments.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),

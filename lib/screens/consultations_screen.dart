@@ -635,7 +635,7 @@ class _ConsultationTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             doctorName,
-                            maxLines: 1,
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
