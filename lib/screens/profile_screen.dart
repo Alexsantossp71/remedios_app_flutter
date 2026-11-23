@@ -500,10 +500,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final contacts = provider.emergencyContacts;
 
     return SafeArea(
-      child: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
+      child: Center(
+        // Design audit: em desktop (1440px), formulário de coluna única com
+        // 1300px de largura é anti-ergonômico. Constrain a 560px e centraliza.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
           children: [
             Text(
               'Meu Perfil',
@@ -618,6 +623,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
           ],
+        ),
+      ),
         ),
       ),
     );

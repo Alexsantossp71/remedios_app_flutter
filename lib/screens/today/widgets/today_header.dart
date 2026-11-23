@@ -186,7 +186,7 @@ class TodayHeader extends StatelessWidget {
                 Expanded(
                   child: StatCard(
                     icon: Icons.local_fire_department_rounded,
-                    value: streak > 0 ? '$streak' : '—',
+                    value: streak > 0 ? '$streak' : '0',
                     label: streak == 0 ? 'comece hoje' : streak == 1 ? 'dia em sequência' : 'dias em sequência',
                     iconColor: BrandColors.yellow,
                   ),
