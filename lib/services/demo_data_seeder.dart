@@ -23,7 +23,7 @@ class DemoDataSeeder {
       'nome': 'João da Silva',
       'data_nascimento': '1965-03-15T00:00:00.000Z',
       'tipo_sanguineo': 'O+',
-      'alergias': '["penicilina"]',
+      'alergias': '["Penicilina"]',
       'condicoes_cronicas': '["hipertensão"]',
       'peso': 78.5,
       'altura': 1.72,
