@@ -229,8 +229,11 @@ class AppTheme {
         filled: true,
         fillColor: inputFill,
         labelStyle: TextStyle(color: titleColor.withValues(alpha: .75)),
-        // Design audit: padding generoso para floating label não clipping.
-        contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+        // Design audit: floating label sempre visível acima do campo —
+        // não sobrepõe a borda do input. Antes: label flutuava sobre
+        // a borda causando "clipping" visual. Agora: label sempre no topo.
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        contentPadding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputRadius),
           borderSide: BorderSide.none,
