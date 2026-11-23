@@ -169,12 +169,12 @@ class _TodayScreenState extends State<TodayScreen> {
                 // Design audit: SliverGrid responsivo — desktop (>=900px)
                 // mostra 2 colunas, mobile mostra 1 (lista vertical).
                 sliver: SliverGrid.builder(
-                  gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent:
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount:
                         MediaQuery.sizeOf(context).width >= 900
-                            ? 600
-                            : double.infinity,
-                    childAspectRatio: 3.2,
+                            ? 2
+                            : 1,
+                    childAspectRatio: 5.0,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: AppSpacing.md,
                   ),
