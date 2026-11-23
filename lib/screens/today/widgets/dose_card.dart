@@ -121,7 +121,10 @@ class DoseCard extends StatelessWidget {
                   DoseRoundAction(
                     icon: Icons.skip_next_rounded,
                     tooltip: 'Pular',
-                    color: semantic.danger,
+                    // Design audit: usar warning (âmbar) em vez de danger
+                    // (vermelho). Pular dose não é erro — é ação neutra que
+                    // o usuário pode decidir. Vermelho = erro/cancelar.
+                    color: semantic.warning,
                     onPressed: () => onStatusChanged(DoseStatus.skipped),
                   ),
                 ],
