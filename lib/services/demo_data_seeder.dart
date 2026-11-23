@@ -201,6 +201,20 @@ class DemoDataSeeder {
       'updated_at': utc(today.subtract(const Duration(days: 60))),
     });
 
+    // Consulta futura agendada (design audit: resolve contradição
+    // "0 próximas consultas" com retorno no histórico).
+    await db.insert('consultations', {
+      'id': 'demo-cons-2',
+      'doctor_id': 'demo-doc-1',
+      'title': 'Retorno — hipertensão',
+      'date': utc(today.add(const Duration(days: 14)).add(const Duration(hours: 9))),
+      'status': 'scheduled',
+      'notes': 'Levar os últimos exames de sangue.',
+      'return_date': null,
+      'created_at': utc(today),
+      'updated_at': utc(today),
+    });
+
     // ── exams ─────────────────────────────────────────────────────
     await db.insert('exams', {
       'id': 'demo-exam-1',

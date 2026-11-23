@@ -666,6 +666,7 @@ class _ConsultationTile extends StatelessWidget {
                 ),
               ),
               PopupMenuButton<String>(
+              tooltip: "Mais opções",
                 tooltip: 'Mais ações',
                 onSelected: (value) {
                   switch (value) {
