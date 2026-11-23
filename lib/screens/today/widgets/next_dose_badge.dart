@@ -73,7 +73,9 @@ class _NextDoseBadgeState extends State<NextDoseBadge> {
           const Icon(Icons.timer_outlined, size: 15, color: Colors.white),
           const SizedBox(width: 5),
           Text(
-            'Próxima dose em ${_countdownFor(next.scheduledAt)}',
+            // Design audit: adicionar horário absoluto além do relativo.
+            // Antes: "Próxima dose em 4h38". Agora: "Próxima às 16:00 (em 4h38)".
+            'Próxima às ${_timeOfDay(next.scheduledAt)} (em ${_countdownFor(next.scheduledAt)})',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w800,
@@ -83,4 +85,11 @@ class _NextDoseBadgeState extends State<NextDoseBadge> {
       ),
     );
   }
+}
+
+/// Formata um DateTime como HH:mm (horário local).
+String _timeOfDay(DateTime dt) {
+  String p2(int v) => v.toString().padLeft(2, '0');
+  final local = dt.toLocal();
+  return '${p2(local.hour)}:${p2(local.minute)}';
 }

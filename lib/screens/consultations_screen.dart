@@ -358,6 +358,55 @@ class ConsultationsScreen extends StatelessWidget {
                 ),
               ],
 
+              // Design audit: empty state CTA quando há histórico mas nenhuma
+              // próxima consulta agendada. Antes: stat card "0" sem ação.
+              if (allUpcoming.isEmpty && past.isNotEmpty) ...[
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  sliver: SliverToBoxAdapter(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.event_available_outlined,
+                              size: 36,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Nenhuma consulta agendada',
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Agende sua próxima consulta para não interromper o tratamento.',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                            const SizedBox(height: 14),
+                            FilledButton.icon(
+                              onPressed: () =>
+                                  _openConsultationForm(context),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Agendar consulta'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
               // Histórico
               if (past.isNotEmpty) ...[
                 SliverPadding(

@@ -166,7 +166,18 @@ class _TodayScreenState extends State<TodayScreen> {
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
-                sliver: SliverList.builder(
+                // Design audit: SliverGrid responsivo — desktop (>=900px)
+                // mostra 2 colunas, mobile mostra 1 (lista vertical).
+                sliver: SliverGrid.builder(
+                  gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent:
+                        MediaQuery.sizeOf(context).width >= 900
+                            ? 600
+                            : double.infinity,
+                    childAspectRatio: 3.2,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: AppSpacing.md,
+                  ),
                   itemCount: events.length,
                   itemBuilder: (context, index) {
                     final event = events[index];
@@ -174,46 +185,42 @@ class _TodayScreenState extends State<TodayScreen> {
                       event.treatmentId,
                     );
                     if (treatment == null) return const SizedBox.shrink();
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                      child: DoseTimelineRow(
+                    return DoseTimelineRow(
+                      event: event,
+                      isFirst: index == 0,
+                      isLast: index == events.length - 1,
+                      child: DoseCard(
                         event: event,
-                        isFirst: index == 0,
-                        isLast: index == events.length - 1,
-                        child: DoseCard(
-                          event: event,
-                          treatment: treatment,
-                          onStatusChanged: (status) async {
-                            unawaited(HapticFeedback.lightImpact());
-                            await therapyProvider.setDoseStatus(event, status);
-                            // Zerou o dia de hoje? Confete calmo de cápsulas.
-                            final adherence = therapyProvider.adherenceForDay(
-                              _selectedDay,
-                            );
-                            if (!context.mounted) return;
-                            if (isToday &&
-                                status == DoseStatus.taken &&
-                                adherence.total > 0 &&
-                                adherence.taken == adherence.total) {
-                              showCapsuleConfetti(context);
-                              return;
-                            }
-                            if (!context.mounted) return;
-                            showAppSnackBar(
-                              context,
-                              status == DoseStatus.taken
-                                  ? 'Dose marcada como tomada.'
-                                  : 'Dose pulada.',
-                              action: SnackBarAction(
-                                label: 'Desfazer',
-                                onPressed: () => therapyProvider.setDoseStatus(
-                                  event,
-                                  DoseStatus.pending,
-                                ),
+                        treatment: treatment,
+                        onStatusChanged: (status) async {
+                          unawaited(HapticFeedback.lightImpact());
+                          await therapyProvider.setDoseStatus(event, status);
+                          final adherence = therapyProvider.adherenceForDay(
+                            _selectedDay,
+                          );
+                          if (!context.mounted) return;
+                          if (isToday &&
+                              status == DoseStatus.taken &&
+                              adherence.total > 0 &&
+                              adherence.taken == adherence.total) {
+                            showCapsuleConfetti(context);
+                            return;
+                          }
+                          if (!context.mounted) return;
+                          showAppSnackBar(
+                            context,
+                            status == DoseStatus.taken
+                                ? 'Dose marcada como tomada.'
+                                : 'Dose pulada.',
+                            action: SnackBarAction(
+                              label: 'Desfazer',
+                              onPressed: () => therapyProvider.setDoseStatus(
+                                event,
+                                DoseStatus.pending,
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
