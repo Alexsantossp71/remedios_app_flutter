@@ -238,10 +238,14 @@ class ProfileFormCard extends StatelessWidget {
               onChanged: onConsentChanged,
             ),
             const SizedBox(height: 12),
-            FilledButton.icon(
-              onPressed: onSave,
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Salvar perfil'),
+            // Design audit: full-width para ser mais discoverable.
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onSave,
+                icon: const Icon(Icons.save_outlined),
+                label: const Text('Salvar perfil'),
+              ),
             ),
           ],
         ),

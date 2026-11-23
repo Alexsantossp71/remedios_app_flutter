@@ -477,8 +477,10 @@ class _ConsultationsStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         Expanded(
           child: StatCard(
             icon: Icons.event_available_rounded,
@@ -500,6 +502,7 @@ class _ConsultationsStats extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 }

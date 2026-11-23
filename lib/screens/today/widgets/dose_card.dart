@@ -117,15 +117,31 @@ class DoseCard extends StatelessWidget {
                     color: semantic.success,
                     onPressed: () => onStatusChanged(DoseStatus.taken),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 2),
+                  // Design audit: label visível distingue ação de status.
+                  Text(
+                    'Tomar',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: semantic.success,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   DoseRoundAction(
                     icon: Icons.skip_next_rounded,
                     tooltip: 'Pular',
-                    // Design audit: usar warning (âmbar) em vez de danger
-                    // (vermelho). Pular dose não é erro — é ação neutra que
-                    // o usuário pode decidir. Vermelho = erro/cancelar.
                     color: semantic.warning,
                     onPressed: () => onStatusChanged(DoseStatus.skipped),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Pular',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: semantic.warning,
+                    ),
                   ),
                 ],
               ),
