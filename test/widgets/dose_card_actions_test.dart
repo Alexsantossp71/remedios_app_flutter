@@ -112,7 +112,7 @@ void main() {
         ),
       );
 
-      final tomeiFinder = find.widgetWithIcon(IconButton, Icons.check_rounded);
+      final tomeiFinder = find.widgetWithIcon(IconButton, Icons.local_drink_outlined);
       final pularFinder = find.widgetWithIcon(
         IconButton,
         Icons.skip_next_rounded,
