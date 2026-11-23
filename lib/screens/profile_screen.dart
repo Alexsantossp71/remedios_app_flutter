@@ -507,7 +507,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           constraints: const BoxConstraints(maxWidth: 720),
           child: Form(
             key: _formKey,
-            child: ListView(
+            child: Scrollbar(
+              child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
           children: [
             Text(
@@ -626,6 +627,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
         ),
+      ),
       ),
     );
   }

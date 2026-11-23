@@ -87,7 +87,9 @@ class _TodayScreenState extends State<TodayScreen> {
     final streak = isToday ? _fullDaysStreak(therapyProvider) : 0;
 
     return SafeArea(
-      child: CustomScrollView(
+      // Design audit: Scrollbar visível no desktop para affordance de scroll.
+      child: Scrollbar(
+        child: CustomScrollView(
         slivers: [
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
@@ -229,6 +231,7 @@ class _TodayScreenState extends State<TodayScreen> {
             ],
           ],
         ],
+      ),
       ),
     );
   }
