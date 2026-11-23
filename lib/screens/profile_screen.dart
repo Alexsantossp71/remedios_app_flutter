@@ -504,7 +504,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         // Design audit: em desktop (1440px), formulário de coluna única com
         // 1300px de largura é anti-ergonômico. Constrain a 560px e centraliza.
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
+          constraints: const BoxConstraints(maxWidth: 720),
           child: Form(
             key: _formKey,
             child: ListView(
@@ -531,7 +531,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _tipoSanguineo != null ||
                 _alergias.isNotEmpty ||
                 _condicoesCronicas.isNotEmpty) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 18),
               EmergencyCard(
                 tipoSanguineo: _tipoSanguineo,
                 alergias: _alergias,
@@ -539,7 +539,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 contacts: contacts,
               ),
             ],
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
             const SectionHeader(title: 'Dados pessoais'),
             const SizedBox(height: 10),
             ProfileFormCard(
@@ -580,7 +580,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               validatePeso: _validatePeso,
               validateAltura: _validateAltura,
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
             const SectionHeader(title: 'Contatos de emergência'),
             const SizedBox(height: 10),
             EmergencyContactsCard(
@@ -590,16 +590,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onEdit: (contact) => _editContact(contact),
               onRemove: (contact) => _removeContact(contact),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
             const SectionHeader(title: 'Meus cadastros'),
             const SizedBox(height: 10),
             const ProfileRegistryCard(),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
             if (WebReminderService.instance.isSupported) ...[
               const SectionHeader(title: 'Lembretes no navegador'),
               const SizedBox(height: 10),
               WebReminderCard(),
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
             ],
             const SectionHeader(title: 'Backup e restauração'),
             const SizedBox(height: 10),
@@ -608,11 +608,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onExport: _exportBackup,
               onRestore: _restoreBackup,
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
             const SectionHeader(title: 'Dados e privacidade'),
             const SizedBox(height: 10),
             ProfilePrivacyCard(onDeleteAll: _confirmDeleteAllData),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
             Center(
               child: Text(
                 'Remédio na Hora v3.0',
