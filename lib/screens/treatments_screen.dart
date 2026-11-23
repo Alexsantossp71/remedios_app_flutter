@@ -387,12 +387,19 @@ class TreatmentCard extends StatelessWidget {
                 ),
                 if (treatment.instructions.isNotEmpty) ...[
                   const SizedBox(height: 10),
-                  Text(
-                    treatment.instructions,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  // Design audit: paddingRight 60 para não sobrepor FAB
+                  // centerDocked no mobile. Em desktop não há FAB floating.
+                  Padding(
+                    padding: EdgeInsets.only(
+                      right: MediaQuery.sizeOf(context).width >= 900 ? 0 : 60,
+                    ),
+                    child: Text(
+                      treatment.instructions,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
@@ -408,9 +415,13 @@ class TreatmentCard extends StatelessWidget {
   /// lista; o CRM completo fica no formulário e no histórico.
   static String _prescriberLabel(Treatment treatment) {
     final date = treatment.prescribedOn;
+    // Design audit: encurtar para evitar overflow horizontal em mobile.
+    // "Receita: Dr. Carlos Almeida · 23/11/2026" → "Dr. Carlos Almeida · 23/11"
+    final name = treatment.prescriberName ?? '';
+    final shortName = name.length > 20 ? '${name.substring(0, 18)}…' : name;
     return [
-      'Receita: ${treatment.prescriberName}',
-      if (date != null) DateFormat('dd/MM/yyyy').format(date),
+      shortName,
+      if (date != null) DateFormat('dd/MM/yy').format(date),
     ].join(' · ');
   }
 
