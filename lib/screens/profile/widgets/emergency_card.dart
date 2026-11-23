@@ -182,7 +182,10 @@ class _EmergencyCardState extends State<EmergencyCard> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Remédio na Hora • Gerado em ${_stampRodape(DateTime.now())}',
+                    // Design audit: "Atualizado em" + date only (sem hora)
+                    // — antes era "Gerado em dd/MM/yyyy HH:mm" que parecia
+                    // timestamp interno de debug.
+                    'Remédio na Hora • Atualizado em ${_stampRodape(DateTime.now())}',
                     style: textTheme.bodySmall?.copyWith(
                       color: mutedColor,
                       fontWeight: FontWeight.w600,
@@ -237,7 +240,7 @@ String _stampArquivo(DateTime d) {
 /// Carimbo legível para o rodapé da imagem: dd/MM/yyyy HH:mm.
 String _stampRodape(DateTime d) {
   String p2(int v) => v.toString().padLeft(2, '0');
-  return '${p2(d.day)}/${p2(d.month)}/${d.year} ${p2(d.hour)}:${p2(d.minute)}';
+  return '${p2(d.day)}/${p2(d.month)}/${d.year}';
 }
 
 class _EmergencyRow extends StatelessWidget {
