@@ -229,6 +229,8 @@ class AppTheme {
         filled: true,
         fillColor: inputFill,
         labelStyle: TextStyle(color: titleColor.withValues(alpha: .75)),
+        // Design audit: padding generoso para floating label não clipping.
+        contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputRadius),
           borderSide: BorderSide.none,
