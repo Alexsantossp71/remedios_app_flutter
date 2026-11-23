@@ -226,15 +226,16 @@ class _MainShellState extends State<MainShell>
               ],
             )
           : _wrapWithDemoBannerIfNeeded(content),
-      floatingActionButton: FloatingActionButton(
+      // Desktop: FAB do rail já existe (leading do NavigationRail). Não
+      // precisamos de um segundo FAB floating — era redundante e obstruía
+      // conteúdo no rodapé. Mobile: mantém centerDocked (não há rail).
+      floatingActionButton: isWide ? null : FloatingActionButton(
         tooltip: 'Cadastrar',
         shape: const CircleBorder(),
         onPressed: _openCreateMenu,
         child: const Icon(Icons.add),
       ),
-      floatingActionButtonLocation: isWide
-          ? FloatingActionButtonLocation.endFloat
-          : FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: isWide ? null : _buildBottomBar(),
     );
   }
