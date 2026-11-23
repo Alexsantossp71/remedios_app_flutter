@@ -77,8 +77,73 @@ class ProfileFormCard extends StatelessWidget {
   /// Formatação da data de nascimento exibida no campo (pt_BR).
   static final DateFormat _dateFormat = DateFormat('dd/MM/yyyy', 'pt_BR');
 
+  // ── Campos extraídos para suportar 2-col no desktop ──────────────
+
+  Widget _cpfField() => TextFormField(
+        key: cpfFieldKey,
+        controller: cpfController,
+        decoration: const InputDecoration(
+          labelText: 'CPF',
+          hintText: '000.000.000-00',
+          prefixIcon: Icon(Icons.badge_outlined),
+        ),
+        keyboardType: TextInputType.number,
+        inputFormatters: [CpfInputFormatter()],
+        validator: validateCpf,
+      );
+
+  Widget _birthDateField(BuildContext context) => InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onSelectBirthDate,
+        child: InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Data de nascimento',
+            prefixIcon: Icon(Icons.cake_outlined),
+            suffixIcon: Icon(Icons.calendar_today_outlined),
+          ),
+          child: Text(
+            dataNascimento != null
+                ? _dateFormat.format(dataNascimento!)
+                : 'Toque para selecionar',
+            style: dataNascimento != null
+                ? null
+                : TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+          ),
+        ),
+      );
+
+  Widget _telefoneField() => TextFormField(
+        key: telefoneFieldKey,
+        controller: telefoneController,
+        decoration: const InputDecoration(
+          labelText: 'Telefone',
+          hintText: '(11) 91234-5678',
+          prefixIcon: Icon(Icons.phone_outlined),
+        ),
+        keyboardType: TextInputType.phone,
+        inputFormatters: [PhoneInputFormatter()],
+        validator: validateTelefone,
+      );
+
+  Widget _bloodTypeField() => DropdownButtonFormField<TipoSanguineo>(
+        initialValue: tipoSanguineo,
+        decoration: const InputDecoration(
+          labelText: 'Tipo sanguíneo',
+          prefixIcon: Icon(Icons.bloodtype_outlined),
+        ),
+        items: TipoSanguineo.values
+            .map((tipo) =>
+                DropdownMenuItem(value: tipo, child: Text(tipo.value)))
+            .toList(),
+        onChanged: onTipoSanguineoChanged,
+      );
+
   @override
   Widget build(BuildContext context) {
+    // Design audit: desktop (>=900px) usa 2 colunas para aproveitar horizontal.
+    final isWide = MediaQuery.sizeOf(context).width >= 900;
     return RecordCard(
       padding: EdgeInsets.zero,
       child: Padding(
@@ -86,6 +151,7 @@ class ProfileFormCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Linha 1: Nome (full width — campo longo)
             TextFormField(
               key: nomeFieldKey,
               controller: nomeController,
@@ -104,68 +170,38 @@ class ProfileFormCard extends StatelessWidget {
               },
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              key: cpfFieldKey,
-              controller: cpfController,
-              decoration: const InputDecoration(
-                labelText: 'CPF',
-                hintText: '000.000.000-00',
-                prefixIcon: Icon(Icons.badge_outlined),
-              ),
-              keyboardType: TextInputType.number,
-              inputFormatters: [CpfInputFormatter()],
-              validator: validateCpf,
-            ),
+            // Linha 2: CPF + Data nascimento (2 colunas no desktop)
+            if (isWide)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _cpfField()),
+                  const SizedBox(width: 12),
+                  Expanded(child: _birthDateField(context)),
+                ],
+              )
+            else ...[
+              _cpfField(),
+              const SizedBox(height: 16),
+              _birthDateField(context),
+            ],
             const SizedBox(height: 16),
-            InkWell(
-              borderRadius: BorderRadius.circular(8),
-              onTap: onSelectBirthDate,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Data de nascimento',
-                  prefixIcon: Icon(Icons.cake_outlined),
-                  suffixIcon: Icon(Icons.calendar_today_outlined),
-                ),
-                child: Text(
-                  dataNascimento != null
-                      ? _dateFormat.format(dataNascimento!)
-                      : 'Toque para selecionar',
-                  style: dataNascimento != null
-                      ? null
-                      : TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                ),
-              ),
-            ),
+            // Linha 3: Telefone + Tipo sanguíneo (2 colunas no desktop)
+            if (isWide)
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _telefoneField()),
+                  const SizedBox(width: 12),
+                  Expanded(child: _bloodTypeField()),
+                ],
+              )
+            else ...[
+              _telefoneField(),
+              const SizedBox(height: 16),
+              _bloodTypeField(),
+            ],
             const SizedBox(height: 16),
-            TextFormField(
-              key: telefoneFieldKey,
-              controller: telefoneController,
-              decoration: const InputDecoration(
-                labelText: 'Telefone',
-                hintText: '(11) 91234-5678',
-                prefixIcon: Icon(Icons.phone_outlined),
-              ),
-              keyboardType: TextInputType.phone,
-              inputFormatters: [PhoneInputFormatter()],
-              validator: validateTelefone,
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<TipoSanguineo>(
-              initialValue: tipoSanguineo,
-              decoration: const InputDecoration(
-                labelText: 'Tipo sanguíneo',
-                prefixIcon: Icon(Icons.bloodtype_outlined),
-              ),
-              items: TipoSanguineo.values
-                  .map(
-                    (tipo) =>
-                        DropdownMenuItem(value: tipo, child: Text(tipo.value)),
-                  )
-                  .toList(),
-              onChanged: onTipoSanguineoChanged,
-            ),
             const SizedBox(height: 16),
             StringListEditor(
               label: 'Alergias',
