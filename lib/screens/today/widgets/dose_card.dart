@@ -116,6 +116,8 @@ class _DoseCardState extends State<DoseCard> {
                   const SizedBox(height: 2),
                   Text(
                     '${treatment.dosage} · ${treatment.presentation}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
