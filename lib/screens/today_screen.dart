@@ -165,7 +165,7 @@ class _TodayScreenState extends State<TodayScreen> {
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
                 sliver: SliverList.builder(
                   itemCount: events.length,
                   itemBuilder: (context, index) {
