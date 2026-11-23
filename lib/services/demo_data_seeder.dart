@@ -28,7 +28,7 @@ class DemoDataSeeder {
       'peso': 78.5,
       'altura': 1.72,
       'telefone': '(11) 99999-9999',
-      'cpf': null,
+      'cpf': '123.456.789-09',
       'consent_at': utc(now),
       'ai_consent_at': null,
       'created_at': utc(now.subtract(const Duration(days: 90))),
