@@ -167,7 +167,7 @@ class _TodayScreenState extends State<TodayScreen> {
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                 // Design audit: SliverGrid responsivo — desktop (>=900px)
                 // mostra 2 colunas, mobile mostra 1 (lista vertical).
                 sliver: SliverGrid.builder(

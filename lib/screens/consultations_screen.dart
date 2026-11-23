@@ -416,7 +416,7 @@ class ConsultationsScreen extends StatelessWidget {
                   ),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 120),
                   sliver: SliverList.separated(
                     itemCount: past.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
