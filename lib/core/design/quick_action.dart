@@ -30,12 +30,12 @@ class _QuickActionState extends State<QuickAction> {
 
     final borderColor = _hovered
         ? (isDark ? BrandColors.teal700 : const Color(0xFF99F6E4))
-        : (isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0));
+        : (isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1));
     final fillColor = _hovered
         ? (isDark
               ? BrandColors.teal700.withValues(alpha: .16)
               : const Color(0xFFF0FDFA))
-        : Colors.transparent;
+        : (isDark ? Colors.transparent : Colors.white);
     final contentColor = _hovered
         ? (isDark ? const Color(0xFF99F6E4) : BrandColors.teal700)
         : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155));
@@ -53,6 +53,19 @@ class _QuickActionState extends State<QuickAction> {
           color: fillColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: borderColor),
+          // Design audit: elevation sutil para affordance de botão clicável.
+          // Antes: sem shadow, parecia linha de texto. Agora: card com depth.
+          boxShadow: _hovered
+              ? null
+              : [
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: .08)
+                        : const Color(0xFF94A3B8).withValues(alpha: .12),
+                    offset: const Offset(0, 2),
+                    blurRadius: 8,
+                  ),
+                ],
         ),
         child: InkWell(
           onTap: widget.onTap,
@@ -72,6 +85,12 @@ class _QuickActionState extends State<QuickAction> {
                     color: contentColor,
                   ),
                 ),
+              ),
+              // Design audit: chevron sinaliza que é clicável.
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: contentColor.withValues(alpha: .6),
               ),
             ],
           ),
