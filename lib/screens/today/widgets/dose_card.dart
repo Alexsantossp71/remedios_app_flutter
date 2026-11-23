@@ -9,7 +9,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../models/dose_event.dart';
 import '../../../models/treatment.dart';
 
-class DoseCard extends StatelessWidget {
+/// Design audit: StatefulWidget para hover elevation no desktop.
+class DoseCard extends StatefulWidget {
   const DoseCard({
     super.key,
     required this.event,
@@ -22,7 +23,16 @@ class DoseCard extends StatelessWidget {
   final ValueChanged<DoseStatus> onStatusChanged;
 
   @override
+  State<DoseCard> createState() => _DoseCardState();
+}
+
+class _DoseCardState extends State<DoseCard> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final event = widget.event;
+    final treatment = widget.treatment;
     final theme = Theme.of(context);
     final isTaken = event.status == DoseStatus.taken;
     final isSkipped = event.status == DoseStatus.skipped;
@@ -45,7 +55,16 @@ class DoseCard extends StatelessWidget {
       side = BorderSide(color: statusColor, width: 2);
     }
 
-    return Card(
+    return MouseRegion(
+      // Design audit: hover elevation no desktop.
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        transform: Matrix4.translationValues(0, _hovered ? -2 : 0, 0),
+        child: Card(
+          elevation: _hovered ? 4 : 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
         side: side,
@@ -115,7 +134,7 @@ class DoseCard extends StatelessWidget {
                     icon: Icons.local_drink_outlined,
                     tooltip: 'Tomei',
                     color: semantic.success,
-                    onPressed: () => onStatusChanged(DoseStatus.taken),
+                    onPressed: () => widget.onStatusChanged(DoseStatus.taken),
                   ),
                   const SizedBox(height: 2),
                   // Design audit: label visível distingue ação de status.
@@ -132,7 +151,7 @@ class DoseCard extends StatelessWidget {
                     icon: Icons.skip_next_rounded,
                     tooltip: 'Pular',
                     color: semantic.warning,
-                    onPressed: () => onStatusChanged(DoseStatus.skipped),
+                    onPressed: () => widget.onStatusChanged(DoseStatus.skipped),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -153,6 +172,8 @@ class DoseCard extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
         ),
       ),
     );
