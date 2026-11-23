@@ -235,7 +235,11 @@ class _MainShellState extends State<MainShell>
         onPressed: _openCreateMenu,
         child: const Icon(Icons.add),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      // Design audit: FAB endFloat (canto direito) em vez de centerDocked.
+      // Antes: FAB central sobreposte conteúdo em todas as telas (dose
+      // subtitle, instructions, histórico, tipo sanguíneo). Agora: FAB
+      // no canto direito — menos invasivo, padrão Material 3.
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: isWide ? null : _buildBottomBar(),
     );
   }
@@ -282,7 +286,13 @@ class _MainShellState extends State<MainShell>
 
   Widget _buildBottomBar() {
     return BottomAppBar(
-      shape: const CircularNotchedRectangle(),
+      // Design audit: sem notch central (FAB agora é endFloat).
+      shape: const AutomaticNotchedShape(
+        RoundedRectangleBorder(),
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(20)),
+        ),
+      ),
       notchMargin: 8,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
