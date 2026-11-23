@@ -149,14 +149,9 @@ class TodayHeader extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (adherence.total > 0)
-                        Text(
-                          '${(adherence.adherenceRate * 100).round()}%',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
+                      // Design audit: removido o "50%" redundante — a stat
+                      // card "2/4 doses de hoje" já mostra a mesma info.
+                      // Hero fica mais limpo com só texto + badge.
                     ],
                   ),
                   if (isToday) ...[
