@@ -312,7 +312,6 @@ class TreatmentCard extends StatelessWidget {
                       ),
                     ),
                     PopupMenuButton<String>(
-              tooltip: "Mais opções",
                       tooltip: 'Opções do tratamento',
                       padding: EdgeInsets.zero,
                       onSelected: (value) {
