@@ -229,12 +229,18 @@ class _MainShellState extends State<MainShell>
       // Desktop: FAB do rail já existe (leading do NavigationRail). Não
       // precisamos de um segundo FAB floating — era redundante e obstruía
       // conteúdo no rodapé. Mobile: mantém centerDocked (não há rail).
-      floatingActionButton: isWide ? null : FloatingActionButton(
-        tooltip: 'Cadastrar',
-        shape: const CircleBorder(),
-        onPressed: _openCreateMenu,
-        child: const Icon(Icons.add),
-      ),
+      // Design audit: FAB oculto na aba Perfil (índice 3) — não há ação
+      // de criação óbvia no perfil, e o FAB sobrepondo campos de formulário
+      // é falha de UX. Nas outras 3 abas (Hoje, Tratamentos, Consultas)
+      // o FAB abre o menu radial de cadastro.
+      floatingActionButton: (isWide || _selectedIndex == 3)
+          ? null
+          : FloatingActionButton(
+              tooltip: 'Cadastrar',
+              shape: const CircleBorder(),
+              onPressed: _openCreateMenu,
+              child: const Icon(Icons.add),
+            ),
       // Design audit: FAB endFloat (canto direito) em vez de centerDocked.
       // Antes: FAB central sobreposte conteúdo em todas as telas (dose
       // subtitle, instructions, histórico, tipo sanguíneo). Agora: FAB
