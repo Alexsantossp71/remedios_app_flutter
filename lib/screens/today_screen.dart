@@ -174,7 +174,7 @@ class _TodayScreenState extends State<TodayScreen> {
                         MediaQuery.sizeOf(context).width >= 900
                             ? 2
                             : 1,
-                    childAspectRatio: 3.8,
+                    childAspectRatio: 4.0,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: AppSpacing.md,
                   ),
