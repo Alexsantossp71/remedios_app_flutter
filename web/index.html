@@ -158,7 +158,12 @@
   <script src="flutter_bootstrap.js" async></script>
 
   <!-- Oculta o splash quando o Flutter termina o primeiro frame.
-       Listener para o evento 'flutter-firstframe' disparado pelo flutter_bootstrap.js. -->
+       O engine dispatcha 'flutter-first-frame' (com hífen duplo) no primeiro
+       frame renderizado — nome verificado em main.dart.js compilado
+       (initEvent("flutter-first-frame")). Antes o listener usava
+       'flutter-firstframe' (sem o segundo hífen), que o engine nunca
+       dispatcha: o splash só sumia no fallback de 12s, e a tela de
+       carregamento do app ficava escondida atrás dele. -->
   <script>
     (function () {
       var splash = document.getElementById('rn-splash');
@@ -172,7 +177,7 @@
         }, 480);
       }
 
-      window.addEventListener('flutter-firstframe', hideSplash);
+      window.addEventListener('flutter-first-frame', hideSplash);
       // Fallback: se o evento não disparar em 12s (Flutter travou?), esconde mesmo assim.
       setTimeout(hideSplash, 12000);
     })();

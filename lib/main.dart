@@ -31,11 +31,8 @@ Future<void> main() async {
   final notifications = sl<NotificationService>();
   await notifications.init();
 
-  // Web: WelcomeScreen first → "Começar" (gate) ou "Ver demo" (demo mode).
-  // Native: bootstrap direto (Keystore resolve a chave transparente).
-  if (kIsWeb) {
-    runWelcomeScreen(notifications);
-    return;
-  }
-  await bootstrapApp(notifications);
+  // Toda abertura (web e nativo) passa pelo BootLoader — tela de
+  // carregamento com porcentagem 0–100% e "Tudo pronto!". Ao terminar:
+  // web → WelcomeScreen (Começar / Ver demo); nativo → bootstrapApp.
+  runBootLoader(notifications);
 }

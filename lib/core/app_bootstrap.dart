@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:material_ui/material_ui.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'
@@ -23,8 +24,10 @@ import '../services/lab_result_storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/therapy_storage_service.dart';
 import '../services/web_reminder_service.dart';
+import '../widgets/boot_loader.dart';
 import '../widgets/database_unlock_gate.dart';
 import '../widgets/welcome_screen.dart';
+import 'boot/boot_steps.dart';
 
 /// Bootstrap da app em diferentes modos.
 ///
@@ -47,6 +50,29 @@ MaterialApp _materialApp({required Widget home}) {
     ],
     supportedLocales: const [Locale('pt', 'BR'), Locale('en', 'US')],
     home: home,
+  );
+}
+
+/// Mostra o BootLoader — tela de carregamento com porcentagem (0–100%)
+/// que roda em TODA abertura do app, web e nativo.
+///
+/// Ao terminar ("Tudo pronto!"), despacha para o fluxo da plataforma:
+/// web → [runWelcomeScreen] (Começar / Ver demo); nativo → [bootstrapApp]
+/// direto (o cofre do SO resolve a chave de criptografia).
+void runBootLoader(NotificationService notifications) {
+  runApp(
+    _materialApp(
+      home: BootLoader(
+        steps: buildBootSteps(),
+        onDone: () {
+          if (kIsWeb) {
+            runWelcomeScreen(notifications);
+          } else {
+            bootstrapApp(notifications);
+          }
+        },
+      ),
+    ),
   );
 }
 
