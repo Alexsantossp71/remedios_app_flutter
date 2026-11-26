@@ -417,7 +417,7 @@ class TreatmentCard extends StatelessWidget {
     final date = treatment.prescribedOn;
     // Design audit: encurtar para evitar overflow horizontal em mobile.
     // "Receita: Dr. Carlos Almeida · 23/11/2026" → "Dr. Carlos Almeida · 23/11"
-    final name = treatment.prescriberName ?? '';
+    final name = treatment.prescriberName;
     final shortName = name.length > 20 ? '${name.substring(0, 18)}…' : name;
     return [
       shortName,
