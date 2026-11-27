@@ -88,6 +88,19 @@ void main() {
     expect(store.hasStoredEnvelope, isTrue);
   });
 
+  test('setup com PIN de 6 dígitos cria cofre e desbloqueia sessão nova', () async {
+    final key = await store.setupWithPassword('482913');
+    expect(key, hasLength(32));
+    expect(store.state, DatabaseKeyState.unlocked);
+
+    // Nova sessão (reload): cofre volta travado e abre com o mesmo PIN.
+    final newSession = WebDatabaseKeyStore(storage: storage);
+    expect(newSession.state, DatabaseKeyState.locked);
+    final unlocked = await newSession.unlockWithPassword('482913');
+    expect(unlocked, key);
+    expect(newSession.state, DatabaseKeyState.unlocked);
+  });
+
   test(
     'restauração em perfil limpo: envelope exportado + senha correta',
     () async {

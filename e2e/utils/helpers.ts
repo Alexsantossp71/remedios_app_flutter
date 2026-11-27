@@ -13,8 +13,8 @@ import { Page } from '@playwright/test';
  * before waiting for any text.
  */
 
-/** Password used to set up the encrypted database in e2e (≥12 chars). */
-const E2E_DB_PASSWORD = 'e2e-test-pass-1234';
+/** 6-digit vault PIN used to set up the encrypted database in e2e. */
+const E2E_DB_PIN = '123456';
 
 /** Wait for the Flutter app to be fully loaded and interactive. */
 export async function waitForAppReady(page: Page) {
@@ -91,9 +91,10 @@ export async function ensureWelcomePassed(page: Page) {
 /** Complete the web DatabaseUnlockGate setup or unlock flow if present.
  *
  * Two flows:
- *  - Setup (fresh profile): "Proteger seu banco de dados" → password +
+ *  - Setup (fresh profile): "Proteger seu banco de dados" → 6-digit PIN +
  *    confirm + "Criar cofre e abrir o app".
- *  - Unlock (returning profile): "Banco bloqueado" → password +
+ *  - Unlock (returning profile): "Banco bloqueado" → password (legacy vaults
+ *    keep long passwords; new vaults use the same 6-digit PIN) +
  *    "Desbloquear".
  *
  * Idempotent: if neither prompt is visible (DB already unlocked in this
@@ -106,15 +107,15 @@ export async function ensureDatabaseUnlocked(page: Page) {
     .isVisible({ timeout: 3000 })
     .catch(() => false);
   if (setupVisible) {
-    const password = page.locator('[aria-label="Senha de recuperação"]').first();
-    const confirm = page.locator('[aria-label="Confirmar senha"]').first();
+    const pin = page.locator('[aria-label="PIN do cofre (6 dígitos)"]').first();
+    const confirm = page.locator('[aria-label="Confirmar PIN"]').first();
     // Flutter web keeps a single native <input> in flt-text-editing-host and
     // reassigns it to whichever semantics textbox has focus. Click each field
     // first so Flutter spawns the native input for it, then type.
-    await password.click();
-    await password.fill(E2E_DB_PASSWORD);
+    await pin.click();
+    await pin.fill(E2E_DB_PIN);
     await confirm.click();
-    await confirm.fill(E2E_DB_PASSWORD);
+    await confirm.fill(E2E_DB_PIN);
     await page.getByRole('button', { name: 'Criar cofre e abrir o app' }).click();
     return;
   }
@@ -127,7 +128,7 @@ export async function ensureDatabaseUnlocked(page: Page) {
   if (unlockVisible) {
     const password = page.locator('[aria-label="Senha de recuperação"]').first();
     await password.click();
-    await password.fill(E2E_DB_PASSWORD);
+    await password.fill(E2E_DB_PIN);
     await page.getByRole('button', { name: 'Desbloquear' }).click();
     return;
   }

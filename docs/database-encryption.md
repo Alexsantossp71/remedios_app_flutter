@@ -42,7 +42,7 @@ localStorage em texto claro. O hex da chave vive apenas na chamada
 | Banco ativo Android (`remedios_app_enc.db`) | Sim (ChaCha20 por página) | Journal do SQLite usa o mesmo esquema de página cifrada |
 | Banco ativo Web (`remedios_app_enc.db` no IndexedDB do worker) | Sim | O arquivo SQLite dentro do storage do navegador é o blob cifrado |
 | Envelope Android (`noBackupFilesDir/database-key/remedios_app.dek`) | Envolto pelo Keystore (AES-GCM) | Não é texto claro; depende do Keystore do aparelho |
-| Envelope de recuperação Web (`localStorage rnh.db.recoveryEnvelope.v1`) | Ciphertext autenticado (senha ≥12 caracteres) | Exportável/importável; contém apenas material cifrado |
+| Envelope de recuperação Web (`localStorage rnh.db.recoveryEnvelope.v1`) | Ciphertext autenticado (PIN de 6 dígitos em cofres novos; senhas legadas ≥12 continuam válidas no desbloqueio) | Exportável/importável; contém apenas material cifrado |
 | Backup pré-migração (`remedios_app_backup_pre_encryption/`) | **Não** — permanece texto claro | Existe exatamente para recuperação; removível apenas por política de retenção explícita |
 | WAL/journal do banco legado original | Não | Copiados para o backup; nunca modificados |
 | Fotos/anexos/exames (base64 dentro do banco) | Sim (colunas do banco cifrado) | Fotos fora do banco (files) exigem cifra independente — fora do escopo |

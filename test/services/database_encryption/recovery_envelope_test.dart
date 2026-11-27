@@ -176,5 +176,28 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('PIN de 6 dígitos cria e desbloqueia (política atual do cofre)', () async {
+      final key = List<int>.generate(32, (i) => i * 11 % 256);
+      final envelope = await RecoveryEnvelope.create(
+        databaseKey: key,
+        recoveryPassword: '482913',
+      );
+      final decoded = RecoveryEnvelope.decode(envelope.encode());
+      final unlocked = await decoded.unlock(recoveryPassword: '482913');
+      expect(unlocked, key);
+    });
+
+    test('senha legada longa (≥12) continua aceita no desbloqueio', () async {
+      // Cofres criados antes do PIN de 6 dígitos usavam senhas ≥12; o
+      // desbloqueio não valida formato — apenas a autenticação AES-GCM.
+      final key = List<int>.generate(32, (i) => i * 13 % 256);
+      final envelope = await RecoveryEnvelope.create(
+        databaseKey: key,
+        recoveryPassword: _password,
+      );
+      final unlocked = await envelope.unlock(recoveryPassword: _password);
+      expect(unlocked, key);
+    });
   });
 }

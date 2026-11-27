@@ -180,10 +180,14 @@ class RecoveryEnvelope {
     '$iterations:${base64Encode(salt)}',
   );
 
+  /// Piso do serviço: 6 caracteres. A política de produto (PIN de exatamente
+  /// 6 dígitos) é aplicada na UI do DatabaseUnlockGate na criação do cofre;
+  /// envelopes legados protegidos por senhas longas (≥12) continuam
+  /// desbloqueando normalmente porque o desbloqueio não valida formato.
   static void _validatePassword(String password) {
-    if (password.length < 12) {
+    if (password.length < 6) {
       throw ArgumentError(
-        'Recovery password must contain at least 12 characters.',
+        'Recovery password must contain at least 6 characters.',
       );
     }
   }

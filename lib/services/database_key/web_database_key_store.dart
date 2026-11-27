@@ -156,9 +156,9 @@ class WebDatabaseKeyStore implements DatabaseKeyStore {
     RecoveryEnvelope envelope,
     String password,
   ) async {
-    if (password.length < 12) {
+    if (password.length < 6) {
       throw const DatabaseUnlockWrongPasswordException(
-        'A senha de recuperação deve ter pelo menos 12 caracteres.',
+        'A senha de recuperação deve ter pelo menos 6 caracteres.',
       );
     }
     try {
@@ -174,10 +174,13 @@ class WebDatabaseKeyStore implements DatabaseKeyStore {
     }
   }
 
+  /// Piso do serviço: 6 caracteres. A política de produto (PIN de exatamente
+  /// 6 dígitos) é aplicada na UI do gate; senhas legadas (≥12) de cofres
+  /// antigos continuam válidas no desbloqueio.
   void _validatePasswordOrThrow(String password) {
-    if (password.length < 12) {
+    if (password.length < 6) {
       throw ArgumentError(
-        'Recovery password must contain at least 12 characters.',
+        'Recovery password must contain at least 6 characters.',
       );
     }
   }

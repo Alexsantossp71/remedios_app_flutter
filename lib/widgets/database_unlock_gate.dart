@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../core/theme/app_theme.dart';
@@ -36,6 +37,28 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
   final _confirmController = TextEditingController();
   final _envelopeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+
+  /// Política do cofre na criação: PIN de exatamente 6 dígitos. O
+  /// desbloqueio e a restauração NÃO aplicam esta regra — cofres criados
+  /// antes do PIN usam senhas longas (≥12 caracteres) e continuam válidos.
+  static final RegExp _pinPattern = RegExp(r'^\d{6}$');
+
+  /// Modo criação (primeiro uso): exige o PIN de 6 dígitos.
+  bool get _isSetup => !_showRestore && _state == DatabaseKeyState.needsSetup;
+
+  String? _validatePin(String? value) {
+    if (value == null || !_pinPattern.hasMatch(value)) {
+      return 'O PIN deve conter exatamente 6 dígitos.';
+    }
+    return null;
+  }
+
+  String? _validateUnlockPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Digite a senha de recuperação.';
+    }
+    return null;
+  }
 
   @override
   void initState() {
@@ -206,19 +229,25 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
             controller: _passwordController,
             obscureText: true,
             autofillHints: const [AutofillHints.password],
+            keyboardType: _isSetup ? TextInputType.number : null,
+            inputFormatters: _isSetup
+                ? [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(6),
+                  ]
+                : null,
+            maxLength: _isSetup ? 6 : null,
             decoration: InputDecoration(
               labelText: _showRestore
                   ? 'Senha do envelope'
+                  : _isSetup
+                  ? 'PIN do cofre (6 dígitos)'
                   : 'Senha de recuperação',
               border: const OutlineInputBorder(),
-              helperText: 'Mínimo de 12 caracteres',
+              helperText: _isSetup ? 'Apenas números' : null,
+              counterText: _isSetup ? '' : null,
             ),
-            validator: (value) {
-              if (value == null || value.length < 12) {
-                return 'A senha deve ter pelo menos 12 caracteres.';
-              }
-              return null;
-            },
+            validator: _isSetup ? _validatePin : _validateUnlockPassword,
             onFieldSubmitted: (_) => _submit(),
           ),
           if (!_showRestore && _state == DatabaseKeyState.needsSetup) ...[
@@ -226,13 +255,18 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
             TextFormField(
               controller: _confirmController,
               obscureText: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ],
+              maxLength: 6,
               decoration: const InputDecoration(
-                labelText: 'Confirmar senha',
+                labelText: 'Confirmar PIN',
                 border: OutlineInputBorder(),
+                counterText: '',
               ),
-              validator: (value) => (value == null || value.length < 12)
-                  ? 'A senha deve ter pelo menos 12 caracteres.'
-                  : null,
+              validator: _validatePin,
             ),
           ],
           const SizedBox(height: 16),
@@ -366,10 +400,10 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
     }
     switch (_state) {
       case DatabaseKeyState.needsSetup:
-        return 'Crie uma senha de recuperação (mínimo 12 caracteres). Ela '
-            'protege a chave de criptografia do banco local e será pedida '
-            'ao abrir o app neste navegador. Guarde-a: sem ela o banco não '
-            'pode ser desbloqueado.';
+        return 'Crie um PIN de 6 dígitos para proteger a chave de '
+            'criptografia do banco local. Ele será pedido ao abrir o app '
+            'neste navegador. Guarde-o: sem ele o banco não pode ser '
+            'desbloqueado.';
       case DatabaseKeyState.locked:
         return 'Digite sua senha de recuperação para desbloquear o banco '
             'criptografado nesta sessão. O banco original permanece '
