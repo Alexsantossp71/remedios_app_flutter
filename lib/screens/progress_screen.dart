@@ -1,5 +1,12 @@
 import 'dart:math' as math;
 
+// Intencional: o Material NATIVO do flutter/material é exigido pelos
+// InkWells do table_calendar (checagem por tipo exato — o Material do
+// material_ui é outra classe). Não trocar por material_ui.
+// ignore: deprecated_member_use
+import 'package:flutter/material.dart'
+    as flutter_material
+    show Material, MaterialType;
 import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -59,71 +66,83 @@ class _ProgressScreenState extends State<ProgressScreen> {
                         Card(
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-                            child: TableCalendar<void>(
-                              locale: 'pt_BR',
-                              firstDay: DateTime.utc(2020, 1, 1),
-                              lastDay: DateTime.utc(2100, 12, 31),
-                              focusedDay: _focusedDay,
-                              selectedDayPredicate: (day) =>
-                                  isSameDay(_selectedDay, day),
-                              onDaySelected: (selectedDay, focusedDay) {
-                                setState(() {
-                                  _selectedDay = selectedDay;
-                                  _focusedDay = focusedDay;
-                                });
-                              },
-                              onPageChanged: (focusedDay) =>
-                                  _focusedDay = focusedDay,
-                              calendarFormat: CalendarFormat.month,
-                              headerStyle: const HeaderStyle(
-                                formatButtonVisible: false,
-                                titleCentered: true,
-                              ),
-                              calendarStyle: CalendarStyle(
-                                todayDecoration: BoxDecoration(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withValues(alpha: .22),
-                                  shape: BoxShape.circle,
-                                ),
-                                todayTextStyle: TextStyle(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                                selectedDecoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              calendarBuilders: CalendarBuilders(
-                                markerBuilder: (context, day, events) {
-                                  final semantic = AppSemanticColors.of(
-                                    context,
-                                  );
-                                  final adherence = provider.adherenceForDay(
-                                    day,
-                                  );
-                                  if (adherence.total == 0) return null;
-                                  final color =
-                                      adherence.taken == adherence.total
-                                      ? semantic.success
-                                      : adherence.completed == 0
-                                      ? semantic.warning
-                                      : Theme.of(context).colorScheme.primary;
-                                  return Positioned(
-                                    bottom: 3,
-                                    child: Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: color,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  );
+                            // Material do flutter/material (não o do
+                            // material_ui): os InkWells internos do
+                            // table_calendar checam ancestry de Material
+                            // por tipo EXATO — o Material do material_ui
+                            // é outra classe, então sem este wrapper o
+                            // debug-build quebra com "No Material widget
+                            // found" e os ripples do calendário não
+                            // funcionam.
+                            child: flutter_material.Material(
+                              type: flutter_material.MaterialType.transparency,
+                              child: TableCalendar<void>(
+                                locale: 'pt_BR',
+                                firstDay: DateTime.utc(2020, 1, 1),
+                                lastDay: DateTime.utc(2100, 12, 31),
+                                focusedDay: _focusedDay,
+                                selectedDayPredicate: (day) =>
+                                    isSameDay(_selectedDay, day),
+                                onDaySelected: (selectedDay, focusedDay) {
+                                  setState(() {
+                                    _selectedDay = selectedDay;
+                                    _focusedDay = focusedDay;
+                                  });
                                 },
+                                onPageChanged: (focusedDay) =>
+                                    _focusedDay = focusedDay,
+                                calendarFormat: CalendarFormat.month,
+                                headerStyle: const HeaderStyle(
+                                  formatButtonVisible: false,
+                                  titleCentered: true,
+                                ),
+                                calendarStyle: CalendarStyle(
+                                  todayDecoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primary
+                                        .withValues(alpha: .22),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  todayTextStyle: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  selectedDecoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                calendarBuilders: CalendarBuilders(
+                                  markerBuilder: (context, day, events) {
+                                    final semantic = AppSemanticColors.of(
+                                      context,
+                                    );
+                                    final adherence = provider.adherenceForDay(
+                                      day,
+                                    );
+                                    if (adherence.total == 0) return null;
+                                    final color =
+                                        adherence.taken == adherence.total
+                                        ? semantic.success
+                                        : adherence.completed == 0
+                                        ? semantic.warning
+                                        : Theme.of(context).colorScheme.primary;
+                                    return Positioned(
+                                      bottom: 3,
+                                      child: Container(
+                                        width: 6,
+                                        height: 6,
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                           ),

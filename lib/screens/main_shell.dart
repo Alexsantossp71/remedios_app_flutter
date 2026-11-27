@@ -9,7 +9,12 @@ import '../services/notification_service.dart';
 import '../widgets/create_choice_sheet.dart';
 import 'consultations_screen.dart';
 import 'create_flows.dart';
+import 'doctors_screen.dart';
+import 'exams_screen.dart';
+import 'health_plans_screen.dart';
+import 'lab_results_screen.dart';
 import 'profile_screen.dart';
+import 'progress_screen.dart';
 import 'today_screen.dart';
 import 'treatments_screen.dart';
 
@@ -17,7 +22,10 @@ import 'treatments_screen.dart';
 /// FAB central que abre o menu de cadastro com TODAS as funcionalidades —
 /// Medicamento, Consulta, Exame, Laudo, Plano de saúde e Médico —, cada uma
 /// perguntando manual × foto quando existe leitura por IA. Em telas largas
-/// (>= 900px) a navegação vira um rail lateral.
+/// (>= 900px) a navegação vira uma barra lateral: abas principais + seção
+/// "Registros" (Médicos, Exames, Resultados de laboratório, Planos e
+/// convênios, Progresso) — os mesmos atalhos do card "Meus cadastros" do
+/// Perfil, agora direto na lateral.
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -61,6 +69,38 @@ class _MainShellState extends State<MainShell>
       label: 'Consultas',
     ),
     (icon: Icons.person_outline, selectedIcon: Icons.person, label: 'Perfil'),
+  ];
+
+  /// Registros da barra lateral (desktop): mesmos destinos do card
+  /// "Meus cadastros" no Perfil — abertos por rota (chevron), como no
+  /// menu do mobile.
+  List<({IconData icon, String label, WidgetBuilder builder})>
+  get _sidebarRegistryItems => [
+    (
+      icon: Icons.medical_services_outlined,
+      label: 'Médicos',
+      builder: (_) => const DoctorsScreen(),
+    ),
+    (
+      icon: Icons.science_outlined,
+      label: 'Exames',
+      builder: (_) => const ExamsScreen(),
+    ),
+    (
+      icon: Icons.biotech_outlined,
+      label: 'Resultados de laboratório',
+      builder: (_) => const LabResultsScreen(),
+    ),
+    (
+      icon: Icons.health_and_safety_outlined,
+      label: 'Planos e convênios',
+      builder: (_) => const HealthPlansScreen(),
+    ),
+    (
+      icon: Icons.insights_outlined,
+      label: 'Progresso',
+      builder: (_) => const ProgressScreen(),
+    ),
   ];
 
   static const _pages = <Widget>[
@@ -220,15 +260,15 @@ class _MainShellState extends State<MainShell>
       body: isWide
           ? Row(
               children: [
-                _buildRail(),
+                _buildSidebar(),
                 const VerticalDivider(width: 1, thickness: 1),
                 Expanded(child: _wrapWithDemoBannerIfNeeded(content)),
               ],
             )
           : _wrapWithDemoBannerIfNeeded(content),
-      // Desktop: FAB do rail já existe (leading do NavigationRail). Não
+      // Desktop: botão "Cadastrar" vive na própria barra lateral. Não
       // precisamos de um segundo FAB floating — era redundante e obstruía
-      // conteúdo no rodapé. Mobile: mantém centerDocked (não há rail).
+      // conteúdo no rodapé. Mobile: mantém endFloat (não há lateral).
       // Design audit: FAB oculto na aba Perfil (índice 3) — não há ação
       // de criação óbvia no perfil, e o FAB sobrepondo campos de formulário
       // é falha de UX. Nas outras 3 abas (Hoje, Tratamentos, Consultas)
@@ -264,29 +304,68 @@ class _MainShellState extends State<MainShell>
     );
   }
 
-  Widget _buildRail() {
-    return NavigationRail(
-      selectedIndex: _selectedIndex,
-      onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-      labelType: NavigationRailLabelType.all,
-      leading: Padding(
-        padding: const EdgeInsets.only(top: 8, bottom: 16),
-        child: FloatingActionButton.small(
-          heroTag: 'rail-create-fab',
-          tooltip: 'Cadastrar',
-          shape: const CircleBorder(),
-          onPressed: _openCreateMenu,
-          child: const Icon(Icons.add),
+  /// Barra lateral do desktop: CTA de cadastro, abas principais (seleção
+  /// em pill) e a seção "Registros" com os atalhos antes espalhados no
+  /// card "Meus cadastros" do Perfil — agora direto na lateral, como no
+  /// menu da tela do mobile.
+  Widget _buildSidebar() {
+    return Material(
+      type: MaterialType.transparency,
+      child: SizedBox(
+        width: 248,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Tooltip(
+                message: 'Cadastrar',
+                child: FilledButton.tonalIcon(
+                  onPressed: _openCreateMenu,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Cadastrar'),
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                children: [
+                  const _SidebarHeader('Navegação'),
+                  for (var i = 0; i < 3; i++)
+                    _SidebarNavItem(
+                      icon: _destinations[i].icon,
+                      selectedIcon: _destinations[i].selectedIcon,
+                      label: _destinations[i].label,
+                      selected: _selectedIndex == i,
+                      onTap: () => _switchTab(i),
+                    ),
+                  const _SidebarHeader('Registros'),
+                  for (final item in _sidebarRegistryItems)
+                    _SidebarLinkItem(
+                      icon: item.icon,
+                      label: item.label,
+                      onTap: () => Navigator.of(
+                        context,
+                      ).push(MaterialPageRoute(builder: item.builder)),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              child: _SidebarNavItem(
+                icon: _destinations[3].icon,
+                selectedIcon: _destinations[3].selectedIcon,
+                label: _destinations[3].label,
+                selected: _selectedIndex == 3,
+                onTap: () => _switchTab(3),
+              ),
+            ),
+          ],
         ),
       ),
-      destinations: [
-        for (final destination in _destinations)
-          NavigationRailDestination(
-            icon: Icon(destination.icon),
-            selectedIcon: Icon(destination.selectedIcon),
-            label: Text(destination.label),
-          ),
-      ],
     );
   }
 
@@ -390,6 +469,165 @@ class _NavItem extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Cabeçalho de seção da barra lateral ("Navegação", "Registros").
+class _SidebarHeader extends StatelessWidget {
+  const _SidebarHeader(this.title);
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 6),
+      child: Text(
+        title.toUpperCase(),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.labelSmall?.copyWith(
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
+          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+        ),
+      ),
+    );
+  }
+}
+
+/// Item de ABA da barra lateral: seleção em pill (mesmo idioma visual da
+/// barra inferior do mobile).
+class _SidebarNavItem extends StatelessWidget {
+  const _SidebarNavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selected = this.selected;
+    final contentColor = selected
+        ? theme.colorScheme.onSecondaryContainer
+        : theme.colorScheme.onSurfaceVariant;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        child: Material(
+          color: selected
+              ? theme.colorScheme.secondaryContainer
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    selected ? selectedIcon : icon,
+                    size: 20,
+                    color: contentColor,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 2,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        height: 1.2,
+                        fontWeight: FontWeight.w600,
+                        color: contentColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Item de ATALHO da barra lateral ("Registros"): abre a tela por rota —
+/// chevron à direita, como no card "Meus cadastros" do Perfil.
+class _SidebarLinkItem extends StatelessWidget {
+  const _SidebarLinkItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Semantics(
+        button: true,
+        label: label,
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    size: 20,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 2,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        height: 1.2,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: theme.colorScheme.outline,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
