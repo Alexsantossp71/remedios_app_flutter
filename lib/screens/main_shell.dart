@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsRole;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../core/app_bootstrap.dart';
@@ -308,6 +310,12 @@ class _MainShellState extends State<MainShell>
   /// em pill) e a seção "Registros" com os atalhos antes espalhados no
   /// card "Meus cadastros" do Perfil — agora direto na lateral, como no
   /// menu da tela do mobile.
+  ///
+  /// Semântica: cada item de ABA é role=tab (mesmo contrato acessível do
+  /// NavigationRail que este widget substituiu — o E2E navega por
+  /// getByRole('tab')). Os atalhos de Registros ficam com role=button,
+  /// por isso o contêiner NÃO é um tabBar (o assert de debug do Flutter
+  /// exige que todo filho de um tabBar seja tab).
   Widget _buildSidebar() {
     return Material(
       type: MaterialType.transparency,
@@ -503,7 +511,9 @@ class _SidebarHeader extends StatelessWidget {
 }
 
 /// Item de ABA da barra lateral: seleção em pill (mesmo idioma visual da
-/// barra inferior do mobile).
+/// barra inferior do mobile) e role=tab — mesmo contrato de acessibilidade
+/// do NavigationRail que este widget substituiu (o E2E navega por
+/// getByRole('tab')).
 class _SidebarNavItem extends StatelessWidget {
   const _SidebarNavItem({
     required this.icon,
@@ -529,40 +539,45 @@ class _SidebarNavItem extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Semantics(
-        button: true,
-        selected: selected,
-        label: label,
-        child: Material(
-          color: selected
-              ? theme.colorScheme.secondaryContainer
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          child: InkWell(
-            onTap: onTap,
+      child: MergeSemantics(
+        child: Semantics(
+          role: SemanticsRole.tab,
+          selected: selected,
+          label: label,
+          child: Material(
+            color: selected
+                ? theme.colorScheme.secondaryContainer
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadius.md),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: [
-                  Icon(
-                    selected ? selectedIcon : icon,
-                    size: 20,
-                    color: contentColor,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 2,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        height: 1.2,
-                        fontWeight: FontWeight.w600,
-                        color: contentColor,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      selected ? selectedIcon : icon,
+                      size: 20,
+                      color: contentColor,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 2,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                          color: contentColor,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
