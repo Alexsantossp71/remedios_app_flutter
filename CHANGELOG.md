@@ -1,5 +1,53 @@
 # Changelog
 
+## [3.5.0](https://github.com/Alexsantossp71/remedios_app_flutter/compare/v3.4.0...v3.5.0) (2026-11-27)
+
+
+### Features
+
+* **boot:** carregamento 0-100% em toda abertura + fix do splash 12s ([ebd319f](https://github.com/Alexsantossp71/remedios_app_flutter/commit/ebd319f511439697514f233fd74baad14c6922a4))
+* **boot:** para em 100% e mostra Entrar/Demo — WelcomeScreen removida ([1cd5060](https://github.com/Alexsantossp71/remedios_app_flutter/commit/1cd5060ee1c5fa5d47427ff0a798d8d60c6aea2b))
+* **dados:** apagar meus dados remove o cofre e reinicia como novo aparelho ([c5e78ab](https://github.com/Alexsantossp71/remedios_app_flutter/commit/c5e78abe7c76cea29f92ac2f4524c10a5369bd1c))
+* **design:** 2-column grid, dedup hero, absolute time, empty CTA ([6f23c3a](https://github.com/Alexsantossp71/remedios_app_flutter/commit/6f23c3af1e0a4c76825414dc32f27e13482100e0))
+* **design:** CPF demo, save full-width, dose labels, stat consistency ([2ac7786](https://github.com/Alexsantossp71/remedios_app_flutter/commit/2ac77864435a15480e7d05a6f1dbdff1dea735bc))
+* **design:** dose icon, grid ratio, upcoming consult, menu tooltip ([40bfae4](https://github.com/Alexsantossp71/remedios_app_flutter/commit/40bfae49e23eb2c8b8cde1fea28803bedb3229f0))
+* **design:** Perfil 2-column form + input label padding ([ab7dd57](https://github.com/Alexsantossp71/remedios_app_flutter/commit/ab7dd576299d83363f5d0f8bae61e90bec702814))
+* **design:** scrollbars + DoseCard hover elevation ([60432bd](https://github.com/Alexsantossp71/remedios_app_flutter/commit/60432bd4e19e6221a912349999fbd3a36e8b2b9a))
+* **desktop:** barra lateral com abas + seção Registros (Médicos, Exames, Laudos, Planos, Progresso) ([e049888](https://github.com/Alexsantossp71/remedios_app_flutter/commit/e0498883570ae8ea8a8697c410ed058b01fff4b1))
+* **perfil:** convite para preencher o perfil logo após criar o cofre ([5cc3441](https://github.com/Alexsantossp71/remedios_app_flutter/commit/5cc34416ad0e620dd5ff013223c12b3538c072b4))
+* **vault:** PIN de 6 dígitos na criação do cofre ([3279870](https://github.com/Alexsantossp71/remedios_app_flutter/commit/327987016e110fc99f66efdb8b8b250716b725cf))
+* **vault:** PIN só na 1ª interação no aparelho ou recuperação de backup ([d346a0c](https://github.com/Alexsantossp71/remedios_app_flutter/commit/d346a0c89c912b69f704ecaa5a7e3df8d4e4474f))
+
+
+### Bug Fixes
+
+* 'frequency': 'daily' (Amoxicilina é daily com 3 dose_times: 8h, 16h, 0h = 8/8h dentro de daily). ([a4e9f26](https://github.com/Alexsantossp71/remedios_app_flutter/commit/a4e9f26dd799809d86389816e08090b1feed7caf))
+* **analyze:** remove dead null-aware em prescriberName ([c1aad77](https://github.com/Alexsantossp71/remedios_app_flutter/commit/c1aad77e9f3148fb96bdc45961d68c6fb827a3a2))
+* **backup:** senha mínima de 6 caracteres + alerta exibido por inteiro ([761c68c](https://github.com/Alexsantossp71/remedios_app_flutter/commit/761c68cbe3c58efcd466bc41b371c1157e99222b))
+* cria databaseFactoryWebDemo com SqfliteFfiWebOptions(inMemory: true) que usa o flag nativo da factory web para bancos em memória (sem OPFS, sem persistência). _initDemoDatabase() agora checa kIsWeb e usa databaseFactoryWebDemo.openDatabase('demo.db') em Web, openDatabase(inMemoryDatabasePath) em native. ([ee6f3c1](https://github.com/Alexsantossp71/remedios_app_flutter/commit/ee6f3c1929043bbae8b8417fb2a9e913dac3433f))
+* **demo:** match dose_events schema ([cee08f0](https://github.com/Alexsantossp71/remedios_app_flutter/commit/cee08f0743ccae24069ae5316f595b5195629665))
+* **demo:** use inMemory factory option for web demo database ([#89](https://github.com/Alexsantossp71/remedios_app_flutter/issues/89)) ([ee6f3c1](https://github.com/Alexsantossp71/remedios_app_flutter/commit/ee6f3c1929043bbae8b8417fb2a9e913dac3433f))
+* **demo:** use valid TreatmentFrequency enum value ([#90](https://github.com/Alexsantossp71/remedios_app_flutter/issues/90)) ([a4e9f26](https://github.com/Alexsantossp71/remedios_app_flutter/commit/a4e9f26dd799809d86389816e08090b1feed7caf))
+* **design:** constrain Perfil form width + fix streak ([a624906](https://github.com/Alexsantossp71/remedios_app_flutter/commit/a62490674768b888336140653662aba5c0b7952c))
+* **design:** consultation notes contrast + QuickAction maxLines + bottom padding ([63bf176](https://github.com/Alexsantossp71/remedios_app_flutter/commit/63bf17670418021e0734e6043686ba3447da3ccf))
+* **design:** consultation time, skip color, estoque label, streak copy ([605ef3f](https://github.com/Alexsantossp71/remedios_app_flutter/commit/605ef3f4d1bfad17031ac601d5448af4ca3eb112))
+* **design:** dose subtitle + prescriber chip + instructions padding ([1d634d6](https://github.com/Alexsantossp71/remedios_app_flutter/commit/1d634d688b912c8886348b46be97602c0f54fca4))
+* **design:** FAB centerDocked → endFloat ([a008809](https://github.com/Alexsantossp71/remedios_app_flutter/commit/a0088095d686f9b81ce3fd78bf89544dea53db89))
+* **design:** final 4 fixes for 10/10 ([cbf89f8](https://github.com/Alexsantossp71/remedios_app_flutter/commit/cbf89f840d8b9362cf1918e37b70bf962f557346))
+* **design:** grid 2-column ratio fix ([f57de30](https://github.com/Alexsantossp71/remedios_app_flutter/commit/f57de30fe5281c2a8f2b4426293ae7547a69bd58))
+* **design:** grid aspect 4.5→3.8 ([66d6966](https://github.com/Alexsantossp71/remedios_app_flutter/commit/66d6966ea6031a32fa10b3a4b4fd01383ba54d99))
+* **design:** grid ratio 4.0 + consultation card contrast WCAG AA ([d35ab80](https://github.com/Alexsantossp71/remedios_app_flutter/commit/d35ab8099a18945db6f283e4c2d5b36dfef2545f))
+* **design:** hide FAB on Perfil tab + capitalize Penicilina ([efd97f6](https://github.com/Alexsantossp71/remedios_app_flutter/commit/efd97f621fa8aab44c63d5264fcf16c4284e0f83))
+* **design:** Perfil wider form + compact spacing ([c72766b](https://github.com/Alexsantossp71/remedios_app_flutter/commit/c72766bc5047cd946baac52a96bd928148a3a146))
+* **design:** QuickAction affordance + emergency card timestamp ([ca9bd63](https://github.com/Alexsantossp71/remedios_app_flutter/commit/ca9bd630b3773a56574f8d5ee3023386b1daac64))
+* **design:** remove duplicate desktop FAB + Today bottom padding ([a6f85b5](https://github.com/Alexsantossp71/remedios_app_flutter/commit/a6f85b559efc39842822c2e00f6b0183fe34c78e))
+* **design:** resolve 7 design audit issues ([#93](https://github.com/Alexsantossp71/remedios_app_flutter/issues/93)) ([d743254](https://github.com/Alexsantossp71/remedios_app_flutter/commit/d7432545340a027ea1dfcb93181e2a9a6b47e034))
+* **desktop:** barra lateral mantém o contrato role=tab que o E2E navega ([2c72c24](https://github.com/Alexsantossp71/remedios_app_flutter/commit/2c72c242ee8bb6f9ed8aeca5c2f13e8e8e139442))
+* **e2e:** estabiliza cofre + convite de perfil no Playwright ([541ff9f](https://github.com/Alexsantossp71/remedios_app_flutter/commit/541ff9f56d4d2deaf9dbee47acba92c2e4bdbe75))
+* FloatingActionButtonLocation.centerDocked → endFloat. FAB moves to bottom-right corner. BottomAppBar shape changed from CircularNotchedRectangle (center notch) to AutomaticNotchedShape (right-side notch, barely visible). Content in center of screen no longer overlaps with FAB. ([a008809](https://github.com/Alexsantossp71/remedios_app_flutter/commit/a0088095d686f9b81ce3fd78bf89544dea53db89))
+* **perfil:** auto-save do bloco de emergência + contatos após Observações ([f7e0378](https://github.com/Alexsantossp71/remedios_app_flutter/commit/f7e03785c60c510a46538e7f02b61cd7bec0a120))
+* remove duplicate tooltip parameter ([40e727b](https://github.com/Alexsantossp71/remedios_app_flutter/commit/40e727b9a52c2bdf5ac911dab9172f4d8122ae10))
+
 ## [3.4.0](https://github.com/Alexsantossp71/remedios_app_flutter/compare/v3.3.0...v3.4.0) (2026-11-22)
 
 
