@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../core/app_bootstrap.dart';
+import '../core/service_locator.dart';
 import '../models/emergency_contact.dart';
 import '../models/user_profile.dart';
 import '../providers/consultation_provider.dart';
@@ -11,9 +13,11 @@ import '../providers/doctor_provider.dart';
 import '../providers/health_plan_provider.dart';
 import '../providers/therapy_provider.dart';
 import '../providers/user_profile_provider.dart';
+import '../services/app_data_reset_service.dart';
 import '../services/backup_file.dart';
 import '../services/backup_crypto_service.dart';
 import '../services/backup_service.dart';
+import '../services/notification_service.dart';
 import '../services/web_reminder_service.dart';
 import '../widgets/app_snack_bar.dart';
 import '../widgets/section_header.dart';
@@ -28,7 +32,13 @@ import 'profile/widgets/profile_registry_card.dart';
 import 'profile/widgets/web_reminder_card.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.onCompleteReset});
+
+  /// Chamado após o apagamento completo dos dados e do cofre ("Apagar
+  /// meus dados"). O padrão reinicia o app no BootLoader — o usuário
+  /// volta a ser tratado como novo no aparelho. Testes de widget injetam
+  /// um sentinel para não executar `runApp` dentro do teste.
+  final VoidCallback? onCompleteReset;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -395,15 +405,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  /// "Apagar meus dados": apagamento completo no aparelho (LGPD) — todos
+  /// os registros E o cofre criptográfico com a senha/PIN. Ao final o app
+  /// reinicia no BootLoader e o usuário é tratado como novo: cria um novo
+  /// PIN e recebe o convite de perfil como na primeira instalação.
   Future<void> _confirmDeleteAllData() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Apagar meus dados'),
         content: const Text(
-          'Seu perfil e seus contatos de emergência serão apagados '
-          'permanentemente deste dispositivo. Esta ação não pode ser '
-          'desfeita. Deseja continuar?',
+          'Tudo que está no app neste aparelho será apagado '
+          'permanentemente: tratamentos e doses, médicos, consultas, '
+          'planos, exames, laudos, perfil e contatos de emergência — e '
+          'também o cofre criptográfico com a senha (PIN) de proteção. '
+          'O app reinicia como se fosse a primeira instalação e você '
+          'criará um novo PIN. Mantenha um backup exportado se quiser '
+          'recuperar os dados depois. Esta ação não pode ser desfeita. '
+          'Continuar?',
         ),
         actions: [
           TextButton(
@@ -422,18 +441,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
 
-    if (confirmed == true && mounted) {
-      await context.read<UserProfileProvider>().deleteAllData();
-      setState(() => _loadFromProfile(null));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Seus dados foram apagados.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    if (confirmed != true) return;
+
+    // Bancos + cofre + marcadores + lembretes da sessão. Não há snackbar
+    // pós-apagamento: o reinício para o BootLoader é o próprio feedback.
+    await AppDataResetService.instance.wipeAllDataAndVault();
+
+    // Reinicia como novo aparelho — BootLoader → Entrar → criação do PIN
+    // → convite de perfil. runApp substitui a árvore atual (mesmo padrão
+    // do exitDemoMode); testes injetam onCompleteReset.
+    final restart =
+        widget.onCompleteReset ??
+        () => runBootLoader(sl<NotificationService>());
+    restart();
   }
 
   Future<void> _editContact([EmergencyContact? contact]) async {

@@ -123,13 +123,24 @@ class WebReminderService {
     return due;
   }
 
-  /// Para testes.
-  @visibleForTesting
-  void dispose() {
+  /// Desliga o serviço do provider atual e cancela o timer de varredura.
+  ///
+  /// Chamado pelo apagamento completo de dados: após o wipe o app reinicia
+  /// e o [attach] seguinte religa o serviço ao provider novo — sem ele, o
+  /// timer continuaria disparando lembretes com os dados já apagados.
+  void detach() {
     _timer?.cancel();
     _timer = null;
     _provider?.removeListener(_replan);
     _provider = null;
     _attached = false;
+    _planned = const [];
+    _fired.clear();
+  }
+
+  /// Para testes.
+  @visibleForTesting
+  void dispose() {
+    detach();
   }
 }

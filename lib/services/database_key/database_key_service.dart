@@ -161,4 +161,24 @@ class DatabaseKeyService {
     }
     await store.createKeyIfAbsent(key);
   }
+
+  /// Apaga TODO o material de chaves do cofre: envelope de recuperação +
+  /// espelho do aparelho (web) ou a DEK do Keystore/Keychain (nativo).
+  ///
+  /// Usado exclusivamente pelo apagamento completo de dados ("Apagar meus
+  /// dados"): após esta chamada o aparelho volta ao estado
+  /// [DatabaseKeyState.needsSetup] — o usuário cria um novo PIN e é
+  /// tratado como novo. Deve ser precedido da remoção dos bancos, já que
+  /// sem a chave eles se tornam irrecuperáveis.
+  Future<void> deleteVault() async {
+    if (kIsWeb) {
+      await _webStore!.deleteKey();
+      return;
+    }
+    final store = _nativeStore ?? _injectedStore;
+    if (store == null) {
+      throw UnsupportedError('No key store available for deletion.');
+    }
+    await store.deleteKey();
+  }
 }

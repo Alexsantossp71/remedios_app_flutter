@@ -112,7 +112,9 @@ class PrivacyNoticeCard extends StatelessWidget {
             'você pode solicitar acesso, correção, eliminação e informações '
                 'sobre o tratamento, nos termos do art. 18 da LGPD e conforme aplicável. '
                 'Use “Apagar meus dados” na seção Dados '
-                'e privacidade para remover os registros locais; isso não '
+                'e privacidade para remover os registros locais e o cofre '
+                'com a senha de proteção — o app volta a ser como uma '
+                'primeira instalação; isso não '
                 'apaga cópias que você já exportou ou dados enviados a serviços externos.',
           ),
         ],
