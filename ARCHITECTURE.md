@@ -89,8 +89,12 @@ Web boots through `BootLoader` (0–100%, stops at 100% with the **Entrar** /
 **Demo (não salva dados)** buttons — it never navigates on its own).
 "Entrar" → `DatabaseUnlockGate` (6-digit PIN only on first interaction per
 device or backup recovery; returning sessions go straight in via the device
-key mirror) → `bootstrapApp()`. "Demo" → in-memory demo mode. Native
-"Entrar" bootstraps directly via `bootstrapApp()`. `bootstrapApp()` instancia 7
+key mirror). Right after the vault is CREATED (first interaction only), the
+one-time `ProfileSetupScreen` invites the user to fill their profile
+("Quem vai usar o app?" — save hands the `UserProfile` to
+`bootstrapApp(initialProfile:)`, which persists it before the first frame;
+"skip" hands null) → diary (`MainShell`). "Demo" → in-memory demo mode.
+Native "Entrar" bootstraps directly via `bootstrapApp()`. `bootstrapApp()` instancia 7
 providers, aguarda
 `initialize()` sequencial, registra via `MultiProvider` +
 `ChangeNotifierProvider.value`, e roda `RemediosApp`.

@@ -1,5 +1,10 @@
-import { test, expect } from '@playwright/test';
-import { waitForAppReady } from '../utils/helpers';
+import { test, expect, type Page } from '@playwright/test';
+import {
+  waitForAppReady,
+  ensureWelcomePassed,
+  ensureDatabaseUnlocked,
+  enableSemantics,
+} from '../utils/helpers';
 
 // O app foi refatorado para 4 abas (Hoje, Tratamentos, Consultas, Perfil)
 // após a decomposição dos god-files (P2-1). As suítes de doctors/medicines/
@@ -79,4 +84,80 @@ test.describe('App Setup and Navigation', () => {
       });
     }
   });
+});
+
+test.describe('First-run profile invitation (after vault creation)', () => {
+  // Fresh browser context per test: the vault is created with the E2E PIN,
+  // so every test here walks the real first interaction. Unlike the suite
+  // above, the invitation is kept on screen (dismissProfileInvitation:
+  // false) so it can be asserted directly.
+  async function bootToInvitation(page: Page) {
+    await page.goto('/');
+    await enableSemantics(page);
+    await ensureWelcomePassed(page);
+    const flow = await ensureDatabaseUnlocked(page, {
+      dismissProfileInvitation: false,
+    });
+    expect(flow).toBe('setup');
+    await expect(page.getByText('Quem vai usar o app?')).toBeVisible({
+      timeout: 30000,
+    });
+  }
+
+  test('invites once after the vault is created; skip lands in the diary',
+    async ({ page }) => {
+      await bootToInvitation(page);
+
+      // Both exits are offered: save or skip.
+      await expect(
+        page.getByRole('button', { name: 'Salvar e começar' }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Pular por agora' }),
+      ).toBeVisible();
+
+      // Skipping goes straight to the diary (MainShell).
+      await page.getByRole('button', { name: 'Pular por agora' }).click();
+      await expect
+        .poll(() => page.title(), { timeout: 30000 })
+        .toBe('Remédio na Hora');
+      await expect(page.getByRole('tab', { name: 'Hoje' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+
+      // One-time per device: reload auto-unlocks and never invites again.
+      await page.reload();
+      const reloadFlow = await waitForAppReady(page);
+      expect(reloadFlow).toBe('none');
+      await expect(page.getByText('Quem vai usar o app?')).toHaveCount(0);
+    },
+  );
+
+  test('profile filled on the invitation is saved and shown in Perfil',
+    async ({ page }) => {
+      await bootToInvitation(page);
+
+      // Fill the name (same semantics-input pattern as the vault PIN) and
+      // grant the LGPD consent.
+      const nome = page.locator('[aria-label="Nome"]').first();
+      await nome.click();
+      await nome.fill('Ana Teste');
+      await page.locator('text=Autorizo o tratamento').first().click();
+
+      await page.getByRole('button', { name: 'Salvar e começar' }).click();
+
+      // Bootstrap runs after the invitation: title + main shell.
+      await expect
+        .poll(() => page.title(), { timeout: 30000 })
+        .toBe('Remédio na Hora');
+
+      // The saved name is in the Perfil tab form.
+      await page.getByRole('tab', { name: 'Perfil' }).click();
+      await page.waitForTimeout(1000);
+      const savedNome = page.locator('[aria-label="Nome"]').first();
+      await savedNome.click();
+      await expect(savedNome).toHaveValue('Ana Teste', { timeout: 10000 });
+    },
+  );
 });

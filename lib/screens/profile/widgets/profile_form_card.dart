@@ -43,6 +43,7 @@ class ProfileFormCard extends StatelessWidget {
     required this.validateTelefone,
     required this.validatePeso,
     required this.validateAltura,
+    this.saveLabel = 'Salvar perfil',
   });
 
   final GlobalKey nomeFieldKey;
@@ -73,6 +74,10 @@ class ProfileFormCard extends StatelessWidget {
   final String? Function(String?) validateTelefone;
   final String? Function(String?) validatePeso;
   final String? Function(String?) validateAltura;
+
+  /// Rótulo do botão de salvar — o convite de perfil pós-cofre usa
+  /// "Salvar e começar"; a aba Perfil mantém o padrão "Salvar perfil".
+  final String saveLabel;
 
   /// Formatação da data de nascimento exibida no campo (pt_BR).
   static final DateFormat _dateFormat = DateFormat('dd/MM/yyyy', 'pt_BR');
@@ -280,7 +285,7 @@ class ProfileFormCard extends StatelessWidget {
               child: FilledButton.icon(
                 onPressed: onSave,
                 icon: const Icon(Icons.save_outlined),
-                label: const Text('Salvar perfil'),
+                label: Text(saveLabel),
               ),
             ),
           ],

@@ -33,7 +33,7 @@ Future<void> main() async {
 
   // Toda abertura (web e nativo) passa pelo BootLoader — tela de
   // carregamento com porcentagem 0–100% que PARA ao chegar a 100% e mostra
-  // os botões "Entrar" (cofre na 1ª interação / app direto) e "Demo (não
-  // salva dados)". Nada navega automaticamente.
+  // os botões "Entrar" (cofre + convite de perfil na 1ª interação / app
+  // direto) e "Demo (não salva dados)". Nada navega automaticamente.
   runBootLoader(notifications);
 }

@@ -29,7 +29,13 @@ class DatabaseUnlockGate extends StatefulWidget {
 
   /// Called after the key is resolved for this session. The app bootstrap
   /// (providers, screens) only runs after this callback.
-  final VoidCallback onDatabaseReady;
+  ///
+  /// The boolean argument is `true` ONLY when the vault was created NOW
+  /// (setup flow — first interaction with the app on this device): the
+  /// bootstrap uses it to show the one-time profile invitation before the
+  /// diary. Unlock, restore and auto-unlock pass `false` — the database
+  /// already has the user's data.
+  final ValueChanged<bool> onDatabaseReady;
 
   @override
   State<DatabaseUnlockGate> createState() => _DatabaseUnlockGateState();
@@ -80,11 +86,12 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
     }
   }
 
-  /// Advances to the app bootstrap exactly once.
+  /// Advances to the app bootstrap exactly once (returning device — the
+  /// vault was never created in this pass, so no profile invitation).
   void _proceed() {
     if (_proceeded || !mounted) return;
     _proceeded = true;
-    widget.onDatabaseReady();
+    widget.onDatabaseReady(false);
   }
 
   @override
@@ -113,7 +120,7 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
         _passwordController.text,
       );
       if (!mounted) return;
-      widget.onDatabaseReady();
+      widget.onDatabaseReady(false);
     } on DatabaseUnlockWrongPasswordException catch (error) {
       setState(() {
         _error = error.message;
@@ -142,7 +149,9 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
         _passwordController.text,
       );
       if (!mounted) return;
-      widget.onDatabaseReady();
+      // Cofre criado AGORA (primeira interação no aparelho): o bootstrap
+      // mostra o convite de preenchimento do perfil antes do diário.
+      widget.onDatabaseReady(true);
     } catch (error) {
       setState(() {
         _error = 'Falha ao configurar o cofre: $error';
@@ -163,7 +172,9 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
         _passwordController.text,
       );
       if (!mounted) return;
-      widget.onDatabaseReady();
+      // Backup restaurado: os dados (incluindo o perfil) voltam com o
+      // banco — não há convite de perfil.
+      widget.onDatabaseReady(false);
     } on DatabaseUnlockWrongPasswordException catch (error) {
       setState(() {
         _error = error.message;

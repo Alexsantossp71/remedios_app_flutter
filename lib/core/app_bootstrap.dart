@@ -14,7 +14,9 @@ import '../providers/health_plan_provider.dart';
 import '../providers/lab_result_provider.dart';
 import '../providers/therapy_provider.dart';
 import '../providers/user_profile_provider.dart';
+import '../models/user_profile.dart';
 import '../screens/main_shell.dart';
+import '../screens/profile/profile_setup_screen.dart';
 import '../services/consultation_storage_service.dart';
 import '../services/database_key/database_key_service.dart';
 import '../services/database_key/database_key_store.dart';
@@ -60,8 +62,9 @@ MaterialApp _materialApp({required Widget home}) {
 /// Ao chegar a 100% o carregamento PARA — não navega sozinho. Na própria
 /// tela aparecem os botões:
 /// - **Entrar** → [enterPersistentApp]: web leva à criação do cofre
-///   ([runUnlockGate]) na primeira interação do aparelho ou abre o app
-///   direto quando o cofre já está desbloqueado (espelho da chave);
+///   ([runUnlockGate]) na primeira interação do app — seguida do convite
+///   de preenchimento do perfil ([runFirstRunProfileSetup]) — ou abre o
+///   app direto quando o cofre já está desbloqueado (espelho da chave);
 ///   nativo → [bootstrapApp] (cofre do SO resolve a chave);
 /// - **Demo (não salva dados)** → [runDemoMode] (banco em memória).
 void runBootLoader(NotificationService notifications) {
@@ -97,11 +100,39 @@ void enterPersistentApp(NotificationService notifications) {
 }
 
 /// Mostra o DatabaseUnlockGate — fluxo persistente com cofre criptográfico.
+///
+/// Quando o gate criou o cofre AGORA (primeira interação com o app neste
+/// aparelho), a abertura continua com o convite de preenchimento do perfil
+/// ([runFirstRunProfileSetup]) antes do diário. Desbloqueio por senha,
+/// restauração de backup e auto-unlock vão direto ao [bootstrapApp] — o
+/// banco já contém os dados do usuário (inclusive o perfil).
 void runUnlockGate(NotificationService notifications) {
   runApp(
     _materialApp(
       home: DatabaseUnlockGate(
-        onDatabaseReady: () => bootstrapApp(notifications),
+        onDatabaseReady: (bool vaultCreatedNow) {
+          if (vaultCreatedNow) {
+            runFirstRunProfileSetup(notifications);
+            return;
+          }
+          bootstrapApp(notifications);
+        },
+      ),
+    ),
+  );
+}
+
+/// Mostra o convite de preenchimento do perfil — tela única exibida logo
+/// depois da criação do cofre, na primeira interação com o app (web).
+/// O usuário preenche os dados de saúde (salvos no banco pelo
+/// [bootstrapApp] assim que os providers sobem) ou pula; de qualquer
+/// forma, a navegação seguinte é o diário (MainShell).
+void runFirstRunProfileSetup(NotificationService notifications) {
+  runApp(
+    _materialApp(
+      home: ProfileSetupScreen(
+        onFinish: (UserProfile? profile) =>
+            bootstrapApp(notifications, initialProfile: profile),
       ),
     ),
   );
@@ -124,9 +155,17 @@ Future<void> exitDemoMode(NotificationService notifications) async {
 }
 
 /// Inicializa os 7 providers, registra via MultiProvider e roda RemediosApp.
-/// Chamado por [enterPersistentApp] (botão Entrar do BootLoader) e por
-/// [runDemoMode] para o modo demo.
-Future<void> bootstrapApp(NotificationService notifications) async {
+/// Chamado por [runFirstRunProfileSetup] (convite pós-cofre), por
+/// [runUnlockGate]/[enterPersistentApp] e por [runDemoMode] para o demo.
+///
+/// [initialProfile] vem do convite de perfil da primeira interação: quando
+/// não-nulo, é persistido no banco logo após a inicialização dos providers
+/// — antes do primeiro frame do app, para que a aba Perfil já mostre os
+/// dados. Nulo = usuário pulou o convite (nada é gravado).
+Future<void> bootstrapApp(
+  NotificationService notifications, {
+  UserProfile? initialProfile,
+}) async {
   final therapyProvider = TherapyProvider(
     notifications: notifications,
     storage: sl<TherapyStorageService>(),
@@ -152,6 +191,12 @@ Future<void> bootstrapApp(NotificationService notifications) async {
   await labResultProvider.initialize();
   await healthPlanProvider.initialize();
   await userProfileProvider.initialize();
+
+  // Primeira interação (cofre recém-criado): persiste o perfil preenchido
+  // no convite — ou nada, quando o usuário pulou.
+  if (initialProfile != null) {
+    await userProfileProvider.saveProfile(initialProfile);
+  }
 
   WebReminderService.instance.attach(therapyProvider);
 

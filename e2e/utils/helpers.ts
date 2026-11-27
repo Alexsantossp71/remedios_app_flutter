@@ -112,10 +112,17 @@ export async function ensureWelcomePassed(page: Page) {
  *  - 'none'   → returning session: the gate auto-unlocked from the device
  *               mirror ("Abrindo seu banco…") — no prompt shown.
  *
+ * After vault creation the app shows the one-time profile invitation
+ * ("Quem vai usar o app?") before the diary. By default this helper
+ * dismisses it ("Pular por agora") so suites land in the main shell; pass
+ * `{ dismissProfileInvitation: false }` to keep it on screen (used by the
+ * invitation tests themselves).
+ *
  * Idempotent: safe to call on every load.
  */
 export async function ensureDatabaseUnlocked(
   page: Page,
+  opts: { dismissProfileInvitation?: boolean } = {},
 ): Promise<'setup' | 'unlock' | 'none'> {
   // Setup flow (first interaction on this device).
   const setupVisible = await page
@@ -133,6 +140,21 @@ export async function ensureDatabaseUnlocked(
     await confirm.click();
     await confirm.fill(E2E_DB_PIN);
     await page.getByRole('button', { name: 'Criar cofre e abrir o app' }).click();
+
+    // First interaction ends with the one-time profile invitation. Skip it
+    // by default; the invitation specs pass dismissProfileInvitation: false.
+    if (opts.dismissProfileInvitation !== false) {
+      const skip = page
+        .getByRole('button', { name: 'Pular por agora' })
+        .first();
+      try {
+        await skip.waitFor({ state: 'visible', timeout: 30000 });
+        await skip.click();
+      } catch {
+        // Invitation not rendered (older build or already dismissed) —
+        // proceed to the shell anyway.
+      }
+    }
     return 'setup';
   }
 

@@ -23,8 +23,9 @@ import '../core/design/app_tokens.dart';
 ///   (fail-open — o app nunca fica preso no carregamento);
 /// - Ao completar, exibe "Tudo pronto!" e, após [doneHold], revela as
 ///   ações na própria tela: **Entrar** ([onEnter] — cria o cofre na
-///   primeira interação ou abre o app direto quando o aparelho já tem o
-///   cofre) e **Demo (não salva dados)** ([onDemo]). NENHUM callback é
+///   primeira interação, seguido do convite de preenchimento do perfil,
+///   ou abre o app direto quando o aparelho já tem o cofre) e **Demo
+///   (não salva dados)** ([onDemo]). NENHUM callback é
 ///   disparado automaticamente: a navegação é sempre uma escolha do
 ///   usuário;
 /// - Respeita "reduzir animações" do sistema ([MediaQueryData.disableAnimations]):
