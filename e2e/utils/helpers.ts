@@ -16,8 +16,17 @@ import { Page } from '@playwright/test';
 /** 6-digit vault PIN used to set up the encrypted database in e2e. */
 const E2E_DB_PIN = '123456';
 
-/** Wait for the Flutter app to be fully loaded and interactive. */
-export async function waitForAppReady(page: Page) {
+/** Wait for the Flutter app to be fully loaded and interactive.
+ *
+ * Returns which vault-prompt flow was completed, if any:
+ *  - 'setup'  → the 6-digit PIN vault was created (first interaction on the
+ *               device);
+ *  - 'unlock' → the password fallback was answered (device mirror missing);
+ *  - 'none'   → no prompt was shown (returning session auto-unlocked).
+ */
+export async function waitForAppReady(
+  page: Page,
+): Promise<'setup' | 'unlock' | 'none'> {
   // 1. flutter-view element present (host mounted by the engine).
   await page.waitForSelector('flutter-view', { timeout: 60000 });
 
@@ -52,10 +61,11 @@ export async function waitForAppReady(page: Page) {
   await ensureWelcomePassed(page);
 
   // 4. On web with a fresh browser profile, the app boots into the
-  //    DatabaseUnlockGate ("Proteger seu banco de dados") and requires a
-  //    recovery password before the main shell loads. Complete it once per
-  //    context (idempotent — if the DB is already unlocked, skip).
-  await ensureDatabaseUnlocked(page);
+  //    DatabaseUnlockGate ("Proteger seu banco de dados") and asks for a
+  //    6-digit PIN ONCE (first interaction on this device). Returning
+  //    sessions auto-unlock from the device key mirror and skip the gate
+  //    entirely. Idempotent — reports which flow ran ('none' when skipped).
+  const vaultFlow = await ensureDatabaseUnlocked(page);
 
   // 5. Wait for the main shell: AppBar title "Remédio na Hora" is set by
   //    Flutter on the first rendered frame of MainShell.
@@ -68,6 +78,8 @@ export async function waitForAppReady(page: Page) {
   // 6. Extra settle time for SQLite (sqlite3mc wasm) to finish initializing
   //    before interactions start.
   await page.waitForTimeout(3000);
+
+  return vaultFlow;
 }
 
 /** Dismiss the web WelcomeScreen by clicking "Começar — criar meu cofre".
@@ -88,20 +100,22 @@ export async function ensureWelcomePassed(page: Page) {
   }
 }
 
-/** Complete the web DatabaseUnlockGate setup or unlock flow if present.
+/** Complete the web DatabaseUnlockGate flow if present; report what ran.
  *
- * Two flows:
- *  - Setup (fresh profile): "Proteger seu banco de dados" → 6-digit PIN +
- *    confirm + "Criar cofre e abrir o app".
- *  - Unlock (returning profile): "Banco bloqueado" → password (legacy vaults
- *    keep long passwords; new vaults use the same 6-digit PIN) +
- *    "Desbloquear".
+ * Product rule: the PIN is asked ONLY on the first interaction with the app
+ * on a device (vault setup) and for backup recovery. Returns:
+ *  - 'setup'  → fresh profile: created the vault with the 6-digit PIN.
+ *  - 'unlock' → rare fallback: envelope exists but the device key mirror is
+ *               missing, so the password was requested.
+ *  - 'none'   → returning session: the gate auto-unlocked from the device
+ *               mirror ("Abrindo seu banco…") — no prompt shown.
  *
- * Idempotent: if neither prompt is visible (DB already unlocked in this
- * context), returns immediately.
+ * Idempotent: safe to call on every load.
  */
-export async function ensureDatabaseUnlocked(page: Page) {
-  // Setup flow.
+export async function ensureDatabaseUnlocked(
+  page: Page,
+): Promise<'setup' | 'unlock' | 'none'> {
+  // Setup flow (first interaction on this device).
   const setupVisible = await page
     .locator('text=Proteger seu banco de dados')
     .isVisible({ timeout: 3000 })
@@ -117,21 +131,25 @@ export async function ensureDatabaseUnlocked(page: Page) {
     await confirm.click();
     await confirm.fill(E2E_DB_PIN);
     await page.getByRole('button', { name: 'Criar cofre e abrir o app' }).click();
-    return;
+    return 'setup';
   }
 
-  // Unlock flow (returning profile, e.g. after page.reload()).
+  // Unlock fallback (envelope stored, device mirror missing).
   const unlockVisible = await page
     .locator('text=Banco bloqueado')
     .isVisible({ timeout: 3000 })
     .catch(() => false);
   if (unlockVisible) {
-    const password = page.locator('[aria-label="Senha de recuperação"]').first();
+    const password = page
+      .locator('[aria-label="Senha de recuperação"]')
+      .first();
     await password.click();
     await password.fill(E2E_DB_PIN);
     await page.getByRole('button', { name: 'Desbloquear' }).click();
-    return;
+    return 'unlock';
   }
+
+  return 'none';
 }
 
 /** Enable Flutter's semantics tree (idempotent; also called by waitForAppReady). */

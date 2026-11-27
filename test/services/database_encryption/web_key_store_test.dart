@@ -46,27 +46,45 @@ void main() {
     expect(envelopeJson, isNot(contains('key')));
   });
 
-  test('sessão nova começa travada e desbloqueia com a senha', () async {
+  test('sessão seguinte no mesmo aparelho desbloqueia sozinha (PIN não é pedido)', () async {
     final key = await store.setupWithPassword(_password);
 
-    // Simula uma nova sessão (reload): chave apenas em memória se perde.
+    // Simula uma nova sessão (reload): o espelho do aparelho resolve a
+    // chave sem pedir o PIN novamente.
     final newSession = WebDatabaseKeyStore(storage: storage);
-    expect(newSession.state, DatabaseKeyState.locked);
-    expect(
-      () => newSession.readKey(),
-      throwsA(isA<DatabaseUnlockRequiredException>()),
-    );
-
-    final unlocked = await newSession.unlockWithPassword(_password);
-    expect(unlocked, key);
     expect(newSession.state, DatabaseKeyState.unlocked);
+    expect(newSession.hasStoredEnvelope, isTrue);
     expect(await newSession.readKey(), key);
   });
+
+  test(
+    'espelho do aparelho ausente: fallback volta a pedir a senha',
+    () async {
+      final key = await store.setupWithPassword(_password);
+      // Remove o espelho (ex.: limpeza parcial do navegador): só o
+      // envelope autenticado resta.
+      storage.removeItem(WebDatabaseKeyStore.deviceKeyStorageKey);
+
+      final newSession = WebDatabaseKeyStore(storage: storage);
+      expect(newSession.state, DatabaseKeyState.locked);
+      expect(
+        () => newSession.readKey(),
+        throwsA(isA<DatabaseUnlockRequiredException>()),
+      );
+
+      final unlocked = await newSession.unlockWithPassword(_password);
+      expect(unlocked, key);
+      expect(newSession.state, DatabaseKeyState.unlocked);
+      expect(await newSession.readKey(), key);
+    },
+  );
 
   test(
     'senha incorreta lança DatabaseUnlockWrongPassword e mantém o envelope',
     () async {
       await store.setupWithPassword(_password);
+      // Remove o espelho para exercitar o caminho de desbloqueio por senha.
+      storage.removeItem(WebDatabaseKeyStore.deviceKeyStorageKey);
       final newSession = WebDatabaseKeyStore(storage: storage);
 
       await expectLater(
@@ -88,17 +106,16 @@ void main() {
     expect(store.hasStoredEnvelope, isTrue);
   });
 
-  test('setup com PIN de 6 dígitos cria cofre e desbloqueia sessão nova', () async {
+  test('setup com PIN de 6 dígitos cria cofre; abertura seguinte não pede PIN', () async {
     final key = await store.setupWithPassword('482913');
     expect(key, hasLength(32));
     expect(store.state, DatabaseKeyState.unlocked);
 
-    // Nova sessão (reload): cofre volta travado e abre com o mesmo PIN.
+    // Nova sessão (reload): desbloqueia sozinha pelo espelho do aparelho,
+    // sem chamar unlockWithPassword.
     final newSession = WebDatabaseKeyStore(storage: storage);
-    expect(newSession.state, DatabaseKeyState.locked);
-    final unlocked = await newSession.unlockWithPassword('482913');
-    expect(unlocked, key);
     expect(newSession.state, DatabaseKeyState.unlocked);
+    expect(await newSession.readKey(), key);
   });
 
   test(
@@ -116,6 +133,12 @@ void main() {
       expect(restored, original);
       expect(cleanStore.state, DatabaseKeyState.unlocked);
       expect(await cleanStore.readKey(), original);
+
+      // A restauração também grava o espelho: as próximas aberturas neste
+      // aparelho não pedem senha de novo.
+      final nextSession = WebDatabaseKeyStore(storage: cleanStorage);
+      expect(nextSession.state, DatabaseKeyState.unlocked);
+      expect(await nextSession.readKey(), original);
     },
   );
 
@@ -165,11 +188,12 @@ void main() {
   );
 
   test(
-    'deleteKey remove envelope e sessão (ciclo de vida explícito)',
+    'deleteKey remove envelope, espelho do aparelho e sessão',
     () async {
       await store.setupWithPassword(_password);
       await store.deleteKey();
       expect(store.hasStoredEnvelope, isFalse);
+      expect(storage.getItem(WebDatabaseKeyStore.deviceKeyStorageKey), isNull);
       expect(store.state, DatabaseKeyState.needsSetup);
       expect(await store.readKey(), isNull);
     },

@@ -7,10 +7,18 @@ import '../services/database_key/database_key_store.dart';
 
 /// Full-screen gate shown on Web before any database access.
 ///
-/// The browser session starts locked: the database key exists only as an
-/// authenticated recovery envelope and the user must unlock it explicitly
-/// with their recovery password. This screen also implements:
-/// - first-use setup (create the recovery password);
+/// Product rule (PIN only on first interaction): the PIN is requested ONLY
+/// on the first interaction with the app on a device (vault setup) and for
+/// backup recovery (envelope restoration). Returning sessions on the same
+/// device unlock automatically from the device key mirror — when the store
+/// already reports [DatabaseKeyState.unlocked], this widget skips the form
+/// and proceeds straight to [onDatabaseReady] (brief "Abrindo seu banco…"
+/// state).
+///
+/// This screen also implements:
+/// - first-use setup (create the 6-digit PIN);
+/// - fallback explicit unlock when the device mirror is missing but the
+///   recovery envelope is stored;
 /// - clean-profile restoration (import an exported envelope + password).
 ///
 /// The gate never creates an empty database: when the key material cannot be
@@ -30,6 +38,7 @@ class DatabaseUnlockGate extends StatefulWidget {
 class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
   DatabaseKeyState _state = DatabaseKeyState.locked;
   bool _busy = false;
+  bool _proceeded = false;
   String? _error;
   bool _showRestore = false;
 
@@ -64,6 +73,18 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
   void initState() {
     super.initState();
     _refreshState();
+    if (_state == DatabaseKeyState.unlocked) {
+      // Returning device: the PIN was answered on the first interaction
+      // (device key mirror present) — never ask again on this device.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _proceed());
+    }
+  }
+
+  /// Advances to the app bootstrap exactly once.
+  void _proceed() {
+    if (_proceeded || !mounted) return;
+    _proceeded = true;
+    widget.onDatabaseReady();
   }
 
   @override
@@ -183,6 +204,9 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
   Widget _buildBody() {
     if (_state == DatabaseKeyState.recoveryRequired) {
       return _recoveryRequiredBody();
+    }
+    if (_state == DatabaseKeyState.unlocked) {
+      return _autoUnlockingBody();
     }
     return Form(
       key: _formKey,
@@ -313,6 +337,32 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
     );
   }
 
+  /// Brief state while a returning device auto-unlocks from the device key
+  /// mirror. The form is never rendered, so no PIN is asked again.
+  Widget _autoUnlockingBody() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 8),
+        const Center(child: CircularProgressIndicator()),
+        const SizedBox(height: 16),
+        Text(
+          'Abrindo seu banco…',
+          style: Theme.of(context).textTheme.titleMedium,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'O cofre deste aparelho já está desbloqueado — nenhum PIN é '
+          'necessário.',
+          style: Theme.of(context).textTheme.bodySmall,
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
   Widget _recoveryRequiredBody() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -401,12 +451,14 @@ class _DatabaseUnlockGateState extends State<DatabaseUnlockGate> {
     switch (_state) {
       case DatabaseKeyState.needsSetup:
         return 'Crie um PIN de 6 dígitos para proteger a chave de '
-            'criptografia do banco local. Ele será pedido ao abrir o app '
-            'neste navegador. Guarde-o: sem ele o banco não pode ser '
-            'desbloqueado.';
+            'criptografia do banco local. Ele é pedido apenas agora, na '
+            'primeira configuração deste aparelho — nas próximas aberturas '
+            'o app desbloqueia sozinho. Para acessar em outro navegador ou '
+            'após limpar os dados, use o envelope de recuperação (backup).';
       case DatabaseKeyState.locked:
         return 'Digite sua senha de recuperação para desbloquear o banco '
-            'criptografado nesta sessão. O banco original permanece '
+            'criptografado nesta sessão. O desbloqueio automático do '
+            'aparelho não está disponível; o banco original permanece '
             'intacto em caso de erro.';
       default:
         return '';

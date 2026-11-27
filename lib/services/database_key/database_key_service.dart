@@ -21,8 +21,9 @@ import 'web_database_key_store.dart';
 ///   the same `AndroidDatabaseKeyStore` channel contract (renamed conceptually
 ///   to `NativeDatabaseKeyStore`) so the same MethodChannel works on every
 ///   native platform. See ADR 0009 for the full design and validation status.
-/// - Web: the key is resolved through the explicit unlock flow
-///   ([WebDatabaseKeyStore]); sessions start locked until the user unlocks.
+/// - Web: first use (vault setup) and backup recovery ask for credentials
+///   explicitly ([WebDatabaseKeyStore]); returning sessions on the same
+///   device auto-unlock from the device key mirror without any prompt.
 /// - Tests: an [InMemoryDatabaseKeyStore] (or any injected store) is used.
 class DatabaseKeyService {
   DatabaseKeyService._({

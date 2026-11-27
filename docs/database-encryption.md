@@ -10,14 +10,18 @@ texto claro, sem migração e sem alteração de dados.
 | --- | --- | --- |
 | Biblioteca SQLite | `sqlite3mc` (SQLite3MultipleCiphers) compilada pelo build hook do pacote `sqlite3` (`hooks.user_defines.sqlite3.source: sqlite3mc`, cipher `chacha20`) e carregada por `sqflite_common_ffi` | `sqlite3mc.wasm` oficial (pinned `sqlite3-3.5.2`, checksum verificado na CI) carregado pelo worker customizado |
 | Acesso | `databaseFactoryFfi` | `databaseFactoryWeb` com worker `web/sqlite3_mc_sw.js` que abre todo banco pelo wrapper `multipleciphers-<fs>` |
-| Chave (DEK, 256 bits) | Gerada com CSPRNG no Dart; envolta por AES-256-GCM do **Android Keystore** (chave não exportável); envelope em `noBackupFilesDir` com escrita atômica (`AtomicFile`) + file lock | Só existe em memória durante a sessão; cópia durável é o **envelope de recuperação** (PBKDF2-HMAC-SHA256 310k + AES-256-GCM) em `localStorage` |
-| Desbloqueio | Transparente (Keystore) no boot | **Explícito**: portão `DatabaseUnlockGate` (configurar senha na 1ª vez / desbloquear nas seguintes) |
+| Chave (DEK, 256 bits) | Gerada com CSPRNG no Dart; envolta por AES-256-GCM do **Android Keystore** (chave não exportável); envelope em `noBackupFilesDir` com escrita atômica (`AtomicFile`) + file lock | Em memória durante a sessão; cópia durável autoritativa é o **envelope de recuperação** (PBKDF2-HMAC-SHA256 310k + AES-256-GCM) em `localStorage`; a DEK resolvida também é espelhada em base64 (`rnh.db.deviceKey.v1`) para o desbloqueio automático das aberturas seguintes |
+| Desbloqueio | Transparente (Keystore) no boot | **PIN apenas na 1ª interação**: `DatabaseUnlockGate` pede o PIN de 6 dígitos só na criação do cofre e na recuperação de backup (envelope); aberturas seguintes desbloqueiam sozinhas pelo espelho do aparelho — fallback por senha se o espelho sumir |
 | Recuperação | Envelope portável (mesmo formato das duas plataformas) | Importação do envelope exportado + senha (perfil limpo) |
 | Migração do legado | `DatabaseMigrationIo`: cópia de verificação → banco temporário cifrado → validação (contagens, IDs, `integrity_check`, `foreign_key_check`) → troca atômica por rename → banco original **nunca é modificado** | `DatabaseMigrationWeb`: cópia linha a linha do banco legado (aberto só-leitura) para novo banco lógico cifrado; legado permanece intacto no storage do navegador |
 
-A chave de 256 bits nunca aparece em logs, código-fonte, SharedPreferences ou
-localStorage em texto claro. O hex da chave vive apenas na chamada
-`PRAGMA key` em memória.
+A chave de 256 bits nunca aparece em logs ou código-fonte. Na web, além do
+envelope (apenas ciphertext), a DEK resolvida é espelhada em base64 no
+`localStorage` do aparelho (`rnh.db.deviceKey.v1`) — decisão de produto para
+que o PIN seja pedido apenas na primeira interação ou na recuperação de backup:
+quem tem acesso ao perfil do navegador tem acesso ao banco. O envelope continua
+sendo a cópia de recuperação, e restaurar um backup volta a exigir a senha. O
+hex da chave vive apenas na chamada `PRAGMA key` em memória.
 
 ## Ordem de abertura (garantias)
 

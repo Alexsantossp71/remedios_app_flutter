@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:cryptography/cryptography.dart'
@@ -12,20 +13,33 @@ import 'web_local_storage_binding.dart'
 /// Web implementation of the database key lifecycle.
 ///
 /// Security model:
-/// - The 256-bit DEK lives ONLY in Dart/JS memory for the duration of a
-///   session. It is never written to localStorage, IndexedDB or cookies.
-/// - The durable copy of the key is an authenticated [RecoveryEnvelope]
-///   (AES-256-GCM + PBKDF2-HMAC-SHA256) stored as JSON. Decrypting it requires
-///   the user's recovery password, giving explicit unlock on every session and
-///   restoration in a clean browser profile.
-/// - localStorage/IndexedDB are treated as ciphertext stores, never as a
-///   cryptographic vault: losing browser profile data loses both envelope and
-///   database, which is documented application behavior.
+/// - The authoritative durable copy of the key is an authenticated
+///   [RecoveryEnvelope] (AES-256-GCM + PBKDF2-HMAC-SHA256) stored as JSON.
+///   Decrypting it requires the recovery password, which is asked ONLY on
+///   the first interaction with the app on a device (vault setup) and for
+///   backup recovery (envelope restoration in a clean profile).
+/// - Product decision (PIN only on first interaction): after every
+///   successful setup/unlock/restore, the resolved DEK is mirrored to
+///   localStorage under [deviceKeyStorageKey]. Returning sessions on the
+///   same device load the mirrored key and skip the PIN prompt entirely —
+///   the gate proceeds straight to the app. This intentionally trades the
+///   per-session password prompt for device convenience: possession of the
+///   browser profile grants database access. The envelope remains the
+///   recovery path and keeps the password requirement for restoration.
+/// - Losing browser profile data loses both the device mirror and the
+///   envelope, which is documented application behavior; restoring requires
+///   the exported envelope + password.
 class WebDatabaseKeyStore implements DatabaseKeyStore {
   WebDatabaseKeyStore({WebKeyValueStorage? storage})
     : _storage = storage ?? const LocalStorageKeyValueStorage();
 
   static const String envelopeStorageKey = 'rnh.db.recoveryEnvelope.v1';
+
+  /// Device key mirror: base64 of the resolved 256-bit DEK, written on every
+  /// successful setup/unlock/restore so returning sessions on this device
+  /// unlock WITHOUT asking the PIN again (PIN is asked only on first
+  /// interaction and for envelope restoration).
+  static const String deviceKeyStorageKey = 'rnh.db.deviceKey.v1';
 
   final WebKeyValueStorage _storage;
 
@@ -33,8 +47,13 @@ class WebDatabaseKeyStore implements DatabaseKeyStore {
   List<int>? _sessionKey;
 
   /// [DatabaseKeyState] of this session, based on what is stored.
+  ///
+  /// A returning session (device mirror present) reports [DatabaseKeyState.unlocked]:
+  /// the PIN was answered on the first interaction and must not be asked again.
   DatabaseKeyState get state {
-    if (_sessionKey != null) return DatabaseKeyState.unlocked;
+    if (_sessionKey != null || _readDeviceKey() != null) {
+      return DatabaseKeyState.unlocked;
+    }
     if (_storage.getItem(envelopeStorageKey) != null) {
       return DatabaseKeyState.locked;
     }
@@ -42,6 +61,32 @@ class WebDatabaseKeyStore implements DatabaseKeyStore {
   }
 
   bool get hasStoredEnvelope => _storage.getItem(envelopeStorageKey) != null;
+
+  bool get hasDeviceKey => _readDeviceKey() != null;
+
+  /// Reads the device key mirror, or null when absent. An invalid mirror
+  /// (not base64 / wrong length) is removed and treated as absent so the
+  /// password unlock fallback remains available.
+  List<int>? _readDeviceKey() {
+    final stored = _storage.getItem(deviceKeyStorageKey);
+    if (stored == null) return null;
+    try {
+      final key = base64Decode(stored);
+      if (key.length != 32) {
+        throw const FormatException('device key mirror must be 32 bytes');
+      }
+      return key;
+    } on FormatException {
+      _storage.removeItem(deviceKeyStorageKey);
+      return null;
+    }
+  }
+
+  /// Persists the device key mirror (base64) for auto-unlock on the next
+  /// session of this device.
+  void _mirrorDeviceKey(List<int> key) {
+    _storage.setItem(deviceKeyStorageKey, base64Encode(key));
+  }
 
   /// Creates a fresh DEK protected by a new recovery envelope.
   ///
@@ -62,6 +107,7 @@ class WebDatabaseKeyStore implements DatabaseKeyStore {
       recoveryPassword: password,
     );
     _storage.setItem(envelopeStorageKey, envelope.encode());
+    _mirrorDeviceKey(key);
     _sessionKey = key;
     return List<int>.of(key);
   }
@@ -111,10 +157,14 @@ class WebDatabaseKeyStore implements DatabaseKeyStore {
   /// profile; it contains only ciphertext.
   String? exportEnvelopeJson() => _storage.getItem(envelopeStorageKey);
 
-  /// Resolves the session key. Throws [DatabaseUnlockRequiredException] when
-  /// the user has not unlocked this session yet.
+  /// Resolves the session key, loading the device key mirror when the
+  /// session has not unlocked explicitly yet (auto-unlock on returning
+  /// devices). Throws [DatabaseUnlockRequiredException] only when neither
+  /// the session key, the mirror, nor a usable unlock path exists — i.e.
+  /// the envelope is stored but the device mirror is gone (password
+  /// fallback required).
   List<int>? requireSessionKey() {
-    final key = _sessionKey;
+    final key = _sessionKey ??= _readDeviceKey();
     if (key == null && hasStoredEnvelope) {
       throw const DatabaseUnlockRequiredException(
         'O banco criptografado precisa ser desbloqueado nesta sessão.',
@@ -125,7 +175,7 @@ class WebDatabaseKeyStore implements DatabaseKeyStore {
 
   @override
   Future<List<int>?> readKey() async {
-    final key = _sessionKey;
+    final key = _sessionKey ??= _readDeviceKey();
     if (key != null) return List<int>.of(key);
     if (hasStoredEnvelope) {
       throw const DatabaseUnlockRequiredException(
@@ -136,8 +186,7 @@ class WebDatabaseKeyStore implements DatabaseKeyStore {
   }
 
   /// Not supported on web: the durable copy of the key is the
-  /// password-protected envelope, and storing a raw key would defeat the
-  /// explicit-unlock model. Use [setupWithPassword] instead.
+  /// password-protected envelope; use [setupWithPassword] for first use.
   @override
   Future<bool> createKeyIfAbsent(List<int> key) async {
     throw UnsupportedError(
@@ -150,6 +199,7 @@ class WebDatabaseKeyStore implements DatabaseKeyStore {
   Future<void> deleteKey() async {
     _sessionKey = null;
     _storage.removeItem(envelopeStorageKey);
+    _storage.removeItem(deviceKeyStorageKey);
   }
 
   Future<List<int>> _unlockEnvelope(
@@ -163,6 +213,7 @@ class WebDatabaseKeyStore implements DatabaseKeyStore {
     }
     try {
       final key = await envelope.unlock(recoveryPassword: password);
+      _mirrorDeviceKey(key);
       _sessionKey = List<int>.of(key);
       return List<int>.of(key);
     } on SecretBoxAuthenticationError {

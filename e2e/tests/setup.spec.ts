@@ -8,16 +8,23 @@ import { waitForAppReady } from '../utils/helpers';
 
 const TABS = ['Hoje', 'Tratamentos', 'Consultas', 'Perfil'] as const;
 
+// Vault-prompt flow of the first waitForAppReady in this test (fresh browser
+// context): 'setup' = 6-digit PIN asked, 'none' = auto-unlocked without PIN.
+let firstRunFlow: 'setup' | 'unlock' | 'none' = 'none';
+
 test.describe('App Setup and Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await waitForAppReady(page);
+    firstRunFlow = await waitForAppReady(page);
   });
 
   test('app loads successfully with the bottom navigation', async ({ page }) => {
     // document.title is set by the RemediosApp MaterialApp ("Remédio na Hora")
     // once the main shell renders — proves the gate completed and bootstrap ran.
     await expect.poll(() => page.title(), { timeout: 15000 }).toBe('Remédio na Hora');
+
+    // First interaction on this device: the vault setup MUST ask the PIN.
+    expect(firstRunFlow).toBe('setup');
 
     // Bottom navigation is a tablist with the 4 tabs.
     const tabs = page.getByRole('tab');
@@ -43,11 +50,15 @@ test.describe('App Setup and Navigation', () => {
   });
 
   test('app reloads cleanly after the database is set up', async ({ page }) => {
-    // The encrypted database key persists in IndexedDB across reloads; the
-    // app should boot back into the main shell (unlock flow handled by
-    // waitForAppReady) without losing the session.
+    // First interaction on this device asked for the 6-digit PIN (vault setup).
+    expect(firstRunFlow).toBe('setup');
+
     await page.reload();
-    await waitForAppReady(page);
+
+    // Returning session: the device key mirror auto-unlocks the vault — the
+    // PIN must NOT be asked again on this device ('none' = gate skipped).
+    const reloadFlow = await waitForAppReady(page);
+    expect(reloadFlow).toBe('none');
 
     // Main shell is back: title set and the default Hoje tab is selected.
     await expect.poll(() => page.title(), { timeout: 15000 }).toBe('Remédio na Hora');
