@@ -1,9 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
   waitForAppReady,
+  bootAndEnableSemantics,
   ensureWelcomePassed,
   ensureDatabaseUnlocked,
-  enableSemantics,
+  fillFlutterField,
 } from '../utils/helpers';
 
 // O app foi refatorado para 4 abas (Hoje, Tratamentos, Consultas, Perfil)
@@ -87,13 +88,23 @@ test.describe('App Setup and Navigation', () => {
 });
 
 test.describe('First-run profile invitation (after vault creation)', () => {
+  // Tall viewport: the invitation reuses the full profile form (~1600px) —
+  // in the default 1280x720 the "Salvar e começar" button, the LGPD consent
+  // and "Pular por agora" sit below the fold and are NOT built by the lazy
+  // ListView (absent from the semantics tree).
+  test.use({ viewport: { width: 1280, height: 3200 } });
+
   // Fresh browser context per test: the vault is created with the E2E PIN,
   // so every test here walks the real first interaction. Unlike the suite
   // above, the invitation is kept on screen (dismissProfileInvitation:
   // false) so it can be asserted directly.
   async function bootToInvitation(page: Page) {
     await page.goto('/');
-    await enableSemantics(page);
+    // Same robust prologue as waitForAppReady (engine mount → semantics on →
+    // first rendered text): clicking the placeholder before the engine
+    // mounts is a no-op and leaves the DOM blind, silently skipping Entrar
+    // and the vault setup.
+    await bootAndEnableSemantics(page);
     await ensureWelcomePassed(page);
     const flow = await ensureDatabaseUnlocked(page, {
       dismissProfileInvitation: false,
@@ -138,12 +149,15 @@ test.describe('First-run profile invitation (after vault creation)', () => {
     async ({ page }) => {
       await bootToInvitation(page);
 
-      // Fill the name (same semantics-input pattern as the vault PIN) and
-      // grant the LGPD consent.
-      const nome = page.locator('[aria-label="Nome"]').first();
-      await nome.click();
-      await nome.fill('Ana Teste');
-      await page.locator('text=Autorizo o tratamento').first().click();
+      // Fill the name and grant the LGPD consent. Flutter web merges label
+      // + hint into the accessible name ("Nome Como você quer ser chamado"),
+      // so match by prefix; fillFlutterField verifies the value stuck (the
+      // native <input> is re-parented on focus swaps).
+      const nome = page.getByRole('textbox', { name: /^Nome/ }).first();
+      await fillFlutterField(page, nome, 'Ana Teste');
+      // The consent CheckboxListTile exposes the long LGPD sentence as its
+      // accessible name (no matching text node) — click by role.
+      await page.getByRole('checkbox').first().click();
 
       await page.getByRole('button', { name: 'Salvar e começar' }).click();
 
@@ -155,7 +169,7 @@ test.describe('First-run profile invitation (after vault creation)', () => {
       // The saved name is in the Perfil tab form.
       await page.getByRole('tab', { name: 'Perfil' }).click();
       await page.waitForTimeout(1000);
-      const savedNome = page.locator('[aria-label="Nome"]').first();
+      const savedNome = page.getByRole('textbox', { name: /^Nome/ }).first();
       await savedNome.click();
       await expect(savedNome).toHaveValue('Ana Teste', { timeout: 10000 });
     },

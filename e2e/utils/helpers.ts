@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, type Locator } from '@playwright/test';
 
 /**
  * Helpers for driving the Flutter web app from Playwright.
@@ -16,17 +16,16 @@ import { Page } from '@playwright/test';
 /** 6-digit vault PIN used to set up the encrypted database in e2e. */
 const E2E_DB_PIN = '123456';
 
-/** Wait for the Flutter app to be fully loaded and interactive.
+/** Mount the engine, enable the semantics tree and wait for the first
+ * rendered text.
  *
- * Returns which vault-prompt flow was completed, if any:
- *  - 'setup'  → the 6-digit PIN vault was created (first interaction on the
- *               device);
- *  - 'unlock' → the password fallback was answered (device mirror missing);
- *  - 'none'   → no prompt was shown (returning session auto-unlocked).
+ * Shared prologue of every E2E drive of the app: clicking the semantics
+ * placeholder BEFORE the engine finishes mounting is a no-op (the element
+ * does not exist yet) and leaves the DOM blind — the app renders to canvas
+ * and exposes no text. So: wait for <flutter-view>, click the placeholder,
+ * then wait until <flt-semantics-host> actually carries text.
  */
-export async function waitForAppReady(
-  page: Page,
-): Promise<'setup' | 'unlock' | 'none'> {
+export async function bootAndEnableSemantics(page: Page) {
   // 1. flutter-view element present (host mounted by the engine).
   await page.waitForSelector('flutter-view', { timeout: 60000 });
 
@@ -52,6 +51,21 @@ export async function waitForAppReady(
     undefined,
     { timeout: 120000 },
   );
+}
+
+/** Wait for the Flutter app to be fully loaded and interactive.
+ *
+ * Returns which vault-prompt flow was completed, if any:
+ *  - 'setup'  → the 6-digit PIN vault was created (first interaction on the
+ *               device);
+ *  - 'unlock' → the password fallback was answered (device mirror missing);
+ *  - 'none'   → no prompt was shown (returning session auto-unlocked).
+ */
+export async function waitForAppReady(
+  page: Page,
+): Promise<'setup' | 'unlock' | 'none'> {
+  // 1-3. Engine mount + semantics on + first rendered text.
+  await bootAndEnableSemantics(page);
 
   // 3.5 On web the BootLoader (0–100%, ~2s) STOPS at 100% and shows two
   //     buttons: "Entrar" (vault setup on first interaction, or straight in
@@ -102,6 +116,46 @@ export async function ensureWelcomePassed(page: Page) {
   }
 }
 
+/** Fill a Flutter web text field reliably and VERIFY the value stuck.
+ *
+ * Flutter web keeps a single native <input> in flt-text-editing-host and
+ * re-parents it into whichever semantics node has focus. Two races make a
+ * plain locator.fill() unreliable here:
+ *  1. Events dispatched right after the click can arrive BEFORE Flutter
+ *     rebinds the input — the DOM value sticks, but the framework-side
+ *     controller stays EMPTY (observed as a silently invalid "Confirmar
+ *     PIN" on submit);
+ *  2. A fill issued during the swap can land on the OLD input.
+ * So: click → settle → type with real keyboard events → read back → retry.
+ */
+export async function fillFlutterField(
+  page: Page,
+  locator: Locator,
+  value: string,
+  tries = 6,
+) {
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    await locator.click();
+    // Let Flutter bind the native input to this field before typing.
+    await page.waitForTimeout(400);
+    try {
+      await locator.fill('');
+      await page.waitForTimeout(150);
+    } catch {
+      // Nothing to clear (field may not host the input yet).
+    }
+    await locator.pressSequentially(value, { delay: 40 });
+    const current = await locator
+      .inputValue()
+      .catch(() => null); // no native input in the node yet
+    if (current === value) return;
+    await page.waitForTimeout(400);
+  }
+  throw new Error(
+    `Flutter field did not accept value "${value}" after ${tries} attempts`,
+  );
+}
+
 /** Complete the web DatabaseUnlockGate flow if present; report what ran.
  *
  * Product rule: the PIN is asked ONLY on the first interaction with the app
@@ -132,28 +186,51 @@ export async function ensureDatabaseUnlocked(
   if (setupVisible) {
     const pin = page.locator('[aria-label="PIN do cofre (6 dígitos)"]').first();
     const confirm = page.locator('[aria-label="Confirmar PIN"]').first();
-    // Flutter web keeps a single native <input> in flt-text-editing-host and
-    // reassigns it to whichever semantics textbox has focus. Click each field
-    // first so Flutter spawns the native input for it, then type.
-    await pin.click();
-    await pin.fill(E2E_DB_PIN);
-    await confirm.click();
-    await confirm.fill(E2E_DB_PIN);
+    // Click first so Flutter spawns the native input for each field, then
+    // fill with read-back verification (Flutter web re-parents a single
+    // native <input> — plain fill can silently miss the swap).
+    await fillFlutterField(page, pin, E2E_DB_PIN);
+    await fillFlutterField(page, confirm, E2E_DB_PIN);
     await page.getByRole('button', { name: 'Criar cofre e abrir o app' }).click();
 
     // First interaction ends with the one-time profile invitation. Skip it
-    // by default; the invitation specs pass dismissProfileInvitation: false.
+    // by default; the invitation specs pass dismissProfileInvitation: false
+    // (there the invitation stays up — the shell only comes after the spec
+    // itself skips or saves, so the title check below does not apply).
+    let invitationDismissed = false;
     if (opts.dismissProfileInvitation !== false) {
       const skip = page
         .getByRole('button', { name: 'Pular por agora' })
         .first();
+      // The invitation reuses the full profile form (~1600px): in a default
+      // viewport the skip button sits below the fold and the lazy ListView
+      // has not built it. Wheel-scroll the screen until it shows up.
+      await page.mouse.move(640, 360);
+      for (let i = 0; i < 8; i++) {
+        if (await skip.isVisible().catch(() => false)) break;
+        await page.mouse.wheel(0, 700);
+        await page.waitForTimeout(250);
+      }
       try {
         await skip.waitFor({ state: 'visible', timeout: 30000 });
         await skip.click();
+        invitationDismissed = true;
       } catch {
         // Invitation not rendered (older build or already dismissed) —
         // proceed to the shell anyway.
       }
+    }
+
+    // Verify the bootstrap actually ran: RemediosApp sets the document
+    // title once the main shell renders. Without this check a racy fill
+    // (invalid form) would keep the gate on screen and still return a
+    // bogus 'setup'.
+    if (invitationDismissed) {
+      await page.waitForFunction(
+        () => document.title === 'Remédio na Hora',
+        undefined,
+        { timeout: 90000 },
+      );
     }
     return 'setup';
   }
@@ -167,8 +244,7 @@ export async function ensureDatabaseUnlocked(
     const password = page
       .locator('[aria-label="Senha de recuperação"]')
       .first();
-    await password.click();
-    await password.fill(E2E_DB_PIN);
+    await fillFlutterField(page, password, E2E_DB_PIN);
     await page.getByRole('button', { name: 'Desbloquear' }).click();
     return 'unlock';
   }
