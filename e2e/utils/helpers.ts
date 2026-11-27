@@ -53,11 +53,12 @@ export async function waitForAppReady(
     { timeout: 120000 },
   );
 
-  // 3.5 On web the BootLoader (0–100%, ~2s) always dispatches to the
-  //     WelcomeScreen, which offers "Começar — criar meu cofre" (persistent
-  //     vault) or "Ver demo (não salva dados)" (in-memory mock). The E2E
-  //     suite exercises the persistent flow, so click "Começar" whenever the
-  //     welcome is up. Idempotent: no-op if the welcome is not rendered.
+  // 3.5 On web the BootLoader (0–100%, ~2s) STOPS at 100% and shows two
+  //     buttons: "Entrar" (vault setup on first interaction, or straight in
+  //     when the device mirror unlocks the vault) and "Demo (não salva
+  //     dados)" (in-memory mock). The E2E suite exercises the persistent
+  //     flow, so click "Entrar" whenever the boot screen is up. Idempotent:
+  //     no-op if the button is not rendered.
   await ensureWelcomePassed(page);
 
   // 4. On web with a fresh browser profile, the app boots into the
@@ -82,21 +83,22 @@ export async function waitForAppReady(
   return vaultFlow;
 }
 
-/** Dismiss the web WelcomeScreen by clicking "Começar — criar meu cofre".
+/** Dismiss the BootLoader screen by clicking "Entrar".
  *
- * The web boot flow is BootLoader (0–100%) → WelcomeScreen →
- * DatabaseUnlockGate → main shell, and the welcome shows on every web load
- * (fresh and returning profiles alike). Idempotent: if the welcome is not
- * rendered within the timeout (flow changed or already past it), returns
- * without clicking so the caller can proceed.
+ * The web boot flow is BootLoader (0–100%) → STOP with buttons "Entrar" /
+ * "Demo (não salva dados)" on the same screen → "Entrar" leads to the
+ * DatabaseUnlockGate (first interaction on the device) or straight into the
+ * main shell (returning device, auto-unlock). Idempotent: if the button is
+ * not rendered within the timeout (flow changed or already past it),
+ * returns without clicking so the caller can proceed.
  */
 export async function ensureWelcomePassed(page: Page) {
-  const start = page.getByRole('button', { name: /Começar/ }).first();
+  const enter = page.getByRole('button', { name: /^Entrar$/ }).first();
   try {
-    await start.waitFor({ state: 'visible', timeout: 30000 });
-    await start.click();
+    await enter.waitFor({ state: 'visible', timeout: 30000 });
+    await enter.click();
   } catch {
-    // Welcome not present — nothing to dismiss.
+    // Boot screen not present — nothing to dismiss.
   }
 }
 

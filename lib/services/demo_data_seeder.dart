@@ -2,7 +2,8 @@ import 'package:sqflite/sqflite.dart';
 
 /// Popula o banco em memória com dados mock para o modo demo.
 ///
-/// O visitante que toca "Ver demo" na WelcomeScreen vê o app com dados
+/// O visitante que toca "Demo (não salva dados)" na tela de carregamento vê
+/// o app com dados
 /// realistas — 2 tratamentos, doses de hoje, médico, consulta, exame,
 /// laudo, perfil — sem precisar criar cofre nem cadastrar nada.
 ///

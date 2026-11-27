@@ -156,7 +156,7 @@ web/                                    SQLite3MC WASM + shared worker
 
 ## Key Components
 
-1. **main.dart**: Entry point. Web boots through `DatabaseUnlockGate` (6-digit PIN only on first interaction per device or backup recovery; returning sessions auto-unlock from the device key mirror); native bootstraps directly. `bootstrapApp()` instantiates 7 providers, awaits sequential `initialize()`, registers them via `MultiProvider` + `ChangeNotifierProvider.value`, and runs `RemediosApp` (MaterialApp with light + dark themes, pt-BR primary locale).
+1. **main.dart**: Entry point. Web boots through `BootLoader` (0–100%, stops at 100% with **Entrar** / **Demo (não salva dados)** buttons — never navigates on its own). "Entrar" opens `DatabaseUnlockGate` (6-digit PIN only on first interaction per device or backup recovery; returning sessions skip it via the device key mirror) and "Demo" enters in-memory demo mode. Native "Entrar" bootstraps directly (OS vault). `bootstrapApp()` instantiates 7 providers, awaits sequential `initialize()`, registers them via `MultiProvider` + `ChangeNotifierProvider.value`, and runs `RemediosApp` (MaterialApp with light + dark themes, pt-BR primary locale).
 
 2. **Models** (13 classes): Pure Dart, no Flutter dependency. Use `copyWith` for immutable updates. Convert to/from `Map<String, dynamic>` for SQLite persistence.
 

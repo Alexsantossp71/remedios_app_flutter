@@ -16,6 +16,8 @@ import '../providers/therapy_provider.dart';
 import '../providers/user_profile_provider.dart';
 import '../screens/main_shell.dart';
 import '../services/consultation_storage_service.dart';
+import '../services/database_key/database_key_service.dart';
+import '../services/database_key/database_key_store.dart';
 import '../services/database_service.dart';
 import '../services/doctor_storage_service.dart';
 import '../services/exam_storage_service.dart';
@@ -26,7 +28,6 @@ import '../services/therapy_storage_service.dart';
 import '../services/web_reminder_service.dart';
 import '../widgets/boot_loader.dart';
 import '../widgets/database_unlock_gate.dart';
-import '../widgets/welcome_screen.dart';
 import 'boot/boot_steps.dart';
 
 /// Bootstrap da app em diferentes modos.
@@ -56,36 +57,43 @@ MaterialApp _materialApp({required Widget home}) {
 /// Mostra o BootLoader — tela de carregamento com porcentagem (0–100%)
 /// que roda em TODA abertura do app, web e nativo.
 ///
-/// Ao terminar ("Tudo pronto!"), despacha para o fluxo da plataforma:
-/// web → [runWelcomeScreen] (Começar / Ver demo); nativo → [bootstrapApp]
-/// direto (o cofre do SO resolve a chave de criptografia).
+/// Ao chegar a 100% o carregamento PARA — não navega sozinho. Na própria
+/// tela aparecem os botões:
+/// - **Entrar** → [enterPersistentApp]: web leva à criação do cofre
+///   ([runUnlockGate]) na primeira interação do aparelho ou abre o app
+///   direto quando o cofre já está desbloqueado (espelho da chave);
+///   nativo → [bootstrapApp] (cofre do SO resolve a chave);
+/// - **Demo (não salva dados)** → [runDemoMode] (banco em memória).
 void runBootLoader(NotificationService notifications) {
   runApp(
     _materialApp(
       home: BootLoader(
         steps: buildBootSteps(),
-        onDone: () {
-          if (kIsWeb) {
-            runWelcomeScreen(notifications);
-          } else {
-            bootstrapApp(notifications);
-          }
-        },
+        onEnter: () => enterPersistentApp(notifications),
+        onDemo: () => runDemoMode(notifications),
       ),
     ),
   );
 }
 
-/// Mostra a WelcomeScreen — tela inicial do app em Web.
-void runWelcomeScreen(NotificationService notifications) {
-  runApp(
-    _materialApp(
-      home: WelcomeScreen(
-        onStart: () => runUnlockGate(notifications),
-        onSeeDemo: (_) => runDemoMode(notifications),
-      ),
-    ),
-  );
+/// Trata o botão **Entrar** do [BootLoader].
+///
+/// Web: se o aparelho já tem o cofre resolvido (espelho da chave em
+/// localStorage), entra direto no app — nenhum prompt. Caso contrário
+/// (primeira interação → criação do PIN; espelho ausente → desbloqueio;
+/// material corrompido → recuperação), mostra o [DatabaseUnlockGate].
+/// Nativo: o cofre do SO resolve a chave transparentemente.
+void enterPersistentApp(NotificationService notifications) {
+  if (kIsWeb) {
+    final state = DatabaseKeyService.instance.webState;
+    if (state == DatabaseKeyState.unlocked) {
+      bootstrapApp(notifications);
+      return;
+    }
+    runUnlockGate(notifications);
+    return;
+  }
+  bootstrapApp(notifications);
 }
 
 /// Mostra o DatabaseUnlockGate — fluxo persistente com cofre criptográfico.
@@ -106,17 +114,18 @@ void runDemoMode(NotificationService notifications) {
   bootstrapApp(notifications);
 }
 
-/// Sai do modo demo: fecha banco em memória, desativa flag, volta para
-/// a WelcomeScreen. Chamado pelo banner "Sair do demo" no MainShell.
+/// Sai do modo demo: fecha banco em memória, desativa flag e volta para
+/// o BootLoader (tela de % com os botões Entrar/Demo). Chamado pelo banner
+/// "Sair do demo" no MainShell.
 Future<void> exitDemoMode(NotificationService notifications) async {
   DatabaseService.disableDemoMode();
   await DatabaseService.instance.close();
-  runWelcomeScreen(notifications);
+  runBootLoader(notifications);
 }
 
 /// Inicializa os 7 providers, registra via MultiProvider e roda RemediosApp.
-/// Chamado por [runUnlockGate] após desbloqueio do cofre, por [runDemoMode]
-/// para o modo demo, e por `main()` em native (Android/desktop).
+/// Chamado por [enterPersistentApp] (botão Entrar do BootLoader) e por
+/// [runDemoMode] para o modo demo.
 Future<void> bootstrapApp(NotificationService notifications) async {
   final therapyProvider = TherapyProvider(
     notifications: notifications,

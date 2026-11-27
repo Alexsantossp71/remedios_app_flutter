@@ -32,7 +32,8 @@ Future<void> main() async {
   await notifications.init();
 
   // Toda abertura (web e nativo) passa pelo BootLoader — tela de
-  // carregamento com porcentagem 0–100% e "Tudo pronto!". Ao terminar:
-  // web → WelcomeScreen (Começar / Ver demo); nativo → bootstrapApp.
+  // carregamento com porcentagem 0–100% que PARA ao chegar a 100% e mostra
+  // os botões "Entrar" (cofre na 1ª interação / app direto) e "Demo (não
+  // salva dados)". Nada navega automaticamente.
   runBootLoader(notifications);
 }

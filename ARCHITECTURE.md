@@ -85,10 +85,12 @@ api/                                    Funções serverless Vercel (TS):
 
 ### 1. main.dart (entry point)
 
-Web boots through `WelcomeScreen` → `DatabaseUnlockGate` (6-digit PIN only
-on first interaction per device or backup recovery; returning sessions
-auto-unlock from the device key mirror) → `bootstrapApp()`. Native
-bootstraps directly via `bootstrapApp()`. `bootstrapApp()` instancia 7
+Web boots through `BootLoader` (0–100%, stops at 100% with the **Entrar** /
+**Demo (não salva dados)** buttons — it never navigates on its own).
+"Entrar" → `DatabaseUnlockGate` (6-digit PIN only on first interaction per
+device or backup recovery; returning sessions go straight in via the device
+key mirror) → `bootstrapApp()`. "Demo" → in-memory demo mode. Native
+"Entrar" bootstraps directly via `bootstrapApp()`. `bootstrapApp()` instancia 7
 providers, aguarda
 `initialize()` sequencial, registra via `MultiProvider` +
 `ChangeNotifierProvider.value`, e roda `RemediosApp`.

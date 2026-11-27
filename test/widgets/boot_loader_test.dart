@@ -12,13 +12,17 @@ void main() {
       labels.map((l) => BootStep(l, () => Future<void>.value())).toList();
 
   group('BootLoader — comportamento em toda abertura', () {
-    testWidgets('começa em 0% com o rótulo da primeira etapa', (tester) async {
-      final onDoneCalls = <int>[];
+    testWidgets('começa em 0% com o rótulo da primeira etapa e sem botões', (
+      tester,
+    ) async {
+      final onEnterCalls = <int>[];
+      final onDemoCalls = <int>[];
       await tester.pumpWidget(
         MaterialApp(
           home: BootLoader(
             steps: fakeSteps(['Etapa um', 'Etapa dois', 'Etapa três']),
-            onDone: () => onDoneCalls.add(1),
+            onEnter: () => onEnterCalls.add(1),
+            onDemo: () => onDemoCalls.add(1),
             animationDuration: const Duration(seconds: 1),
           ),
         ),
@@ -27,7 +31,10 @@ void main() {
 
       expect(find.text('0%'), findsOneWidget);
       expect(find.text('Etapa um'), findsOneWidget);
-      expect(onDoneCalls, isEmpty);
+      expect(find.text('Entrar'), findsNothing);
+      expect(find.text('Demo (não salva dados)'), findsNothing);
+      expect(onEnterCalls, isEmpty);
+      expect(onDemoCalls, isEmpty);
     });
 
     testWidgets('percentual avança com o tempo conforme etapas concluem', (
@@ -37,7 +44,8 @@ void main() {
         MaterialApp(
           home: BootLoader(
             steps: fakeSteps(['Um', 'Dois', 'Três']),
-            onDone: () {},
+            onEnter: () {},
+            onDemo: () {},
             animationDuration: const Duration(seconds: 1),
           ),
         ),
@@ -51,15 +59,17 @@ void main() {
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
     });
 
-    testWidgets('chega a 100% e mostra "Tudo pronto!" após a animação', (
+    testWidgets('chega a 100% e NÃO navega sozinho: revela Entrar/Demo', (
       tester,
     ) async {
-      final onDoneCalls = <int>[];
+      final onEnterCalls = <int>[];
+      final onDemoCalls = <int>[];
       await tester.pumpWidget(
         MaterialApp(
           home: BootLoader(
             steps: fakeSteps(['Um', 'Dois', 'Três']),
-            onDone: () => onDoneCalls.add(1),
+            onEnter: () => onEnterCalls.add(1),
+            onDemo: () => onDemoCalls.add(1),
             animationDuration: const Duration(seconds: 1),
             doneHold: const Duration(milliseconds: 100),
           ),
@@ -70,10 +80,28 @@ void main() {
 
       expect(find.text('100%'), findsOneWidget);
       expect(find.text(bootDoneLabel), findsOneWidget);
-      expect(onDoneCalls, isEmpty, reason: 'onDone só dispara após doneHold');
+      // Nenhum callback disparado automaticamente e nenhum botão ainda.
+      expect(onEnterCalls, isEmpty);
+      expect(onDemoCalls, isEmpty);
+      expect(find.text('Entrar'), findsNothing);
 
+      // Após o doneHold os botões aparecem na própria tela de %.
       await tester.pump(const Duration(milliseconds: 150));
-      expect(onDoneCalls, hasLength(1));
+      expect(find.text('Entrar'), findsOneWidget);
+      expect(find.text('Demo (não salva dados)'), findsOneWidget);
+      expect(onEnterCalls, isEmpty, reason: 'navegação só por clique');
+      expect(onDemoCalls, isEmpty, reason: 'navegação só por clique');
+
+      // Entrar → onEnter (e apenas ele).
+      await tester.tap(find.text('Entrar'));
+      await tester.pump();
+      expect(onEnterCalls, hasLength(1));
+      expect(onDemoCalls, isEmpty);
+
+      // Demo → onDemo.
+      await tester.tap(find.text('Demo (não salva dados)'));
+      await tester.pump();
+      expect(onDemoCalls, hasLength(1));
     });
 
     testWidgets('rótulo acompanha a etapa atual (teto trava o avanço)', (
@@ -92,7 +120,8 @@ void main() {
         MaterialApp(
           home: BootLoader(
             steps: steps,
-            onDone: () {},
+            onEnter: () {},
+            onDemo: () {},
             animationDuration: const Duration(seconds: 1),
             doneHold: const Duration(milliseconds: 50),
           ),
@@ -131,7 +160,7 @@ void main() {
     testWidgets('etapa que falha ou demora não trava o app (fail-open)', (
       tester,
     ) async {
-      final onDoneCalls = <int>[];
+      final onEnterCalls = <int>[];
       final hung = Completer<void>(); // nunca completa → estoura timeout
       final steps = <BootStep>[
         BootStep('Quebrada', () async => throw Exception('boom')),
@@ -143,7 +172,8 @@ void main() {
         MaterialApp(
           home: BootLoader(
             steps: steps,
-            onDone: () => onDoneCalls.add(1),
+            onEnter: () => onEnterCalls.add(1),
+            onDemo: () {},
             animationDuration: const Duration(milliseconds: 100),
             stepTimeout: const Duration(milliseconds: 200),
             doneHold: const Duration(milliseconds: 50),
@@ -158,10 +188,15 @@ void main() {
       expect(find.text(bootDoneLabel), findsOneWidget);
 
       await tester.pump(const Duration(milliseconds: 100));
-      expect(onDoneCalls, hasLength(1));
+      expect(find.text('Entrar'), findsOneWidget);
+      expect(onEnterCalls, isEmpty);
+
+      await tester.tap(find.text('Entrar'));
+      await tester.pump();
+      expect(onEnterCalls, hasLength(1));
     });
 
-    testWidgets('reduced motion: percentual salta por etapas e libera rápido', (
+    testWidgets('reduced motion: percentual salta por etapas e ações aparecem', (
       tester,
     ) async {
       tester.platformDispatcher.accessibilityFeaturesTestValue =
@@ -170,12 +205,13 @@ void main() {
         tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
       );
 
-      final onDoneCalls = <int>[];
+      final onEnterCalls = <int>[];
       await tester.pumpWidget(
         MaterialApp(
           home: BootLoader(
             steps: fakeSteps(['Um', 'Dois', 'Três']),
-            onDone: () => onDoneCalls.add(1),
+            onEnter: () => onEnterCalls.add(1),
+            onDemo: () {},
             animationDuration: const Duration(seconds: 1),
             doneHold: const Duration(milliseconds: 50),
           ),
@@ -188,7 +224,9 @@ void main() {
       expect(find.text(bootDoneLabel), findsOneWidget);
 
       await tester.pump(const Duration(milliseconds: 60));
-      expect(onDoneCalls, hasLength(1));
+      expect(find.text('Entrar'), findsOneWidget);
+      expect(find.text('Demo (não salva dados)'), findsOneWidget);
+      expect(onEnterCalls, isEmpty);
     });
 
     testWidgets('expõe progresso à semântica (região viva com value)', (
@@ -200,7 +238,8 @@ void main() {
         MaterialApp(
           home: BootLoader(
             steps: fakeSteps(['Um', 'Dois', 'Três']),
-            onDone: () {},
+            onEnter: () {},
+            onDemo: () {},
             animationDuration: const Duration(seconds: 1),
           ),
         ),

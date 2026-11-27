@@ -543,7 +543,8 @@ class _RadialOption extends StatelessWidget {
 /// Banner fixo no topo quando [DatabaseService.demoMode] está ativo.
 ///
 /// Avisa ao visitante que os dados não persistem (banco em memória) e
-/// oferece botão "Sair do demo" que volta para a WelcomeScreen.
+/// oferece botão "Sair do demo" que volta para o BootLoader (tela de % com
+/// os botões Entrar/Demo).
 class _DemoBanner extends StatelessWidget {
   const _DemoBanner();
 

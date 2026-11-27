@@ -43,8 +43,8 @@ class DatabaseService {
 
   /// Quando true, [database] abre um banco em memória (não persistido,
   /// sem criptografia) com dados mock para o visitante explorar a UI.
-  /// Ativado pelo CTA "Ver demo" da WelcomeScreen. Desativado por
-  /// `disableDemoMode()` quando o usuário sai do demo.
+  /// Ativado pelo CTA "Demo (não salva dados)" do BootLoader. Desativado
+  /// por `disableDemoMode()` quando o usuário sai do demo.
   static bool demoMode = false;
 
   /// Ativa o modo demo: banco em memória + dados mock, sem cofre.
