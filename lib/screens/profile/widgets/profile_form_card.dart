@@ -44,6 +44,7 @@ class ProfileFormCard extends StatelessWidget {
     required this.validatePeso,
     required this.validateAltura,
     this.saveLabel = 'Salvar perfil',
+    this.emergencyContacts,
   });
 
   final GlobalKey nomeFieldKey;
@@ -78,6 +79,13 @@ class ProfileFormCard extends StatelessWidget {
   /// Rótulo do botão de salvar — o convite de perfil pós-cofre usa
   /// "Salvar e começar"; a aba Perfil mantém o padrão "Salvar perfil".
   final String saveLabel;
+
+  /// Bloco opcional de contatos de emergência, renderizado LOGO APÓS o
+  /// campo Observações — dentro deste cartão, antes do aviso de
+  /// privacidade e do consentimento. A aba Perfil o passa (a seção deixa
+  /// de existir fora do cartão); o convite de primeiro uso não o passa,
+  /// porque os providers ainda não estão registrados nessa tela.
+  final Widget? emergencyContacts;
 
   /// Formatação da data de nascimento exibida no campo (pt_BR).
   static final DateFormat _dateFormat = DateFormat('dd/MM/yyyy', 'pt_BR');
@@ -270,6 +278,12 @@ class ProfileFormCard extends StatelessWidget {
               maxLines: 3,
               textCapitalization: TextCapitalization.sentences,
             ),
+            // Contatos de emergência: logo depois de Observações (pedido
+            // do usuário) — o bloco completo vive dentro deste cartão.
+            if (emergencyContacts != null) ...[
+              const SizedBox(height: 16),
+              emergencyContacts!,
+            ],
             const SizedBox(height: 20),
             const PrivacyNoticeCard(),
             const SizedBox(height: 12),

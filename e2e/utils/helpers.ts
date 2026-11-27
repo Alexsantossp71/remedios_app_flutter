@@ -178,6 +178,26 @@ export async function ensureDatabaseUnlocked(
   page: Page,
   opts: { dismissProfileInvitation?: boolean } = {},
 ): Promise<'setup' | 'unlock' | 'none'> {
+  // Wait until either the vault gate renders (first interaction on this
+  // device → PIN setup) or the main shell is already up (returning session
+  // → auto-unlock, no gate at all; RemediosApp is the ONLY MaterialApp with
+  // a document title, so an empty title means the shell has not rendered).
+  // The SQLite wasm worker spin-up makes the gate slow to render on busy
+  // machines — a fixed 3s probe made this helper flaky ('none' while the
+  // gate was still loading).
+  await page
+    .waitForFunction(
+      () =>
+        document.title === 'Remédio na Hora' ||
+        (document
+          .querySelector('flt-semantics-host')
+          ?.textContent?.includes('Proteger seu banco de dados') ===
+          true),
+      undefined,
+      { timeout: 20000 },
+    )
+    .catch(() => {});
+
   // Setup flow (first interaction on this device).
   const setupVisible = await page
     .locator('text=Proteger seu banco de dados')

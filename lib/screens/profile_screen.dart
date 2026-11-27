@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
@@ -68,6 +69,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// True enquanto um backup está sendo exportado/restaurado.
   bool _backupBusy = false;
 
+  /// Debounce do auto-save do bloco de emergência (tipo sanguíneo,
+  /// alergias e condições crônicas) — agrupa ráfagas de edição de chips
+  /// em uma única gravação ~700 ms após a última mudança.
+  Timer? _autosaveTimer;
+
   @override
   void initState() {
     super.initState();
@@ -107,6 +113,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _pesoController.dispose();
     _alturaController.dispose();
     _observacoesController.dispose();
+    _autosaveTimer?.cancel();
     super.dispose();
   }
 
@@ -203,6 +210,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
       curve: Curves.easeOutCubic,
       alignment: 0.2,
     );
+  }
+
+  /// Auto-save do bloco de emergência — tipo sanguíneo, alergias e
+  /// condições crônicas, os mesmos dados que o cartão de emergência exibe
+  /// ao vivo. Sem isso, quem edita uma alergia e fecha o app sem tocar em
+  /// "Salvar perfil" perde a edição ao voltar: o cartão dá a impressão de
+  /// que já estava gravado. Um debounce curto agrupa ráfagas de chips em
+  /// uma única gravação.
+  ///
+  /// LGPD art. 11: só grava com consentimento JÁ registrado — sem
+  /// consentimento, a persistência continua passando pelo botão
+  /// "Salvar perfil". O `copyWith` preserva os demais campos JÁ SALVOS; o
+  /// rascunho não-salvo do formulário fica de fora (o botão segue
+  /// responsável por validar e gravar o formulário completo).
+  void _scheduleEmergencyAutosave() {
+    final provider = context.read<UserProfileProvider>();
+    final saved = provider.profile;
+    if (saved == null || saved.consentAt == null) return;
+    _autosaveTimer?.cancel();
+    _autosaveTimer = Timer(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      final current = provider.profile;
+      if (current == null) return;
+      provider.saveProfile(
+        current.copyWith(
+          tipoSanguineo: _tipoSanguineo,
+          alergias: _alergias,
+          condicoesCronicas: _condicoesCronicas,
+        ),
+      );
+    });
   }
 
   /// Solicita uma senha que nunca é armazenada pelo aplicativo.
@@ -563,12 +601,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               consentAt: _consentAt,
               onTipoSanguineoChanged: (value) {
                 setState(() => _tipoSanguineo = value);
+                _scheduleEmergencyAutosave();
               },
               onAlergiasChanged: (values) {
                 setState(() => _alergias = values);
+                _scheduleEmergencyAutosave();
               },
               onCondicoesCronicasChanged: (values) {
                 setState(() => _condicoesCronicas = values);
+                _scheduleEmergencyAutosave();
               },
               onConsentChanged: (value) {
                 setState(() => _consentGranted = value ?? false);
@@ -580,16 +621,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
               validateTelefone: _validateTelefone,
               validatePeso: _validatePeso,
               validateAltura: _validateAltura,
-            ),
-            const SizedBox(height: 20),
-            const SectionHeader(title: 'Contatos de emergência'),
-            const SizedBox(height: 10),
-            EmergencyContactsCard(
-              contacts: contacts,
-              isDark: Theme.of(context).brightness == Brightness.dark,
-              onAdd: () => _editContact(),
-              onEdit: (contact) => _editContact(contact),
-              onRemove: (contact) => _removeContact(contact),
+              // Contatos de emergência logo depois de Observações —
+              // dentro do cartão "Dados pessoais", antes do consentimento
+              // e do botão salvar (pedido do usuário).
+              emergencyContacts: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Contatos de emergência',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  EmergencyContactsCard(
+                    contacts: contacts,
+                    isDark: Theme.of(context).brightness == Brightness.dark,
+                    onAdd: () => _editContact(),
+                    onEdit: (contact) => _editContact(contact),
+                    onRemove: (contact) => _removeContact(contact),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 20),
             const SectionHeader(title: 'Meus cadastros'),

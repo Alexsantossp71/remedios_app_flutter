@@ -156,8 +156,13 @@ test.describe('First-run profile invitation (after vault creation)', () => {
       const nome = page.getByRole('textbox', { name: /^Nome/ }).first();
       await fillFlutterField(page, nome, 'Ana Teste');
       // The consent CheckboxListTile exposes the long LGPD sentence as its
-      // accessible name (no matching text node) — click by role.
-      await page.getByRole('checkbox').first().click();
+      // accessible name (no matching text node) — click by role. Match by
+      // label: with allergy chips on the form the chips are ALSO exposed
+      // as (disabled) role=checkbox and would win a bare .first().
+      await page
+        .getByRole('checkbox', { name: /Autorizo o tratamento/ })
+        .first()
+        .click();
 
       await page.getByRole('button', { name: 'Salvar e começar' }).click();
 
@@ -174,4 +179,54 @@ test.describe('First-run profile invitation (after vault creation)', () => {
       await expect(savedNome).toHaveValue('Ana Teste', { timeout: 10000 });
     },
   );
+
+  test('allergy filled on the invitation persists across a reload', async ({
+    page,
+  }) => {
+    await bootToInvitation(page);
+
+    // Name (required) via the accessible textbox…
+    const nome = page.getByRole('textbox', { name: /^Nome/ }).first();
+    await fillFlutterField(page, nome, 'Ana Teste');
+
+    // …and one allergy chip. The list-editor inputs carry no accessible
+    // name (the InputDecorator label merges into a group), so click the
+    // input by coordinates (1280x720 viewport) and submit with Enter
+    // (onSubmitted adds the chip, same as the ⊕ button).
+    await page.mouse.click(550, 528);
+    await page.waitForTimeout(400);
+    await page.keyboard.type('Dipirona', { delay: 40 });
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(400);
+
+    // Consent + save (match by the LGPD label — allergy chips are also
+    // exposed as role=checkbox and disabled).
+    await page
+      .getByRole('checkbox', { name: /Autorizo o tratamento/ })
+      .first()
+      .click();
+    await page.getByRole('button', { name: 'Salvar e começar' }).click();
+    await expect
+      .poll(() => page.title(), { timeout: 30000 })
+      .toBe('Remédio na Hora');
+
+    // Reload: the vault auto-unlocks and the profile comes back from the
+    // database — the allergy chip (InputChip exposes role=checkbox with the
+    // chip text as its accessible name) and the emergency card row.
+    await page.reload();
+    const reloadFlow = await waitForAppReady(page);
+    expect(reloadFlow).toBe('none');
+
+    await page.getByRole('tab', { name: 'Perfil' }).click();
+    await page.waitForTimeout(1500);
+    await expect(
+      page.getByRole('checkbox', { name: 'Dipirona' }).first(),
+    ).toBeVisible({ timeout: 20000 });
+    // The emergency card renders its title on canvas (no text node in the
+    // semantics host) — assert via its share IconButton (tooltip = label).
+    await expect(
+      page.getByRole('button', { name: 'Compartilhar como imagem' }),
+    ).toBeVisible({ timeout: 20000 });
+  });
 });
