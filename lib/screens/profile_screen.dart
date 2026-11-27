@@ -244,70 +244,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   /// Solicita uma senha que nunca é armazenada pelo aplicativo.
-  Future<String?> _askBackupPassword({required bool confirm}) async {
-    final password = TextEditingController();
-    final confirmation = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    final result = await showDialog<String>(
+  ///
+  /// Os controllers vivem no State do diálogo e são descartados quando a
+  /// rota é removida (após a animação de saída) — descartá-los logo após
+  /// o `showDialog` retornar causava "used after being disposed" a cada
+  /// frame da animação.
+  Future<String?> _askBackupPassword({required bool confirm}) {
+    return showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(confirm ? 'Proteger backup' : 'Desbloquear backup'),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: password,
-                obscureText: true,
-                autofocus: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                decoration: const InputDecoration(
-                  labelText: 'Senha do backup',
-                  helperText: 'Use pelo menos 12 caracteres.',
-                ),
-                validator: (value) => (value ?? '').length < 12
-                    ? 'A senha precisa ter ao menos 12 caracteres.'
-                    : null,
-              ),
-              if (confirm) ...[
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: confirmation,
-                  obscureText: true,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  decoration: const InputDecoration(
-                    labelText: 'Confirme a senha',
-                  ),
-                  validator: (value) => value != password.text
-                      ? 'As senhas não coincidem.'
-                      : null,
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (formKey.currentState!.validate()) {
-                Navigator.of(dialogContext).pop(password.text);
-              }
-            },
-            child: Text(confirm ? 'Criptografar' : 'Desbloquear'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) => _BackupPasswordDialog(confirm: confirm),
     );
-    password.dispose();
-    confirmation.dispose();
-    return result;
   }
 
   /// Exporta todos os dados em um envelope criptografado com senha.
@@ -713,5 +659,99 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final error = alturaError(value);
     if (error != null) _firstInvalidFieldKey ??= _alturaFieldKey;
     return error;
+  }
+}
+
+/// Diálogo de senha do backup ("Proteger backup" na exportação e
+/// "Desbloquear backup" na restauração). A senha existe apenas aqui: nunca
+/// é persistida nem logada. Mínimo de 6 caracteres — qualquer sequência
+/// serve (o PBKDF2 deriva a chave do que for digitado).
+class _BackupPasswordDialog extends StatefulWidget {
+  const _BackupPasswordDialog({required this.confirm});
+
+  /// True na exportação (pede confirmação da senha); false ao abrir um
+  /// backup já criptografado.
+  final bool confirm;
+
+  @override
+  State<_BackupPasswordDialog> createState() => _BackupPasswordDialogState();
+}
+
+class _BackupPasswordDialogState extends State<_BackupPasswordDialog> {
+  final TextEditingController _password = TextEditingController();
+  final TextEditingController _confirmation = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    // O dispose roda quando a rota sai da árvore (após a animação), não
+    // quando o pop devolve o valor — evita "used after being disposed".
+    _password.dispose();
+    _confirmation.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.confirm ? 'Proteger backup' : 'Desbloquear backup'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _password,
+              obscureText: true,
+              autofocus: true,
+              autocorrect: false,
+              enableSuggestions: false,
+              // errorMaxLines garante que a mensagem de validação apareça
+              // por inteiro, quebrando em várias linhas em telas estreitas
+              // (bug relatado: texto cortado com reticências).
+              decoration: const InputDecoration(
+                labelText: 'Senha do backup',
+                helperText: 'Use pelo menos 6 caracteres.',
+                helperMaxLines: 2,
+                errorMaxLines: 3,
+              ),
+              validator: (value) => (value ?? '').length < 6
+                  ? 'A senha precisa ter ao menos 6 caracteres.'
+                  : null,
+            ),
+            if (widget.confirm) ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _confirmation,
+                obscureText: true,
+                autocorrect: false,
+                enableSuggestions: false,
+                decoration: const InputDecoration(
+                  labelText: 'Confirme a senha',
+                  errorMaxLines: 3,
+                ),
+                validator: (value) => value != _password.text
+                    ? 'As senhas não coincidem.'
+                    : null,
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.of(context).pop(_password.text);
+            }
+          },
+          child: Text(widget.confirm ? 'Criptografar' : 'Desbloquear'),
+        ),
+      ],
+    );
   }
 }

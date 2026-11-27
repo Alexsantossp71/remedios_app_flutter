@@ -76,5 +76,12 @@ void main() {
         throwsA(isA<BackupCryptoException>()),
       );
     });
+
+    test('aceita senha com exatamente 6 caracteres', () async {
+      final service = BackupCryptoService.instance;
+      final encrypted = await service.encrypt(backup, 'abc123');
+      final restored = await service.decrypt(encrypted, 'abc123');
+      expect(restored, backup);
+    });
   });
 }

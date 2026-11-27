@@ -44,6 +44,7 @@ class PrivacyNoticeCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(
                 Icons.privacy_tip_outlined,
@@ -51,10 +52,14 @@ class PrivacyNoticeCard extends StatelessWidget {
                 color: colorScheme.primary,
               ),
               const SizedBox(width: 8),
-              Text(
-                'Aviso de privacidade',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+              // Expanded: em telas estreitas (ou com text scale grande de
+              // acessibilidade) o título quebra de linha em vez de estourar.
+              Expanded(
+                child: Text(
+                  'Aviso de privacidade',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],

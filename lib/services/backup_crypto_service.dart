@@ -128,9 +128,9 @@ class BackupCryptoService {
   }
 
   void _validatePassword(String password) {
-    if (password.length < 12) {
+    if (password.length < 6) {
       throw const BackupCryptoException(
-        'Use uma senha com pelo menos 12 caracteres.',
+        'Use uma senha com pelo menos 6 caracteres.',
       );
     }
   }
